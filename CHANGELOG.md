@@ -10,7 +10,7 @@
 | 4 | Guardián antiinvención (`core::guard`) | ✅ Terminado |
 | 5 | Base de datos SQLite + migraciones (`infra::db`) | ✅ Terminado |
 | 6 | Fuentes de vacantes: Remote OK, Remotive, WWR, Get on Board, Jobicy + importación manual (`infra::sources`) | ✅ Terminado |
-| 7 | Cliente LLM (Ollama / OpenAI-compatible) + importación de CV PDF/DOCX | ⏳ Pendiente |
+| 7 | Cliente LLM (Ollama / OpenAI-compatible / Anthropic) + importación de CV PDF/DOCX | ✅ Terminado (prueba en vivo con Ollama pendiente) |
 | 8 | Generación de PDF (Typst) y DOCX + prueba de ida y vuelta (`infra::docgen`) | ⏳ Pendiente |
 | 9 | Flujo completo del optimizador de CV | ⏳ Pendiente |
 | 10 | App Tauri + interfaz Svelte (perfiles, vacantes, optimizador, tablero) | ⏳ Pendiente |
@@ -64,3 +64,13 @@
 - `ego-tree` se declara como dependencia explícita (ya venía con `scraper`) para recorrer el HTML.
 - Pruebas con respuestas reales guardadas en `crates/infra/tests/fixtures/`, así que `cargo test` no usa la red. La prueba en vivo se corre a mano: `cargo test -p finder-infra -- --ignored --nocapture`.
 - Limitaciones: la API pública de Remotive devuelve solo 10 vacantes; no se pudieron leer los términos de Get on Board (su página de documentación usa JavaScript); los enlaces de búsqueda de OCC, Computrabajo y Bumeran siguen el formato actual de sus sitios y pueden cambiar.
+
+### Módulo 7: cliente de IA e importación de CV
+- `infra::llm`: configuración por variables de entorno (`.env.example`), dos papeles (local y redactor) y dos backends: compatible con OpenAI (Ollama, OpenAI, Gemini, Groq, OpenRouter) y Anthropic nativo.
+- Anthropic por HTTP directo (no hay SDK de Rust): API `2026-10-21`, `output_config.format` (json_schema), modelo por defecto `claude-opus-5-5` con esfuerzo "medium", y `fallbacks: "default"` activado por defecto. Se revisa `stop_reason` (rechazo o corte) antes de leer la respuesta.
+- `infra::cvfile`: texto de PDF (`pdf-extract`, con protección contra pánicos) y DOCX (`docx-rs`, incluidas tablas).
+- `core::import::finalize`: los ids los asigna Rust (no la IA); calcula las cifras y normaliza las fechas; avisa de todo dato que no aparece tal cual en el archivo original.
+- `core::ats::requirements::merge`: la IA reclasifica requerido/deseable y aporta habilidades extra, seniority, años, idiomas y bloqueantes; todo se verifica contra el texto del anuncio y se descarta lo que no esté.
+- `matching::cosine` y `tasks::semantic_similarity` (embeddings con Ollama).
+- Desviación menor: el plan mostraba un `trait Llm`; se usa un `enum Backend`, porque los métodos async en traits no admiten `dyn` y con dos backends basta.
+- Pendiente: probar en vivo con Ollama (no estaba instalado); reintentos automáticos ante errores 429/529 (hoy se marcan como reintentables para la interfaz); la anonimización de datos personales antes de enviar a una API externa (fase 2 del plan; por eso la importación usa el modelo local).

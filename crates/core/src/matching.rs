@@ -205,6 +205,17 @@ pub fn match_score(dict: &SkillDict, input: &MatchInput) -> MatchReport {
     }
 }
 
+/// Similitud coseno entre dos embeddings (−1 a 1). `None` si difieren en tamaño o alguno es cero.
+pub fn cosine(a: &[f32], b: &[f32]) -> Option<f32> {
+    if a.len() != b.len() || a.is_empty() {
+        return None;
+    }
+    let dot: f32 = a.iter().zip(b).map(|(x, y)| x * y).sum();
+    let na = a.iter().map(|x| x * x).sum::<f32>().sqrt();
+    let nb = b.iter().map(|x| x * x).sum::<f32>().sqrt();
+    (na > 0.0 && nb > 0.0).then(|| dot / (na * nb))
+}
+
 /// Los cosenos de embeddings rara vez bajan de ~0.3 entre textos del mismo idioma:
 /// 0.3 → 0 y 0.8 → 1.
 /// shortcut: umbrales a ojo; calibrarlos con bge-m3 y vacantes reales en el módulo 7.
@@ -612,6 +623,14 @@ mod tests {
             remote_score(RemotePref::Cualquiera, WorkMode::Onsite),
             MAX_REMOTE
         );
+    }
+
+    #[test]
+    fn coseno_basico() {
+        assert_eq!(cosine(&[1.0, 0.0], &[1.0, 0.0]), Some(1.0));
+        assert_eq!(cosine(&[1.0, 0.0], &[0.0, 1.0]), Some(0.0));
+        assert_eq!(cosine(&[1.0], &[1.0, 2.0]), None);
+        assert_eq!(cosine(&[0.0, 0.0], &[1.0, 1.0]), None);
     }
 
     #[test]

@@ -335,7 +335,7 @@ fn check_text(
 }
 
 /// Cifras del texto en forma canónica: "1,200" y "1.200" → "1200"; "2,5" y "2.5" → "2.5"; "30%" → "30".
-fn numbers(text: &str) -> Vec<String> {
+pub fn numbers(text: &str) -> Vec<String> {
     let chars: Vec<char> = text.chars().collect();
     let mut out = Vec::new();
     let mut i = 0;

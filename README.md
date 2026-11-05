@@ -26,7 +26,7 @@ El diseño completo está en [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) y el
   sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file openssl \
     appmenu-gtk-module libappindicator-gtk3 librsvg xdotool nodejs npm
   ```
-- Opcional: [Ollama](https://ollama.com) para la IA local (módulo 7).
+- [Ollama](https://ollama.com) para la IA local (ver "IA y claves de API").
 
 ## Compilar y probar
 
@@ -36,9 +36,31 @@ cargo test
 cargo clippy --all-targets
 ```
 
-## Claves de API y configuración
+## IA y claves de API
 
-Las claves **nunca** van en el código ni en el repositorio. Se leerán de variables de entorno o de un archivo `.env` en la raíz, que ya está excluido en `.gitignore`. Las variables exactas se definen en el módulo 7 (LLM) y se documentarán aquí.
+La app usa dos "papeles" de IA:
+
+| Papel | Para qué | Por defecto |
+|---|---|---|
+| **Local** | Importar tu CV, clasificar requisitos de vacantes, similitud semántica | Ollama con `qwen3:8b` y `bge-m3`. Tu CV no sale del equipo |
+| **Redactor** | Reescribir CV y cartas (módulo 9) | Claude si defines `ANTHROPIC_API_KEY`; si no, el modelo local |
+
+Instalar la IA local (Arch/CachyOS):
+```bash
+sudo pacman -S ollama            # ollama-cuda u ollama-rocm si tienes GPU
+sudo systemctl enable --now ollama
+ollama pull qwen3:8b
+ollama pull bge-m3
+```
+
+Las claves **nunca** van en el código: se leen de variables de entorno. Copia `.env.example` como `.env` (excluido de git) y ajusta lo que necesites; ahí están todas las variables documentadas.
+
+Con Claude, cada petición incluye `fallbacks: "default"`: si los filtros de seguridad del modelo rechazan una petición, la API la repite con otro modelo dentro de la misma llamada.
+
+Prueba en vivo de la IA (requiere Ollama corriendo):
+```bash
+cargo test -p finder-infra llm -- --ignored --nocapture
+```
 
 ## Fuentes de vacantes y atribución
 
