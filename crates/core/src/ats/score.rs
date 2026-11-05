@@ -375,6 +375,31 @@ fn legibility_score(cv_text: &str) -> (f32, Vec<String>) {
     (score, tips)
 }
 
+/// Ajusta la legibilidad con la prueba de ida y vuelta del archivo real (módulo 8):
+/// `missing_ratio` = fracción de palabras del CV que no se recuperan al leer el PDF;
+/// `sections_in_order` = si los encabezados aparecen y en el orden esperado.
+pub fn with_roundtrip(mut r: AtsReport, missing_ratio: f32, sections_in_order: bool) -> AtsReport {
+    let mut penalty = 0.0;
+    if missing_ratio > 0.02 {
+        penalty += 8.0;
+        r.suggestions.push(format!(
+            "Al leer el archivo se pierde el {:.0} % del texto; revisa la plantilla o la fuente.",
+            missing_ratio * 100.0
+        ));
+    }
+    if !sections_in_order {
+        penalty += 6.0;
+        r.suggestions
+            .push("Al leer el archivo, las secciones salen desordenadas o faltan.".into());
+    }
+    r.breakdown.legibility = (r.breakdown.legibility - penalty).max(0.0);
+    let b = &r.breakdown;
+    r.total = (b.keywords + b.title + b.sections + b.legibility)
+        .round()
+        .clamp(0.0, 100.0) as u8;
+    r
+}
+
 // ---------------------------------------------------------------------------
 // Huecos
 // ---------------------------------------------------------------------------
@@ -535,6 +560,18 @@ mod tests {
         assert_eq!(legibility_score("Editor \u{FFFD} video").0, 12.0);
         assert_eq!(legibility_score("ene 2022 – 03/2024").0, 16.0);
         assert_eq!(legibility_score("a   b\nc   d\ne\tf").0, 16.0);
+    }
+
+    #[test]
+    fn ida_y_vuelta_penaliza_texto_perdido_y_desorden() -> R {
+        let (dict, terms) = setup()?;
+        let base = ats_score(&dict, CV, JOB_TITLE, &terms);
+        assert_eq!(with_roundtrip(base.clone(), 0.0, true), base);
+        let mal = with_roundtrip(base.clone(), 0.10, false);
+        assert_eq!(mal.breakdown.legibility, 6.0);
+        assert_eq!(mal.total, base.total - 14);
+        assert_eq!(mal.suggestions.len(), base.suggestions.len() + 2);
+        Ok(())
     }
 
     #[test]

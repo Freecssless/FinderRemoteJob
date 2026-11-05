@@ -14,6 +14,10 @@ quick-xml = { version = "0.42", features = ["serialize"] }
 scraper = "0.29"
 pdf-extract = "0.12"
 docx-rs = "0.4"
+typst-as-lib = { version = "0.17", default-features = false }
+typst = "0.15"
+typst-pdf = "0.15"
+typst-layout = "0.15" # PagedDocument (ya lo trae typst)
 ego-tree = "0.11" # ya lo trae scraper; se declara para recorrer el árbol HTML
 thiserror.workspace = true
 uuid = { version = "1.18", features = ["v7"] }

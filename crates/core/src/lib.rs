@@ -4,6 +4,7 @@
 //! para poder reutilizarlo tal cual en escritorio, Android e iOS.
 
 pub mod ats;
+pub mod document;
 pub mod guard;
 pub mod import;
 pub mod matching;

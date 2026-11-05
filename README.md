@@ -66,6 +66,10 @@ cargo test -p finder-infra llm -- --ignored --nocapture
 
 Las vacantes automáticas vienen de Remote OK, Remotive, We Work Remotely, Get on Board y Jobicy. Sus términos piden mencionar la fuente y enlazar al anuncio original; la app guarda ambos datos en cada vacante. Además, respeta un tiempo mínimo entre consultas (Remotive: 6 horas).
 
+## Licencias de terceros
+
+- Fuente Liberation Sans: SIL Open Font License 1.1 (`crates/infra/assets/fonts/LICENSE-LiberationSans.txt`).
+
 ## Portales sin API oficial
 
 LinkedIn, Indeed, Glassdoor, OCC y Computrabajo **no** se consultan automáticamente: sus términos de servicio lo prohíben y hacerlo pone en riesgo tus cuentas. En el MVP solo se pueden importar a mano (pegar el enlace o el texto de la vacante), y la postulación siempre la confirmas tú.

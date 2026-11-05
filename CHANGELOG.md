@@ -11,7 +11,7 @@
 | 5 | Base de datos SQLite + migraciones (`infra::db`) | ✅ Terminado |
 | 6 | Fuentes de vacantes: Remote OK, Remotive, WWR, Get on Board, Jobicy + importación manual (`infra::sources`) | ✅ Terminado |
 | 7 | Cliente LLM (Ollama / OpenAI-compatible / Anthropic) + importación de CV PDF/DOCX | ✅ Terminado (prueba en vivo con Ollama pendiente) |
-| 8 | Generación de PDF (Typst) y DOCX + prueba de ida y vuelta (`infra::docgen`) | ⏳ Pendiente |
+| 8 | Generación de PDF (Typst) y DOCX + prueba de ida y vuelta (`infra::docgen`) | ✅ Terminado |
 | 9 | Flujo completo del optimizador de CV | ⏳ Pendiente |
 | 10 | App Tauri + interfaz Svelte (perfiles, vacantes, optimizador, tablero) | ⏳ Pendiente |
 
@@ -74,3 +74,13 @@
 - `matching::cosine` y `tasks::semantic_similarity` (embeddings con Ollama).
 - Desviación menor: el plan mostraba un `trait Llm`; se usa un `enum Backend`, porque los métodos async en traits no admiten `dyn` y con dos backends basta.
 - Pendiente: probar en vivo con Ollama (no estaba instalado); reintentos automáticos ante errores 429/529 (hoy se marcan como reintentables para la interfaz); la anonimización de datos personales antes de enviar a una API externa (fase 2 del plan; por eso la importación usa el modelo local).
+
+### Módulo 8: generación de PDF y DOCX
+- `core::document::CvDocument`: el CV listo para imprimir (orden de secciones, encabezados estándar en español o inglés, fechas uniformes "ene 2022 – actual", nombre de archivo `Nombre_Apellido_Puesto_Empresa`) y detección simple del idioma de la vacante.
+- Plantilla Typst **Clásica** (`infra/templates/clasica.typ`): una columna, sin tablas, íconos ni encabezado o pie de página; los datos entran como JSON (`sys.inputs.data`), así que `#`, `*`, `$`, `<` o `@` del CV se imprimen literalmente.
+- Fuente Liberation Sans (Regular, Bold, Italic; licencia OFL en `infra/assets/fonts/`) incluida en el binario: el PDF sale igual en cualquier sistema.
+- DOCX con `docx-rs` usando estilos nativos ("Heading 1" y viñetas reales); fuente Arial, que tiene la misma métrica que Liberation Sans.
+- `docgen::verify`: prueba de ida y vuelta (vuelve a leer el archivo y comprueba palabras y orden de secciones); `ats::score::with_roundtrip` aplica el resultado a la legibilidad del puntaje ATS.
+- Dependencias: `typst-as-lib` 0.17, `typst`/`typst-pdf`/`typst-layout` 0.15 (`typst-layout` ya venía con `typst`; se declara por `PagedDocument`).
+- Muestra para revisar a ojo: `cargo test -p finder-infra muestras -- --ignored` → `/tmp/finder-muestras/`.
+- Pendiente para la versión completa: plantillas Compacta y Técnica (fase 2 del plan).
