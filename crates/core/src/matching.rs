@@ -27,6 +27,10 @@ const MAX_REMOTE: f32 = 6.0;
 const MAX_REGION: f32 = 5.0;
 const MAX_LANGUAGES: f32 = 4.0;
 const BLOCKED_CAP: f32 = 20.0;
+/// Si la vacante pide habilidades y cubres menos del 20 %, el total no pasa de 30:
+/// evita que remoto + LATAM hagan parecer compatible una vacante de otro oficio.
+const LOW_RELEVANCE_COVERAGE: f32 = 0.2;
+const LOW_RELEVANCE_CAP: f32 = 30.0;
 
 pub struct MatchInput<'a> {
     pub profile: &'a Profile,
@@ -49,6 +53,8 @@ pub struct MatchReport {
     pub missing_required: Vec<String>,
     /// Motivos que impiden postular; si hay alguno, `total` ≤ 20.
     pub blockers: Vec<String>,
+    /// Cubres menos del 20 % de las habilidades pedidas; la interfaz lo muestra como "Poco relevante".
+    pub low_relevance: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -86,6 +92,7 @@ pub fn match_score(dict: &SkillDict, input: &MatchInput) -> MatchReport {
         }
     }
     // Sin términos extraídos no hay con qué comparar: valor neutro.
+    let low_relevance = total_w > 0.0 && got / total_w < LOW_RELEVANCE_COVERAGE;
     let skills = MAX_SKILLS * if total_w > 0.0 { got / total_w } else { 0.5 };
 
     // --- Similitud semántica.
@@ -174,6 +181,9 @@ pub fn match_score(dict: &SkillDict, input: &MatchInput) -> MatchReport {
         // Sin embeddings: los 85 puntos restantes se escalan a 100.
         None => sum *= 100.0 / (100.0 - MAX_SEMANTIC),
     }
+    if low_relevance {
+        sum = sum.min(LOW_RELEVANCE_CAP);
+    }
     if !blockers.is_empty() {
         sum = sum.min(BLOCKED_CAP);
     }
@@ -191,6 +201,7 @@ pub fn match_score(dict: &SkillDict, input: &MatchInput) -> MatchReport {
         years_experience,
         missing_required,
         blockers,
+        low_relevance,
     }
 }
 
@@ -456,6 +467,7 @@ mod tests {
         );
         let r = evaluate(&j, &profile(), &master()?, None)?;
         assert!(r.blockers.is_empty(), "{:?}", r.blockers);
+        assert!(!r.low_relevance);
         assert_eq!(r.breakdown.title, MAX_TITLE);
         assert_eq!(
             r.breakdown.logistics,
@@ -473,7 +485,8 @@ mod tests {
             include_str!("../tests/fixtures/jd_frontend_jr_en.txt"),
         );
         let r = evaluate(&j, &profile(), &master()?, None)?;
-        assert!(r.total < 40, "total = {}", r.total);
+        assert!(r.low_relevance);
+        assert!(r.total <= 30, "total = {}", r.total);
         Ok(())
     }
 

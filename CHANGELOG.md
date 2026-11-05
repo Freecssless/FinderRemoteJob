@@ -34,6 +34,7 @@
 ### Módulo 3: puntaje de compatibilidad
 - `matching::match_score`: habilidades 45 (un sinónimo cuenta completo), similitud semántica 15 (opcional; sin embeddings se reescala a 100), puesto 10, seniority 5, años 10, logística 15 (remoto 6, región 5, idiomas 4).
 - Bloqueantes ("US only", ciudadanía, idioma requerido que no está en el CV, o los que detecte el LLM) limitan el total a 20.
+- Desviación aprobada (opción b): si cubres menos del 20 % de las habilidades pedidas, el total se limita a 30 y se marca `low_relevance` ("Poco relevante").
 - `years_of_experience` fusiona periodos traslapados; la fecha actual se recibe como parámetro (`core` no lee el reloj).
 - `ats::score` ahora expone `title_overlap` y `Evidence`, que comparten el puntaje ATS y el de compatibilidad.
 - Pendiente: salario (no hay preferencia salarial en el perfil todavía), comparar el nivel del idioma (B2 vs. "avanzado") y calibrar el reescalado del coseno con embeddings reales (módulo 7).
