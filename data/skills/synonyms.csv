@@ -1,0 +1,95 @@
+alias,canonical
+# Sinónimos y variantes que apuntan a una habilidad canónica.
+JS,JavaScript
+TS,TypeScript
+Node,Node.js
+NodeJS,Node.js
+Node JS,Node.js
+React.js,React
+ReactJS,React
+Vue,Vue.js
+VueJS,Vue.js
+NextJS,Next.js
+Nest.js,NestJS
+Postgres,PostgreSQL
+Mongo,MongoDB
+K8s,Kubernetes
+GCP,Google Cloud
+Google Cloud Platform,Google Cloud
+Amazon Web Services,AWS
+Microsoft Azure,Azure
+Rails,Ruby on Rails
+Tailwind,Tailwind CSS
+PowerBI,Power BI
+REST API,API REST
+REST APIs,API REST
+RESTful,API REST
+APIs REST,API REST
+continuous integration,CI/CD
+integración continua,CI/CD
+unit testing,Pruebas unitarias
+unit tests,Pruebas unitarias
+microservices,Microservicios
+aprendizaje automático,Machine Learning
+responsive design,Diseño responsivo
+responsive,Diseño responsivo
+web accessibility,Accesibilidad web
+accesibilidad,Accesibilidad web
+WCAG,Accesibilidad web
+metodologías ágiles,Agile
+agile methodologies,Agile
+Premiere,Adobe Premiere Pro
+Premiere Pro,Adobe Premiere Pro
+Adobe Premiere,Adobe Premiere Pro
+Adobe After Effects,After Effects
+DaVinci,DaVinci Resolve
+Final Cut,Final Cut Pro
+Photoshop,Adobe Photoshop
+Illustrator,Adobe Illustrator
+InDesign,Adobe InDesign
+Lightroom,Adobe Lightroom
+C4D,Cinema 4D
+video editing,Edición de video
+edición de videos,Edición de video
+editor de video,Edición de video
+video editor,Edición de video
+audio editing,Edición de audio
+mezcla de audio,Edición de audio
+color grading,Corrección de color
+colorización,Corrección de color
+etalonaje,Corrección de color
+motion design,Motion graphics
+motion graphic,Motion graphics
+post-producción,Postproducción
+postproduction,Postproducción
+post-production,Postproducción
+2D animation,Animación 2D
+3D animation,Animación 3D
+subtítulos,Subtitulado
+subtitles,Subtitulado
+subtitling,Subtitulado
+guionismo,Guion
+scriptwriting,Guion
+photography,Fotografía
+video production,Producción audiovisual
+producción de video,Producción audiovisual
+graphic design,Diseño gráfico
+UX design,Diseño UX
+UX,Diseño UX
+experiencia de usuario,Diseño UX
+UI design,Diseño UI
+UI,Diseño UI
+social media,Redes sociales
+teamwork,Trabajo en equipo
+team player,Trabajo en equipo
+communication skills,Comunicación efectiva
+habilidades de comunicación,Comunicación efectiva
+problem solving,Resolución de problemas
+problem-solving,Resolución de problemas
+time management,Gestión del tiempo
+leadership,Liderazgo
+attention to detail,Atención al detalle
+self-starter,Trabajo autónomo
+English,Inglés
+Portuguese,Portugués
+Spanish,Español

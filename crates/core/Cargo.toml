@@ -7,6 +7,9 @@ license.workspace = true
 
 [dependencies]
 serde.workspace = true
+thiserror.workspace = true
+aho-corasick.workspace = true
+deunicode.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true

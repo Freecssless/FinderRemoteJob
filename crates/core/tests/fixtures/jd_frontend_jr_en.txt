@@ -1,0 +1,20 @@
+Junior Frontend Developer - Remote (LATAM)
+
+About the role
+We are looking for a junior developer to join our product team. You will build features with React and TypeScript.
+
+Requirements
+- 1+ years of experience with JavaScript and TypeScript
+- Solid knowledge of React, HTML and CSS
+- Experience consuming REST APIs
+- Git and GitHub
+- Good English communication skills
+
+Nice to have
+- Next.js
+- Tailwind CSS
+- Unit testing with Jest
+- Figma
+
+Benefits
+- Fully remote, flexible hours

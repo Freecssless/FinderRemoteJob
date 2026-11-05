@@ -322,16 +322,27 @@ mod tests {
 
     #[test]
     fn estados_de_respuesta() {
-        let respuestas: Vec<_> = Status::ALL.into_iter().filter(|s| s.is_response()).collect();
+        let respuestas: Vec<_> = Status::ALL
+            .into_iter()
+            .filter(|s| s.is_response())
+            .collect();
         assert_eq!(
             respuestas,
-            [Status::EnProceso, Status::Entrevista, Status::Oferta, Status::Rechazada]
+            [
+                Status::EnProceso,
+                Status::Entrevista,
+                Status::Oferta,
+                Status::Rechazada
+            ]
         );
     }
 
     #[test]
     fn estado_se_serializa_como_en_sqlite() -> Result<(), serde_json::Error> {
-        assert_eq!(serde_json::to_string(&Status::CvAdaptado)?, "\"CvAdaptado\"");
+        assert_eq!(
+            serde_json::to_string(&Status::CvAdaptado)?,
+            "\"CvAdaptado\""
+        );
         assert_eq!(Status::CvAdaptado.label(), "CV adaptado");
         Ok(())
     }

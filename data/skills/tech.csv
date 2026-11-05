@@ -1,0 +1,93 @@
+canonical,kind
+# Habilidades técnicas. kind: hard | tool | soft | language
+# Evitamos nombres ambiguos de una o dos letras (Go, R, C): chocan con palabras comunes.
+JavaScript,hard
+TypeScript,hard
+Python,hard
+Java,hard
+C#,hard
+C++,hard
+Golang,hard
+Rust,hard
+PHP,hard
+Ruby,hard
+Kotlin,hard
+Swift,hard
+Dart,hard
+SQL,hard
+HTML,hard
+CSS,hard
+Sass,hard
+React,hard
+React Native,hard
+Next.js,hard
+Vue.js,hard
+Nuxt,hard
+Angular,hard
+Svelte,hard
+Node.js,hard
+Express,hard
+NestJS,hard
+Django,hard
+Flask,hard
+FastAPI,hard
+Laravel,hard
+Spring Boot,hard
+.NET,hard
+ASP.NET,hard
+Ruby on Rails,hard
+Flutter,hard
+GraphQL,hard
+API REST,hard
+Redux,hard
+Tailwind CSS,hard
+Bootstrap,hard
+jQuery,hard
+Microservicios,hard
+Pruebas unitarias,hard
+Machine Learning,hard
+Diseño responsivo,hard
+Accesibilidad web,hard
+CI/CD,hard
+TDD,hard
+SEO,hard
+PostgreSQL,tool
+MySQL,tool
+MongoDB,tool
+Redis,tool
+SQLite,tool
+Firebase,tool
+Supabase,tool
+Elasticsearch,tool
+AWS,tool
+Azure,tool
+Google Cloud,tool
+Docker,tool
+Kubernetes,tool
+Terraform,tool
+Linux,tool
+Bash,tool
+GitHub Actions,tool
+Jenkins,tool
+Jest,tool
+Cypress,tool
+Playwright,tool
+Selenium,tool
+Pandas,tool
+NumPy,tool
+TensorFlow,tool
+PyTorch,tool
+Power BI,tool
+Tableau,tool
+Excel,tool
+Git,tool
+GitHub,tool
+GitLab,tool
+Jira,tool
+Webpack,tool
+Vite,tool
+WordPress,tool
+Shopify,tool
+Agile,soft
+Scrum,soft
+Kanban,soft
