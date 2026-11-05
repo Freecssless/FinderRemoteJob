@@ -7,4 +7,5 @@ pub mod db;
 pub mod docgen;
 
 pub mod llm;
+pub mod optimizer;
 pub mod sources;

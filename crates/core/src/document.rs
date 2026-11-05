@@ -8,6 +8,7 @@
 use serde::Serialize;
 
 use crate::ats::keywords::normalize;
+use crate::guard::GuardReport;
 use crate::model::CvMaster;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -55,6 +56,23 @@ impl DocLang {
             DocLang::En
         } else {
             DocLang::Es
+        }
+    }
+}
+
+/// Decisiones del usuario en el diff. Por defecto se usa todo lo que aprobó el guardián.
+#[derive(Debug, Clone, PartialEq, serde::Deserialize, Serialize)]
+pub struct Choices {
+    pub summary: bool,
+    /// Una entrada por cada bullet de `GuardReport::bullets` (`true` = usar la propuesta).
+    pub bullets: Vec<bool>,
+}
+
+impl Choices {
+    pub fn accept_all(report: &GuardReport) -> Self {
+        Self {
+            summary: true,
+            bullets: report.bullets.iter().map(|b| b.accepted()).collect(),
         }
     }
 }
@@ -182,6 +200,69 @@ impl CvDocument {
                 .map(|l| format!("{} ({})", l.name, l.level))
                 .collect(),
         }
+    }
+
+    /// CV optimizado: el maestro con lo que el guardián aceptó y el usuario confirmó.
+    ///
+    /// - Resumen: el propuesto si se acepta; si no, ninguno.
+    /// - Logros: por experiencia, en el orden propuesto; los rechazados vuelven a su texto original.
+    ///   Si la propuesta no tocó una experiencia, se conservan sus logros originales.
+    /// - Habilidades: primero las del orden propuesto y después las demás (se reordena, nunca se quita).
+    /// - Empresa, puesto, fechas, educación e idiomas salen siempre del maestro.
+    pub fn from_report(
+        m: &CvMaster,
+        report: &GuardReport,
+        choices: &Choices,
+        lang: DocLang,
+    ) -> Self {
+        let mut doc = Self::from_master(m, lang);
+        doc.summary = report
+            .summary
+            .as_ref()
+            .filter(|s| choices.summary && s.accepted())
+            .map(|s| s.proposed.clone());
+
+        for (exp, out) in m.experience.iter().zip(doc.experience.iter_mut()) {
+            let mut proposed = report
+                .bullets
+                .iter()
+                .enumerate()
+                .filter(|(_, c)| c.exp_id.as_deref() == Some(exp.id.as_str()))
+                .peekable();
+            if proposed.peek().is_none() {
+                continue;
+            }
+            let mut bullets: Vec<String> = Vec::new();
+            for (i, c) in proposed {
+                let use_proposed = c.accepted() && choices.bullets.get(i).copied().unwrap_or(true);
+                let texts: Vec<&str> = if use_proposed {
+                    vec![c.proposed.as_str()]
+                } else {
+                    c.originals.iter().map(String::as_str).collect()
+                };
+                for t in texts {
+                    // Un original puede repetirse si dos propuestas citaban el mismo logro.
+                    if !bullets.iter().any(|b| b == t) {
+                        bullets.push(t.to_string());
+                    }
+                }
+            }
+            out.bullets = bullets;
+        }
+
+        let mut skills: Vec<String> = report
+            .skills_order
+            .iter()
+            .filter_map(|id| m.skill(id))
+            .map(|s| s.name.clone())
+            .collect();
+        for s in &m.skills {
+            if !skills.contains(&s.name) {
+                skills.push(s.name.clone());
+            }
+        }
+        doc.skills = skills;
+        doc
     }
 
     /// Texto plano en el mismo orden que las plantillas: lo que un ATS debería poder leer.
@@ -316,6 +397,71 @@ mod tests {
 
     fn master() -> Result<CvMaster, serde_json::Error> {
         serde_json::from_str(include_str!("../tests/fixtures/cv_editor_video.json"))
+    }
+
+    #[test]
+    fn cv_optimizado_respeta_guardian_y_decisiones() -> Result<(), Box<dyn std::error::Error>> {
+        use crate::guard::{Draft, DraftBullet, DraftText, validate};
+        let m = master()?;
+        let dict = SkillDict::builtin()?;
+        let b = |exp: &str, text: &str, src: &[&str]| DraftBullet {
+            exp_id: exp.into(),
+            text: text.into(),
+            source_ids: src.iter().map(|s| s.to_string()).collect(),
+        };
+        let draft = Draft {
+            summary: Some(DraftText {
+                text: "Editor de video con 6 años de experiencia.".into(),
+                source_ids: vec!["exp_01".into()],
+            }),
+            bullets: vec![
+                b(
+                    "exp_01",
+                    "Reduje 30% el tiempo de entrega con plantillas de edición reutilizables",
+                    &["b_02"],
+                ),
+                b("exp_01", "Edité 500 videos para YouTube", &["b_01"]), // cifra inventada → original
+            ],
+            skills_order: vec!["sk_03".into()],
+        };
+        let report = validate(&dict, &m, &draft, "2026-11");
+        let all = Choices::accept_all(&report);
+        assert_eq!(all.bullets, [true, false]);
+
+        let doc = CvDocument::from_report(&m, &report, &all, DocLang::Es);
+        assert_eq!(
+            doc.summary.as_deref(),
+            Some("Editor de video con 6 años de experiencia.")
+        );
+        assert_eq!(
+            doc.experience[0].bullets,
+            [
+                "Reduje 30% el tiempo de entrega con plantillas de edición reutilizables",
+                "Edité 120 videos para YouTube con Premiere y After Effects",
+            ]
+        );
+        // La experiencia que la propuesta no tocó conserva sus logros.
+        assert_eq!(
+            doc.experience[1].bullets,
+            ["Corrección de color y sonido para comerciales de TV"]
+        );
+        assert_eq!(
+            doc.skills,
+            ["DaVinci Resolve", "Adobe Premiere Pro", "After Effects"]
+        );
+
+        // El usuario rechaza el resumen y el primer cambio.
+        let mine = Choices {
+            summary: false,
+            bullets: vec![false, false],
+        };
+        let doc = CvDocument::from_report(&m, &report, &mine, DocLang::Es);
+        assert_eq!(doc.summary, None);
+        assert_eq!(
+            doc.experience[0].bullets[0],
+            "Reduje el tiempo de entrega 30% creando plantillas de edición reutilizables"
+        );
+        Ok(())
     }
 
     #[test]

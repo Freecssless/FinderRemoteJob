@@ -12,7 +12,7 @@
 | 6 | Fuentes de vacantes: Remote OK, Remotive, WWR, Get on Board, Jobicy + importación manual (`infra::sources`) | ✅ Terminado |
 | 7 | Cliente LLM (Ollama / OpenAI-compatible / Anthropic) + importación de CV PDF/DOCX | ✅ Terminado (prueba en vivo con Ollama pendiente) |
 | 8 | Generación de PDF (Typst) y DOCX + prueba de ida y vuelta (`infra::docgen`) | ✅ Terminado |
-| 9 | Flujo completo del optimizador de CV | ⏳ Pendiente |
+| 9 | Flujo completo del optimizador de CV | ✅ Terminado (prueba en vivo con IA pendiente) |
 | 10 | App Tauri + interfaz Svelte (perfiles, vacantes, optimizador, tablero) | ⏳ Pendiente |
 
 ## Registro
@@ -84,3 +84,13 @@
 - Dependencias: `typst-as-lib` 0.17, `typst`/`typst-pdf`/`typst-layout` 0.15 (`typst-layout` ya venía con `typst`; se declara por `PagedDocument`).
 - Muestra para revisar a ojo: `cargo test -p finder-infra muestras -- --ignored` → `/tmp/finder-muestras/`.
 - Pendiente para la versión completa: plantillas Compacta y Técnica (fase 2 del plan).
+
+### Módulo 9: optimizador de CV
+- `infra::optimizer`: `prepare` (requisitos con IA local o, si no responde, solo diccionario; ATS antes; huecos; idioma) → `optimize` (el redactor propone un `Draft` con esquema JSON estricto) → `apply_draft` (guardián, CV final, PDF, ida y vuelta, ATS después) → `save` (decisiones del usuario, PDF y DOCX en la carpeta indicada, `cv_versions` vinculada a la postulación y estado "CV adaptado" sin retroceder).
+- `core::document::CvDocument::from_report` + `Choices`: los rechazados por el guardián o por el usuario vuelven al texto original; las habilidades se reordenan sin quitar ninguna; empresa, puesto y fechas siempre salen del maestro.
+- Privacidad: el redactor no recibe nombre, correo, teléfono, ubicación ni enlaces (los pone la plantilla).
+- Nombre de archivo con sufijo del id de versión, para no sobrescribir versiones anteriores.
+- `master_hash` (FNV-1a sobre el JSON del maestro) identifica de qué versión del maestro salió cada CV.
+- Ejemplo de prueba: ATS 67 → 69 con un borrador honesto; lo que sigue faltando (TikTok, Instagram…) no está en el maestro y se queda como hueco.
+- Carta de presentación: pasa a la fase 2 (decisión del usuario).
+- Pendiente: probar en vivo con Ollama o Claude (`cargo test -p finder-infra optimizer -- --ignored --nocapture`).
