@@ -8,7 +8,7 @@
 | 2 | Palabras clave y puntaje ATS (`core::ats`) | ✅ Terminado |
 | 3 | Puntaje de compatibilidad (`core::matching`) | ✅ Terminado |
 | 4 | Guardián antiinvención (`core::guard`) | ✅ Terminado |
-| 5 | Base de datos SQLite + migraciones (`infra::db`) | ⏳ Pendiente |
+| 5 | Base de datos SQLite + migraciones (`infra::db`) | ✅ Terminado |
 | 6 | Fuentes de vacantes: Remote OK, Remotive, WWR, Get on Board, Jobicy + importación manual (`infra::sources`) | ⏳ Pendiente |
 | 7 | Cliente LLM (Ollama / OpenAI-compatible) + importación de CV PDF/DOCX | ⏳ Pendiente |
 | 8 | Generación de PDF (Typst) y DOCX + prueba de ida y vuelta (`infra::docgen`) | ⏳ Pendiente |
@@ -44,3 +44,12 @@
 - `guard::validate` rechaza: texto vacío, falta de fuentes, ids inexistentes o de otra experiencia, cifras que no están en las fuentes (canonicaliza "1,200" = "1.200"; el resumen puede citar tus años reales) y habilidades que no están en `maestro.skills`, en el titular, en los puestos ni en las fuentes citadas.
 - Un bullet rechazado vuelve al texto original de sus fuentes válidas (`Checked::final_texts`), y cada rechazo trae su motivo en español para el diff.
 - Límites conocidos: no detecta cifras escritas con letra ni habilidades fuera del diccionario. Por eso siempre hay revisión humana en el diff.
+
+### Módulo 5: base de datos SQLite
+- `infra/migrations/0001_init.sql`: esquema de la §5.2 del plan. Incluye las fuentes del MVP precargadas e índices para el tablero.
+- Detalle técnico de FTS5: la tabla de búsqueda guarda su propia copia del texto (mantenida con triggers) en vez de usar "external content", porque el rowid de `jobs` (clave TEXT) puede cambiar con VACUUM.
+- `infra::db::Db`: perfiles (crear, editar, listar, borrar con todo lo suyo), CV maestro (conserva el texto del archivo importado), vacantes (sin duplicados por `dedupe_key`), búsqueda de texto completo segura, tablero con filtros por perfil, estado, portal y fechas, cambios de estado con historial, notas y próximo paso, y versiones de CV vinculadas a la postulación.
+- `core`: `Status::as_str/parse`, `RemotePref::as_str/parse`, `dedupe_key`, `CvVersion`, `StatusChange` y `pipeline::transition` (fija `applied_at` y `first_response_at`).
+- Decisiones confirmadas: cada combinación de vacante y perfil tiene su fila en `applications` desde "Encontrada"; la ruta del archivo la decide la app.
+- La fecha actual se toma de SQLite (`strftime`), sin agregar un crate de fechas.
+- Pendiente: recordatorios (tabla creada, se usará en la fase 2) y estadísticas.

@@ -33,6 +33,27 @@ pub enum RemotePref {
     Cualquiera,
 }
 
+impl RemotePref {
+    pub const ALL: [RemotePref; 3] = [
+        RemotePref::SoloRemoto,
+        RemotePref::RemotoOHibrido,
+        RemotePref::Cualquiera,
+    ];
+
+    /// Valor guardado en SQLite (igual al nombre serializado).
+    pub fn as_str(self) -> &'static str {
+        match self {
+            RemotePref::SoloRemoto => "SoloRemoto",
+            RemotePref::RemotoOHibrido => "RemotoOHibrido",
+            RemotePref::Cualquiera => "Cualquiera",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|p| p.as_str() == s)
+    }
+}
+
 /// CV maestro: la única fuente de la verdad sobre la experiencia del usuario.
 ///
 /// Cada experiencia, logro y habilidad lleva un `id` estable. El optimizador solo puede
@@ -145,6 +166,20 @@ impl CvMaster {
 // Vacantes y requisitos
 // ---------------------------------------------------------------------------
 
+/// Clave para detectar la misma vacante publicada en varios portales:
+/// empresa + puesto + ubicación, normalizados (sin acentos, minúsculas, espacios simples).
+pub fn dedupe_key(company: Option<&str>, title: &str, location: Option<&str>) -> String {
+    [company.unwrap_or(""), title, location.unwrap_or("")]
+        .map(|p| {
+            crate::ats::keywords::normalize(p)
+                .split(|c: char| !c.is_alphanumeric())
+                .filter(|w| !w.is_empty())
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+        .join("|")
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Job {
     pub id: Id,
@@ -247,6 +282,31 @@ impl Status {
         Status::Descartada,
     ];
 
+    /// Valor guardado en SQLite (igual al nombre serializado).
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Status::Encontrada => "Encontrada",
+            Status::Evaluada => "Evaluada",
+            Status::CvAdaptado => "CvAdaptado",
+            Status::Postulada => "Postulada",
+            Status::EnProceso => "EnProceso",
+            Status::Entrevista => "Entrevista",
+            Status::Oferta => "Oferta",
+            Status::Rechazada => "Rechazada",
+            Status::SinRespuesta => "SinRespuesta",
+            Status::Descartada => "Descartada",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|st| st.as_str() == s)
+    }
+
+    /// ¿Este estado implica que ya te postulaste? (Postulada o cualquier paso posterior.)
+    pub fn implies_applied(self) -> bool {
+        matches!(self, Status::Postulada | Status::SinRespuesta) || self.is_response()
+    }
+
     /// Texto para mostrar en la interfaz.
     pub fn label(self) -> &'static str {
         match self {
@@ -299,6 +359,41 @@ pub struct Application {
     pub updated_at: String,
 }
 
+/// Un cambio de estado registrado en el historial.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StatusChange {
+    pub from: Option<Status>,
+    pub to: Status,
+    pub at: String,
+}
+
+/// Versión de CV generada para una vacante (plan §5.2, tabla `cv_versions`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CvVersion {
+    pub id: Id,
+    pub profile_id: Id,
+    #[serde(default)]
+    pub job_id: Option<Id>,
+    /// Plantilla o estrategia ("clasica", "compacta"...), para las estadísticas.
+    pub variant: String,
+    /// Contenido final del CV en JSON. Su forma exacta se fija en el módulo 9 (optimizador).
+    pub content_json: String,
+    /// Identifica la versión del CV maestro de la que salió.
+    pub master_hash: String,
+    #[serde(default)]
+    pub ats_before: Option<u8>,
+    #[serde(default)]
+    pub ats_after: Option<u8>,
+    /// Palabras clave que siguieron faltando.
+    #[serde(default)]
+    pub missing: Vec<String>,
+    #[serde(default)]
+    pub pdf_path: Option<String>,
+    #[serde(default)]
+    pub docx_path: Option<String>,
+    pub created_at: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -334,6 +429,32 @@ mod tests {
                 Status::Oferta,
                 Status::Rechazada
             ]
+        );
+    }
+
+    #[test]
+    fn as_str_y_parse_coinciden_con_serde() -> Result<(), serde_json::Error> {
+        for st in Status::ALL {
+            assert_eq!(serde_json::to_string(&st)?, format!("\"{}\"", st.as_str()));
+            assert_eq!(Status::parse(st.as_str()), Some(st));
+        }
+        for p in RemotePref::ALL {
+            assert_eq!(serde_json::to_string(&p)?, format!("\"{}\"", p.as_str()));
+            assert_eq!(RemotePref::parse(p.as_str()), Some(p));
+        }
+        assert_eq!(Status::parse("Inventado"), None);
+        Ok(())
+    }
+
+    #[test]
+    fn clave_de_duplicados_ignora_acentos_mayusculas_y_signos() {
+        assert_eq!(
+            dedupe_key(Some("Agencia Ñu, S.A."), "Editor de Vídeo  (Remoto)", None),
+            dedupe_key(Some("agencia nu s a"), "editor de video remoto", Some(""))
+        );
+        assert_ne!(
+            dedupe_key(None, "Editor de video", Some("CDMX")),
+            dedupe_key(None, "Editor de video", Some("Monterrey"))
         );
     }
 

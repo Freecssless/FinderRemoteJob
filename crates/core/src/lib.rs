@@ -7,3 +7,4 @@ pub mod ats;
 pub mod guard;
 pub mod matching;
 pub mod model;
+pub mod pipeline;

@@ -7,6 +7,13 @@ license.workspace = true
 
 [dependencies]
 finder-core = { path = "../core" }
+serde_json.workspace = true
+thiserror.workspace = true
+uuid = { version = "1.18", features = ["v7"] }
+sqlx = { version = "0.9", default-features = false, features = ["sqlite", "runtime-tokio", "migrate", "macros"] }
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt"] }
