@@ -7,7 +7,7 @@
 | 1 | Workspace de Cargo + modelo de dominio (`finder-core::model`) | ✅ Terminado |
 | 2 | Palabras clave y puntaje ATS (`core::ats`) | ✅ Terminado |
 | 3 | Puntaje de compatibilidad (`core::matching`) | ✅ Terminado |
-| 4 | Guardián antiinvención (`core::guard`) | ⏳ Pendiente |
+| 4 | Guardián antiinvención (`core::guard`) | ✅ Terminado |
 | 5 | Base de datos SQLite + migraciones (`infra::db`) | ⏳ Pendiente |
 | 6 | Fuentes de vacantes: Remote OK, Remotive, WWR, Get on Board, Jobicy + importación manual (`infra::sources`) | ⏳ Pendiente |
 | 7 | Cliente LLM (Ollama / OpenAI-compatible) + importación de CV PDF/DOCX | ⏳ Pendiente |
@@ -38,3 +38,9 @@
 - `years_of_experience` fusiona periodos traslapados; la fecha actual se recibe como parámetro (`core` no lee el reloj).
 - `ats::score` ahora expone `title_overlap` y `Evidence`, que comparten el puntaje ATS y el de compatibilidad.
 - Pendiente: salario (no hay preferencia salarial en el perfil todavía), comparar el nivel del idioma (B2 vs. "avanzado") y calibrar el reescalado del coseno con embeddings reales (módulo 7).
+
+### Módulo 4: guardián antiinvención
+- `guard::Draft`: el único formato que la IA puede proponer (resumen, bullets con `source_ids` y orden de habilidades). Empresa, puesto y fechas no están en el borrador; la plantilla los toma del maestro.
+- `guard::validate` rechaza: texto vacío, falta de fuentes, ids inexistentes o de otra experiencia, cifras que no están en las fuentes (canonicaliza "1,200" = "1.200"; el resumen puede citar tus años reales) y habilidades que no están en `maestro.skills`, en el titular, en los puestos ni en las fuentes citadas.
+- Un bullet rechazado vuelve al texto original de sus fuentes válidas (`Checked::final_texts`), y cada rechazo trae su motivo en español para el diff.
+- Límites conocidos: no detecta cifras escritas con letra ni habilidades fuera del diccionario. Por eso siempre hay revisión humana en el diff.
