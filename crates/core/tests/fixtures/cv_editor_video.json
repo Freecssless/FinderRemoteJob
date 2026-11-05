@@ -1,0 +1,45 @@
+{
+  "basics": {
+    "name": "Persona de Ejemplo",
+    "email": "ejemplo@correo.com",
+    "phone": "+52 55 0000 0000",
+    "headline": "Editor de video",
+    "location": "Ciudad de México",
+    "links": ["https://portafolio.ejemplo.com"]
+  },
+  "experience": [
+    {
+      "id": "exp_01",
+      "company": "Productora X",
+      "title": "Editor de video",
+      "start": "2022-01",
+      "end": null,
+      "bullets": [
+        { "id": "b_01", "text": "Edité 120 videos para YouTube con Premiere y After Effects", "metrics": ["120"] },
+        { "id": "b_02", "text": "Reduje el tiempo de entrega 30% creando plantillas de edición reutilizables", "metrics": ["30%"] }
+      ]
+    },
+    {
+      "id": "exp_02",
+      "company": "Agencia Y",
+      "title": "Asistente de postproducción",
+      "start": "2020-06",
+      "end": "2021-12",
+      "bullets": [
+        { "id": "b_03", "text": "Corrección de color y sonido para comerciales de TV" }
+      ]
+    }
+  ],
+  "skills": [
+    { "id": "sk_01", "name": "Adobe Premiere Pro", "level": "avanzado", "years": 4 },
+    { "id": "sk_02", "name": "After Effects", "level": "intermedio", "years": 3 },
+    { "id": "sk_03", "name": "DaVinci Resolve", "level": "intermedio", "years": 2 }
+  ],
+  "education": [
+    { "id": "edu_01", "institution": "Universidad Ejemplo", "degree": "Lic. en Comunicación", "start": "2016", "end": "2020" }
+  ],
+  "languages": [
+    { "name": "Español", "level": "Nativo" },
+    { "name": "Inglés", "level": "B2" }
+  ]
+}

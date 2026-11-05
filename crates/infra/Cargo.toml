@@ -1,0 +1,12 @@
+[package]
+name = "finder-infra"
+description = "Infraestructura de FinderRemoteJob: SQLite, LLM, fuentes de vacantes, PDF/DOCX."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+finder-core = { path = "../core" }
+
+[lints]
+workspace = true

@@ -1,0 +1,15 @@
+[package]
+name = "finder-core"
+description = "Dominio puro de FinderRemoteJob: modelos, ATS, compatibilidad, guardián. Sin IO."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true
