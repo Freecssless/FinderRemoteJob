@@ -3,3 +3,5 @@
 pub use finder_core as core;
 
 pub mod db;
+
+pub mod sources;

@@ -360,6 +360,7 @@ const BLOCKER_MARKERS: &[&str] = &[
     "eu only",
     "europe only",
     "uk only",
+    "north america only",
     "ciudadania estadounidense",
 ];
 

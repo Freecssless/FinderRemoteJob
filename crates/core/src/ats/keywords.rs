@@ -284,6 +284,8 @@ fn csv_rows<'a>(file: &str, content: &'a str) -> Result<Vec<(usize, &'a str, &'a
 /// así "Requisitos deseables" cuenta como deseable.
 const PREFERRED_MARKERS: &[&str] = &[
     "deseable",
+    "deseables",
+    "desirable",
     "es un plus",
     "sera un plus",
     "plus",

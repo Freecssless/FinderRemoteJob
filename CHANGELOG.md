@@ -9,7 +9,7 @@
 | 3 | Puntaje de compatibilidad (`core::matching`) | ✅ Terminado |
 | 4 | Guardián antiinvención (`core::guard`) | ✅ Terminado |
 | 5 | Base de datos SQLite + migraciones (`infra::db`) | ✅ Terminado |
-| 6 | Fuentes de vacantes: Remote OK, Remotive, WWR, Get on Board, Jobicy + importación manual (`infra::sources`) | ⏳ Pendiente |
+| 6 | Fuentes de vacantes: Remote OK, Remotive, WWR, Get on Board, Jobicy + importación manual (`infra::sources`) | ✅ Terminado |
 | 7 | Cliente LLM (Ollama / OpenAI-compatible) + importación de CV PDF/DOCX | ⏳ Pendiente |
 | 8 | Generación de PDF (Typst) y DOCX + prueba de ida y vuelta (`infra::docgen`) | ⏳ Pendiente |
 | 9 | Flujo completo del optimizador de CV | ⏳ Pendiente |
@@ -53,3 +53,14 @@
 - Decisiones confirmadas: cada combinación de vacante y perfil tiene su fila en `applications` desde "Encontrada"; la ruta del archivo la decide la app.
 - La fecha actual se toma de SQLite (`strftime`), sin agregar un crate de fechas.
 - Pendiente: recordatorios (tabla creada, se usará en la fase 2) y estadísticas.
+
+### Módulo 6: fuentes de vacantes
+- 5 fuentes automáticas con API o RSS públicos, verificadas en vivo el 2026-11-05: Remote OK (99 vacantes), Remotive (10), We Work Remotely (100), Get on Board (15 por búsqueda) y Jobicy (100, filtro LATAM).
+- Se respetan las condiciones de cada una: se guarda el enlace original y la fuente (atribución), y hay un intervalo mínimo entre consultas (Remotive: 6 h, por su límite de 4 al día; las demás: 1 h), controlado con `sources.last_sync_at`.
+- `sources::sync`: descarga, filtra por los puestos del perfil ("Editor de video" acepta "Video Editor"), guarda sin duplicados y devuelve los ids nuevos.
+- `sources::manual`: importar por texto pegado o por URL (una sola petición; lee el JSON-LD `JobPosting` de schema.org o el texto principal; si el portal bloquea, pide pegar el texto).
+- `ASSISTED_PORTALS`: LinkedIn, Indeed, OCC, Computrabajo, Bumeran y Glassdoor solo generan el enlace de búsqueda para abrirlo en el navegador. Sin scraping ni postulación automática.
+- Desviación aprobada: WWR se lee con `quick-xml` en lugar de `feed-rs`, para conservar `<region>` ("USA Only"), que se usa como bloqueante.
+- `ego-tree` se declara como dependencia explícita (ya venía con `scraper`) para recorrer el HTML.
+- Pruebas con respuestas reales guardadas en `crates/infra/tests/fixtures/`, así que `cargo test` no usa la red. La prueba en vivo se corre a mano: `cargo test -p finder-infra -- --ignored --nocapture`.
+- Limitaciones: la API pública de Remotive devuelve solo 10 vacantes; no se pudieron leer los términos de Get on Board (su página de documentación usa JavaScript); los enlaces de búsqueda de OCC, Computrabajo y Bumeran siguen el formato actual de sus sitios y pueden cambiar.

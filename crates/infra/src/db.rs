@@ -253,6 +253,33 @@ impl Db {
     }
 
     // -----------------------------------------------------------------------
+    // Fuentes
+    // -----------------------------------------------------------------------
+
+    /// ¿Ya pasaron `min_minutes` desde la última consulta a la fuente? (o nunca se consultó)
+    pub async fn source_due(&self, source_id: &str, min_minutes: u32) -> Result<bool> {
+        let due: Option<bool> = sqlx::query_scalar(
+            "SELECT last_sync_at IS NULL
+                    OR last_sync_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-' || ?2 || ' minutes')
+             FROM sources WHERE id = ?1",
+        )
+        .bind(source_id)
+        .bind(min_minutes)
+        .fetch_optional(&self.pool)
+        .await?;
+        due.ok_or_else(|| DbError::NotFound(format!("fuente {source_id}")))
+    }
+
+    pub async fn mark_source_synced(&self, source_id: &str) -> Result<()> {
+        sqlx::query("UPDATE sources SET last_sync_at = ? WHERE id = ?")
+            .bind(self.now().await?)
+            .bind(source_id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------------
     // Vacantes
     // -----------------------------------------------------------------------
 
@@ -959,6 +986,20 @@ mod tests {
         assert_eq!(db.list_profiles().await?.len(), 1);
         drop(db);
         std::fs::remove_dir_all(&dir)?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn limite_de_frecuencia_por_fuente() -> R {
+        let db = Db::open_in_memory().await?;
+        assert!(db.source_due("remotive", 360).await?, "nunca consultada");
+        db.mark_source_synced("remotive").await?;
+        assert!(!db.source_due("remotive", 360).await?, "recién consultada");
+        assert!(db.source_due("remotive", 0).await?, "sin intervalo mínimo");
+        assert!(matches!(
+            db.source_due("inventada", 60).await,
+            Err(DbError::NotFound(_))
+        ));
         Ok(())
     }
 
