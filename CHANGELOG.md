@@ -6,7 +6,7 @@
 |---|---|---|
 | 1 | Workspace de Cargo + modelo de dominio (`finder-core::model`) | ✅ Terminado |
 | 2 | Palabras clave y puntaje ATS (`core::ats`) | ✅ Terminado |
-| 3 | Puntaje de compatibilidad (`core::matching`) | ⏳ Pendiente |
+| 3 | Puntaje de compatibilidad (`core::matching`) | ✅ Terminado |
 | 4 | Guardián antiinvención (`core::guard`) | ⏳ Pendiente |
 | 5 | Base de datos SQLite + migraciones (`infra::db`) | ⏳ Pendiente |
 | 6 | Fuentes de vacantes: Remote OK, Remotive, WWR, Get on Board, Jobicy + importación manual (`infra::sources`) | ⏳ Pendiente |
@@ -30,3 +30,10 @@
 - Ejemplo: `cargo run -p finder-core --example ats_demo -- vacante.txt cv.txt "Puesto"`.
 - Desviaciones menores: la similitud de título usa coincidencia de palabras en lugar de `strsim`, y no se agregó `rust-stemmers` (los sinónimos cubren las variantes por ahora). Ninguno de los dos crates hacía falta todavía.
 - Pendiente para módulos posteriores: el diccionario ESCO completo; la clasificación requerido/deseable con LLM (módulo 7), que hoy marca como requerido todo lo que aparece en "Responsabilidades"; la legibilidad con el PDF real (módulo 8).
+
+### Módulo 3: puntaje de compatibilidad
+- `matching::match_score`: habilidades 45 (un sinónimo cuenta completo), similitud semántica 15 (opcional; sin embeddings se reescala a 100), puesto 10, seniority 5, años 10, logística 15 (remoto 6, región 5, idiomas 4).
+- Bloqueantes ("US only", ciudadanía, idioma requerido que no está en el CV, o los que detecte el LLM) limitan el total a 20.
+- `years_of_experience` fusiona periodos traslapados; la fecha actual se recibe como parámetro (`core` no lee el reloj).
+- `ats::score` ahora expone `title_overlap` y `Evidence`, que comparten el puntaje ATS y el de compatibilidad.
+- Pendiente: salario (no hay preferencia salarial en el perfil todavía), comparar el nivel del idioma (B2 vs. "avanzado") y calibrar el reescalado del coseno con embeddings reales (módulo 7).

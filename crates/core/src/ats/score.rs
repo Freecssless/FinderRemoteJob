@@ -145,24 +145,27 @@ fn tokens(norm: &str) -> impl Iterator<Item = &str> {
         .filter(|w| w.len() >= 2 && !TITLE_STOPWORDS.contains(w))
 }
 
-/// Fracción de las palabras del puesto que aparecen en la cabecera del CV (primeras 5 líneas).
-fn title_score(cv_text: &str, job_title: &str) -> f32 {
-    let header: String = cv_text
-        .lines()
-        .filter(|l| !l.trim().is_empty())
-        .take(5)
-        .collect::<Vec<_>>()
-        .join("\n");
-    let header = normalize(&header);
-    let header_words: Vec<&str> = tokens(&header).collect();
-
+/// Fracción (0–1) de las palabras significativas de `job_title` que aparecen en `text`.
+/// Ignora modalidad, nivel y conectores (ver `TITLE_STOPWORDS`).
+pub fn title_overlap(text: &str, job_title: &str) -> f32 {
+    let text = normalize(text);
+    let have: Vec<&str> = tokens(&text).collect();
     let job = normalize(job_title);
     let wanted: Vec<&str> = tokens(&job).collect();
     if wanted.is_empty() {
-        return MAX_TITLE;
+        return 1.0;
     }
-    let found = wanted.iter().filter(|w| header_words.contains(w)).count();
-    MAX_TITLE * found as f32 / wanted.len() as f32
+    wanted.iter().filter(|w| have.contains(w)).count() as f32 / wanted.len() as f32
+}
+
+/// Fracción de las palabras del puesto que aparecen en la cabecera del CV (primeras 5 líneas).
+fn title_score(cv_text: &str, job_title: &str) -> f32 {
+    let header: Vec<&str> = cv_text
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .take(5)
+        .collect();
+    MAX_TITLE * title_overlap(&header.join("\n"), job_title)
 }
 
 // ---------------------------------------------------------------------------
@@ -386,28 +389,46 @@ pub struct Gaps {
 }
 
 pub fn classify_gaps(dict: &SkillDict, missing: &[Term], master: &CvMaster) -> Gaps {
-    let mut parts = vec![master.basics.headline.as_str()];
-    for e in &master.experience {
-        parts.push(&e.title);
-        parts.extend(e.bullets.iter().map(|b| b.text.as_str()));
-    }
-    parts.extend(master.skills.iter().map(|s| s.name.as_str()));
-    parts.extend(master.certifications.iter().map(|c| c.name.as_str()));
-    parts.extend(master.languages.iter().map(|l| l.name.as_str()));
-    let text = parts.join("\n");
-
-    let text_norm = normalize(&text);
-    let skills: Vec<usize> = dict.find(&text).into_iter().map(|h| h.skill).collect();
-
-    let (with_evidence, without_evidence) = missing.iter().cloned().partition(|t| {
-        contains_word(&text_norm, &normalize(&t.surface))
-            || dict
-                .lookup(&t.canonical)
-                .is_some_and(|i| skills.contains(&i))
-    });
+    let ev = Evidence::new(dict, master);
+    let (with_evidence, without_evidence) = missing.iter().cloned().partition(|t| ev.has(dict, t));
     Gaps {
         with_evidence,
         without_evidence,
+    }
+}
+
+/// Lo que respalda el CV maestro: su texto completo y las habilidades del diccionario que contiene.
+pub struct Evidence {
+    text_norm: String,
+    skills: Vec<usize>,
+}
+
+impl Evidence {
+    pub fn new(dict: &SkillDict, master: &CvMaster) -> Self {
+        let mut parts = vec![master.basics.headline.as_str()];
+        for e in &master.experience {
+            parts.push(&e.title);
+            parts.extend(e.bullets.iter().map(|b| b.text.as_str()));
+        }
+        parts.extend(master.skills.iter().map(|s| s.name.as_str()));
+        parts.extend(master.certifications.iter().map(|c| c.name.as_str()));
+        parts.extend(master.languages.iter().map(|l| l.name.as_str()));
+        let text = parts.join("\n");
+        Self {
+            skills: dict.find(&text).into_iter().map(|h| h.skill).collect(),
+            text_norm: normalize(&text),
+        }
+    }
+
+    /// ¿El maestro respalda el término, con la forma del anuncio o con un sinónimo?
+    pub fn has(&self, dict: &SkillDict, t: &Term) -> bool {
+        self.has_name(dict, &t.surface) || self.has_name(dict, &t.canonical)
+    }
+
+    /// Igual que [`Evidence::has`] pero con un nombre suelto ("Inglés", "Portuguese").
+    pub fn has_name(&self, dict: &SkillDict, name: &str) -> bool {
+        contains_word(&self.text_norm, &normalize(name))
+            || dict.lookup(name).is_some_and(|i| self.skills.contains(&i))
     }
 }
 
