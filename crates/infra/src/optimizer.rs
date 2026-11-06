@@ -397,6 +397,34 @@ fn writer_request(master: &CvMaster, job: &Job, prepared: &Prepared, years: u32)
     }))?)
 }
 
+/// Tokens aproximados de una llamada al redactor, para mostrar el costo antes de pedirla.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+pub struct TokenEstimate {
+    pub input: u32,
+    pub output: u32,
+}
+
+/// shortcut: ~3 caracteres por token (español y JSON) y salida fija; el razonamiento de Claude
+/// suma salida aparte. Para el valor exacto habría que usar el contador de tokens del proveedor.
+pub(crate) fn tokens_for(chars: usize, output: u32) -> TokenEstimate {
+    TokenEstimate {
+        input: (chars / 3) as u32,
+        output,
+    }
+}
+
+/// Propuesta de CV: sistema + vacante + CV sin datos personales + esquema (los términos de la
+/// vacante salen del análisis local, que aún no existe: se cuentan aparte, ~1000 caracteres).
+pub fn estimate_tokens(master: &CvMaster, job: &Job) -> Result<TokenEstimate> {
+    let chars = writer_system(job_lang(job)).len()
+        + serde_json::to_string(&for_writer(master))?.len()
+        + job.title.len()
+        + job.description.len()
+        + draft_schema().to_string().len()
+        + 1000;
+    Ok(tokens_for(chars, 1500))
+}
+
 /// Esquema del [`Draft`] (estricto: todas las propiedades requeridas, sin propiedades extra).
 pub fn draft_schema() -> Value {
     let ids = json!({"type": "array", "items": {"type": "string"}});

@@ -56,6 +56,7 @@
   const FIELDS = [
     "FRJ_WRITER", "FRJ_LOCAL_URL", "FRJ_LOCAL_MODEL", "FRJ_EMBED_MODEL",
     "FRJ_ANTHROPIC_MODEL", "FRJ_ANTHROPIC_EFFORT", "FRJ_OPENAI_URL", "FRJ_OPENAI_MODEL",
+    "FRJ_ANTHROPIC_PRICE_IN", "FRJ_ANTHROPIC_PRICE_OUT", "FRJ_OPENAI_PRICE_IN", "FRJ_OPENAI_PRICE_OUT",
   ];
   const locked = (k: string) => s?.overridden.includes(k) ?? false;
 
@@ -68,6 +69,14 @@
     <input bind:value={values[key]} {placeholder} disabled={locked(key)} />
     {#if locked(key)}<span class="muted small">Definido en el entorno o en .env: ese valor manda.</span>{/if}
   </label>
+{/snippet}
+
+{#snippet prices(p: string)}
+  <div class="prices">
+    {@render field(`${p}_PRICE_IN`, "Precio de entrada (USD por millón de tokens)", "")}
+    {@render field(`${p}_PRICE_OUT`, "Precio de salida (USD por millón de tokens)", "")}
+  </div>
+  <p class="muted small">Cópialos de la página de precios de tu proveedor. Solo sirven para mostrarte el costo estimado antes de generar.</p>
 {/snippet}
 
 {#snippet apiKey(key: string, label: string)}
@@ -135,10 +144,12 @@
             {#each EFFORTS as e}<option value={e}>{e}</option>{/each}
           </select>
         </label>
+        {@render prices("FRJ_ANTHROPIC")}
       {:else if writer === "openai"}
         {@render field("FRJ_OPENAI_URL", "URL base", "https://api.openai.com/v1")}
         {@render apiKey("FRJ_OPENAI_API_KEY", "Clave de API")}
         {@render field("FRJ_OPENAI_MODEL", "Modelo", "")}
+        {@render prices("FRJ_OPENAI")}
       {/if}
 
       {#if s.keyring_error}
@@ -164,4 +175,5 @@
   .choice { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.3rem; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .link.small { align-self: flex-start; }
+  .prices { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.6rem; }
 </style>

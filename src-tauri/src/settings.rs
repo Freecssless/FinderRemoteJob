@@ -7,7 +7,9 @@
 use std::collections::HashMap;
 
 use finder_infra::db::Db;
+use finder_infra::letter;
 use finder_infra::llm::{Backend, LlmConfig};
+use finder_infra::optimizer::{self, TokenEstimate};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
@@ -16,7 +18,7 @@ use crate::{AppState, CmdResult, err};
 const KEYRING_SERVICE: &str = "FinderRemoteJob";
 const PREFIX: &str = "llm.";
 /// Valores normales (se guardan en la base de datos).
-const PLAIN: [&str; 8] = [
+const PLAIN: [&str; 12] = [
     "FRJ_WRITER",
     "FRJ_LOCAL_URL",
     "FRJ_LOCAL_MODEL",
@@ -25,6 +27,11 @@ const PLAIN: [&str; 8] = [
     "FRJ_ANTHROPIC_EFFORT",
     "FRJ_OPENAI_URL",
     "FRJ_OPENAI_MODEL",
+    // Precios en USD por millón de tokens (los escribe el usuario; solo sirven para el estimado).
+    "FRJ_ANTHROPIC_PRICE_IN",
+    "FRJ_ANTHROPIC_PRICE_OUT",
+    "FRJ_OPENAI_PRICE_IN",
+    "FRJ_OPENAI_PRICE_OUT",
 ];
 /// Claves de API (se guardan en el llavero).
 const SECRETS: [&str; 2] = ["ANTHROPIC_API_KEY", "FRJ_OPENAI_API_KEY"];
@@ -147,6 +154,11 @@ pub async fn save_llm_settings(
             return Err(format!("Ajuste desconocido: {k}"));
         }
         let v = v.trim();
+        if k.contains("_PRICE_") && !v.is_empty() && price(v).is_none() {
+            return Err(format!(
+                "Precio inválido: «{v}». Escribe un número en USD por millón de tokens (p. ej. 3 o 0.25)."
+            ));
+        }
         state
             .db
             .set_setting(&format!("{PREFIX}{k}"), (!v.is_empty()).then_some(v))
@@ -185,8 +197,88 @@ async fn reload(state: &AppState) -> CmdResult<SettingsView> {
     view(state).await
 }
 
+fn price(v: &str) -> Option<f64> {
+    v.replace(',', ".")
+        .parse::<f64>()
+        .ok()
+        .filter(|p| p.is_finite() && *p >= 0.0)
+}
+
+#[derive(Debug, Serialize)]
+pub struct Cost {
+    #[serde(flatten)]
+    tokens: TokenEstimate,
+    /// Sin precios en Ajustes, solo se muestran los tokens.
+    usd: Option<f64>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CostView {
+    cv: Cost,
+    letter: Cost,
+}
+
+/// Costo aproximado de la propuesta de CV y de la carta con el redactor externo en uso.
+/// `None` si el redactor es local (no cuesta).
+#[tauri::command]
+pub async fn estimate_cost(
+    state: State<'_, AppState>,
+    job_id: String,
+    profile_id: String,
+) -> CmdResult<Option<CostView>> {
+    let prefix = match state.llm()?.writer.backend {
+        Backend::Ollama { .. } => return Ok(None),
+        Backend::Anthropic { .. } => "FRJ_ANTHROPIC",
+        Backend::OpenAiCompat { .. } => "FRJ_OPENAI",
+    };
+    let job = state
+        .db
+        .get_job(&job_id)
+        .await
+        .map_err(err)?
+        .ok_or("La vacante ya no existe.")?;
+    let Some((_, master)) = crate::jobs::profile_and_cv(&state, Some(&profile_id)).await? else {
+        return Ok(None);
+    };
+    let stored: HashMap<String, String> = state
+        .db
+        .settings_with_prefix(PREFIX)
+        .await
+        .map_err(err)?
+        .into_iter()
+        .collect();
+    let prices = ["IN", "OUT"].map(|side| {
+        let key = format!("{prefix}_PRICE_{side}");
+        external(&state.file_vars, &key)
+            .or_else(|| stored.get(&key).cloned())
+            .as_deref()
+            .and_then(price)
+    });
+    let cost = |tokens: TokenEstimate| Cost {
+        usd: match prices {
+            [Some(i), Some(o)] => {
+                Some((f64::from(tokens.input) * i + f64::from(tokens.output) * o) / 1e6)
+            }
+            _ => None,
+        },
+        tokens,
+    };
+    Ok(Some(CostView {
+        cv: cost(optimizer::estimate_tokens(&master, &job).map_err(err)?),
+        letter: cost(letter::estimate_tokens(&master, &job).map_err(err)?),
+    }))
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn precios_con_coma_o_punto() {
+        assert_eq!(super::price("0,25"), Some(0.25));
+        assert_eq!(super::price("3"), Some(3.0));
+        assert_eq!(super::price("-1"), None);
+        assert_eq!(super::price("tres"), None);
+    }
+
     /// Toca el llavero real del sistema: `cargo test -p finder-app llavero -- --ignored`.
     #[test]
     #[ignore]

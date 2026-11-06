@@ -234,6 +234,7 @@ pub fn run() {
             settings::get_llm_settings,
             settings::save_llm_settings,
             settings::delete_api_key,
+            settings::estimate_cost,
         ])
         .run(tauri::generate_context!())
         .expect("no se pudo iniciar la app de Tauri");

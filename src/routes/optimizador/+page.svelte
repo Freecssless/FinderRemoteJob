@@ -2,8 +2,8 @@
   import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
   import { page } from "$app/state";
   import {
-    api, jobsApi, letterApi, optimizerApi, rememberedProfile, TEMPLATES,
-    type Choices, type LetterView, type Template, type JobDetail, type OptimizerView, type Profile, type SavedCv,
+    api, costLabel, jobsApi, letterApi, optimizerApi, rememberedProfile, settingsApi, TEMPLATES,
+    type Choices, type CostView, type LetterView, type Template, type JobDetail, type OptimizerView, type Profile, type SavedCv,
   } from "$lib/api";
 
   const jobId = $derived(page.url.searchParams.get("job"));
@@ -19,6 +19,7 @@
   let letterText = $state("");
   let letterMsg = $state("");
   let error = $state("");
+  let cost = $state<CostView | null>(null);
 
   const expLabel = $derived(new Map(view?.experiences ?? []));
   const changed = $derived(
@@ -37,7 +38,11 @@
       const saved = rememberedProfile();
       profile = profiles.find((p) => p.id === saved) ?? profiles[0] ?? null;
       detail = await jobsApi.get(jobId, profile?.id ?? null);
-      if (profile) show(await optimizerApi.get(jobId, profile.id));
+      if (profile) {
+        show(await optimizerApi.get(jobId, profile.id));
+        // El estimado es informativo: si falla, no bloquea la pantalla.
+        cost = await settingsApi.estimate(jobId, profile.id).catch(() => null);
+      }
     } catch (e) {
       error = String(e);
     } finally {
@@ -148,6 +153,7 @@
         <button class="primary" onclick={run} disabled={busy !== ""}>
           {busy === "run" ? "Analizando y redactando…" : "Generar propuesta"}
         </button>
+        {#if cost}<p class="muted small">Redactor externo: {costLabel(cost.cv)}.</p>{/if}
         {#if busy === "run"}
           <p class="muted small">Con modelos locales en CPU puede tardar varios minutos. No cierres la app.</p>
         {/if}
@@ -295,6 +301,9 @@
             {busy === "letter" ? "Redactando…" : letter ? "Generar otra" : "Generar carta"}
           </button>
           {#if busy === "letter"}<span class="muted small">Con modelos locales puede tardar unos minutos.</span>{/if}
+          {#if cost && busy !== "letter"}
+            <span class="muted small">{costLabel(cost.letter)}; hasta el doble si el guardián pide repetir.</span>
+          {/if}
         </div>
         {#each letter?.paragraphs.filter((p) => p.issues.length) ?? [] as p}
           <div class="rejected small">

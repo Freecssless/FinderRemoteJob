@@ -426,4 +426,24 @@ export const settingsApi = {
   save: (values: Record<string, string>, keys: Record<string, string>) =>
     invoke<LlmSettings>("save_llm_settings", { input: { values, keys } }),
   deleteKey: (key: string) => invoke<LlmSettings>("delete_api_key", { key }),
+  /** `null` si el redactor es local (no cuesta). */
+  estimate: (jobId: string, profileId: string) => invoke<CostView | null>("estimate_cost", { jobId, profileId }),
 };
+
+/** Tokens aproximados y costo en USD (sin precios en Ajustes, `usd` es null). */
+export interface Cost {
+  input: number;
+  output: number;
+  usd: number | null;
+}
+
+export interface CostView {
+  cv: Cost;
+  letter: Cost;
+}
+
+export function costLabel(c: Cost): string {
+  const tokens = `~${Math.round(c.input / 100) / 10} k tokens de entrada + ~${Math.round(c.output / 100) / 10} k de salida`;
+  if (c.usd === null) return `${tokens} (pon los precios en Ajustes para ver el costo)`;
+  return `≈ US$ ${c.usd < 0.01 ? c.usd.toFixed(4) : c.usd.toFixed(2)} (${tokens})`;
+}

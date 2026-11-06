@@ -173,3 +173,8 @@
 - Prioridad: variable de entorno > `.env` > Ajustes > valor por defecto. Los campos fijados por el entorno o el `.env` aparecen bloqueados con el aviso.
 - `Db::settings_with_prefix` y `Db::set_setting` (tabla `settings`, prefijo `llm.`).
 - La pantalla recuerda qué se envía a una API externa: vacante y CV maestro sin nombre, correo, teléfono, ubicación ni enlaces.
+
+### Costo estimado del redactor externo (Fase 2)
+- Con Claude o un proveedor compatible con OpenAI, el Optimizador muestra antes de generar los tokens aproximados y el costo en USD de la propuesta de CV y de la carta (`optimizer::estimate_tokens`, `letter::estimate_tokens`, comando `estimate_cost`).
+- Los precios (USD por millón de tokens de entrada y salida) los escribe el usuario en Ajustes, por proveedor; la app no trae precios fijos que se queden viejos. Sin precios, solo se muestran los tokens.
+- Estimado simple: ~3 caracteres por token y salida fija (1.5 k el CV, 0.6 k la carta); no cuenta el razonamiento de Claude ni la segunda vuelta de la carta.

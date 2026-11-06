@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::llm::LlmClient;
-use crate::optimizer::{Result, for_writer, job_lang};
+use crate::optimizer::{Result, TokenEstimate, for_writer, job_lang, tokens_for};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LetterDraft {
@@ -145,6 +145,14 @@ fn request(master: &CvMaster, job: &Job, years: u32, forbidden: &[String]) -> Re
     }))?)
 }
 
+/// Tokens aproximados de una vuelta; si el guardián rechaza algún párrafo hay una segunda.
+pub fn estimate_tokens(master: &CvMaster, job: &Job) -> Result<TokenEstimate> {
+    let chars = system(job_lang(job)).len()
+        + request(master, job, 0, &[])?.len()
+        + schema().to_string().len();
+    Ok(tokens_for(chars, 600))
+}
+
 pub fn schema() -> Value {
     json!({
         "type": "object", "additionalProperties": false, "required": ["paragraphs"],
@@ -252,6 +260,19 @@ mod tests {
         for dato in [&m.basics.name, &m.basics.email, &m.basics.phone] {
             assert!(dato.is_empty() || !req.contains(dato.as_str()), "{dato}");
         }
+        Ok(())
+    }
+
+    #[test]
+    fn el_estimado_crece_con_la_vacante() -> R {
+        let m = master()?;
+        let corta = estimate_tokens(&m, &job(None))?;
+        let mut j = job(None);
+        j.description = "x".repeat(3000);
+        let larga = estimate_tokens(&m, &j)?;
+        assert!(corta.input > 500, "{corta:?}");
+        assert!(larga.input >= corta.input + 950, "{corta:?} {larga:?}");
+        assert!(crate::optimizer::estimate_tokens(&m, &j)?.input > larga.input / 2);
         Ok(())
     }
 
