@@ -6,6 +6,7 @@
   --border: #dcdde1;
   --hover: #eef0f3;
   --accent: #2557d6;
+  --chart-bar: #2557d6;
   --accent-soft: #e6edfc;
   --danger: #c0352b;
   --warn-bg: #fff6e0;
@@ -22,6 +23,8 @@
     --border: #33363c;
     --hover: #2a2d33;
     --accent: #7ea2ff;
+    /* Barras de gráficas: dentro de la banda de luminosidad validada para fondo oscuro. */
+    --chart-bar: #6b8ff0;
     --accent-soft: #24304d;
     --danger: #ff7b70;
     --warn-bg: #3a3120;

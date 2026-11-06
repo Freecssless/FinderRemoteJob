@@ -352,3 +352,33 @@ export const boardApi = {
   reminderDays: () => invoke<ReminderDays>("get_reminder_days"),
   setReminderDays: (days: ReminderDays) => invoke<void>("set_reminder_days", { days }),
 };
+
+// ---------------------------------------------------------------------------
+// Estadísticas
+// ---------------------------------------------------------------------------
+
+export interface GroupStat {
+  group: string;
+  applied: number;
+  responded: number;
+  interviews: number;
+  response_rate: number;
+  few_data: boolean;
+}
+export interface Stats {
+  eligible: number;
+  too_recent: number;
+  response_rate: number | null;
+  median_days_to_response: number | null;
+  funnel: { applied: number; interview: number; offer: number };
+  avg_match_responded: number | null;
+  avg_match_not_responded: number | null;
+  by_source: GroupStat[];
+  by_profile: GroupStat[];
+  by_variant: GroupStat[];
+  by_ats: GroupStat[];
+}
+
+export const statsApi = {
+  get: (profileId: string | null) => invoke<Stats>("get_stats", { profileId }),
+};

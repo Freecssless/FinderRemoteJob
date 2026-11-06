@@ -116,3 +116,18 @@ pub async fn add_to_board(
         .await
         .map_err(err)
 }
+
+/// Estadísticas (plan §5.5) de un perfil, o de todos con `None`.
+#[tauri::command]
+pub async fn get_stats(
+    state: State<'_, AppState>,
+    profile_id: Option<String>,
+) -> CmdResult<finder_infra::core::stats::Stats> {
+    let rows = state
+        .db
+        .stat_inputs(profile_id.as_deref())
+        .await
+        .map_err(err)?;
+    let today = state.db.now().await.map_err(err)?;
+    Ok(finder_infra::core::stats::compute(&rows, &today))
+}

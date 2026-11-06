@@ -208,6 +208,7 @@ pub fn run() {
             board::save_application_notes,
             board::application_detail,
             board::add_to_board,
+            board::get_stats,
             reminders::list_due_reminders,
             reminders::complete_reminder,
             reminders::get_reminder_days,

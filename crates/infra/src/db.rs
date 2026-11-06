@@ -11,6 +11,7 @@ use finder_core::model::{
     StatusChange,
 };
 use finder_core::pipeline::{self, ReminderDays, ReminderKind};
+use finder_core::stats::StatInput;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteRow};
 use sqlx::{Row, SqlitePool};
 
@@ -542,6 +543,41 @@ impl Db {
         Ok(())
     }
 
+    /// Postulaciones con fecha de postulación, para `finder_core::stats::compute` (todos los perfiles
+    /// si `profile_id` es `None`). "Llegó a entrevista/oferta" sale del historial, no del estado actual.
+    pub async fn stat_inputs(&self, profile_id: Option<&str>) -> Result<Vec<StatInput>> {
+        let rows = sqlx::query(
+            "SELECT a.applied_at, a.first_response_at, a.match_score, a.profile_id, a.status,
+                    j.source_id, v.variant, v.ats_after,
+                    EXISTS (SELECT 1 FROM status_history h WHERE h.application_id = a.id
+                            AND h.to_status IN ('Entrevista', 'Oferta')) AS reached_interview,
+                    EXISTS (SELECT 1 FROM status_history h WHERE h.application_id = a.id
+                            AND h.to_status = 'Oferta') AS reached_offer
+             FROM applications a
+             JOIN jobs j ON j.id = a.job_id
+             LEFT JOIN cv_versions v ON v.id = a.cv_version_id
+             WHERE a.applied_at IS NOT NULL AND (?1 IS NULL OR a.profile_id = ?1)",
+        )
+        .bind(profile_id)
+        .fetch_all(&self.pool)
+        .await?;
+        rows.iter()
+            .map(|r| {
+                Ok(StatInput {
+                    applied_at: r.try_get("applied_at")?,
+                    first_response_at: r.try_get("first_response_at")?,
+                    match_score: r.try_get("match_score")?,
+                    source_id: r.try_get("source_id")?,
+                    profile_id: r.try_get("profile_id")?,
+                    variant: r.try_get("variant")?,
+                    ats_after: r.try_get("ats_after")?,
+                    reached_interview: r.try_get("reached_interview")?,
+                    reached_offer: r.try_get("reached_offer")?,
+                })
+            })
+            .collect()
+    }
+
     // -----------------------------------------------------------------------
     // Recordatorios (plan §5.3)
     // -----------------------------------------------------------------------
@@ -1024,6 +1060,30 @@ mod tests {
             2,
             "vacío = recientes"
         );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn datos_para_estadisticas() -> R {
+        let (db, p, job_id) = setup().await?;
+        let app_id = db.upsert_found(&job_id, &p.id, 70).await?;
+        assert!(
+            db.stat_inputs(None).await?.is_empty(),
+            "sin postular no cuenta"
+        );
+        db.set_status(&app_id, Status::Postulada).await?;
+        db.set_status(&app_id, Status::Entrevista).await?;
+        db.set_status(&app_id, Status::Rechazada).await?;
+        let rows = db.stat_inputs(Some(&p.id)).await?;
+        assert_eq!(rows.len(), 1);
+        let r = &rows[0];
+        assert!(r.reached_interview && !r.reached_offer, "{r:?}");
+        assert!(r.first_response_at.is_some());
+        assert_eq!(
+            (r.match_score, r.source_id.as_str(), r.variant.as_deref()),
+            (Some(70), "manual", None)
+        );
+        assert!(db.stat_inputs(Some("otro")).await?.is_empty());
         Ok(())
     }
 

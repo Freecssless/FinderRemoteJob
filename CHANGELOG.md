@@ -143,3 +143,8 @@
 - La app revisa los vencidos al arrancar y cada hora, y los avisa con `tauri-plugin-notification` (uno por sesión; varios se agrupan en una notificación).
 - Tablero: lista de vencidos con «Abrir», «Hecho» y «Marcar sin respuesta»; recordatorios pendientes en la ficha; plazos editables.
 - Las postulaciones que ya estaban en «Postulada» antes de este cambio no tienen recordatorios (se crean al cambiar de estado).
+
+### Estadísticas (plan §5.5)
+- `core::stats::compute`: solo cuentan las postulaciones con ≥ 14 días; tasa de respuesta global y por portal, perfil, plantilla de CV y rango de ATS (<60, 60–79, ≥80); días medianos hasta la primera respuesta; embudo Postulada → Entrevista → Oferta (según el historial, no el estado actual); compatibilidad promedio de las que respondieron y de las que no. Cada grupo con su n; con menos de 10, «pocos datos» y al final.
+- `Db::stat_inputs` y comando `get_stats`.
+- Pantalla Estadísticas: tarjetas de cifras, embudo y tablas con barra de tasa por grupo; filtro por perfil o todos. Color de barra validado con el script de dataviz (claro y oscuro: token `--chart-bar`).
