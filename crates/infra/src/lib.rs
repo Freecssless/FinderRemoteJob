@@ -9,4 +9,5 @@ pub mod docgen;
 pub mod letter;
 pub mod llm;
 pub mod optimizer;
+pub mod semantic;
 pub mod sources;

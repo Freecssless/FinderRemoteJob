@@ -116,7 +116,8 @@ pub(crate) async fn ensure_application(
         "Este perfil no tiene CV maestro: créalo en Perfiles para calcular la compatibilidad.",
     )?;
     let today = jobs::this_month(state).await?;
-    let score = jobs::score(state, &ctx, &job, &today);
+    let vectors = jobs::vectors(state, Some(profile_id)).await?;
+    let score = jobs::score(state, &ctx, &job, &today, &vectors);
     state
         .db
         .upsert_found(&job.id, profile_id, score.total)

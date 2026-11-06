@@ -211,3 +211,10 @@
 - Ajustes → «Alertas por correo»: servidor, puerto, usuario y contraseña de aplicación (al llavero). También en `.env`.
 - Dependencias nuevas: `async-imap`, `mail-parser`, `tokio-rustls` y `rustls-platform-verifier` (certificados del sistema).
 - La lectura de cada alerta es heurística y se probó solo con un correo armado a mano: falta afinarla con alertas reales.
+
+### Similitud semántica con embeddings (Fase 2)
+- La compatibilidad ya usa el componente de similitud semántica (15 de 100 puntos): coseno entre el embedding del CV maestro (titular, habilidades, puestos y logros, sin datos personales) y el de la vacante (puesto + descripción, recortados a 6000 caracteres). Sin embeddings, el puntaje se calcula como antes (los otros 85 puntos escalados a 100).
+- Los vectores se calculan con la IA local (`FRJ_EMBED_MODEL`, por defecto `bge-m3`) y se guardan en la tabla `embeddings` (migración `0006_embeddings.sql`) con el hash del texto: si cambias el CV, se recalcula el suyo.
+- Se calculan solos para las vacantes nuevas al sincronizar y al analizar una vacante (si la IA local no responde, no se interrumpe nada). Botón «Calcular similitud semántica» en Vacantes para las 500 más recientes que no la tengan.
+- La ficha de compatibilidad muestra «Similitud con tu CV» cuando existe.
+- `finder_infra::semantic` (`ensure`, `Vectors`), `Db::embeddings` y `Db::put_embedding`.

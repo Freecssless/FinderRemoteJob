@@ -237,6 +237,7 @@ pub fn run() {
             settings::save_llm_settings,
             settings::delete_api_key,
             settings::estimate_cost,
+            jobs::embed_jobs,
             jobs::get_company_boards,
             jobs::save_company_boards,
             queue::application_queue,

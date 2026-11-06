@@ -16,7 +16,8 @@
   let detail = $state<JobDetail | null>(null);
   let selectedId = $state<string | null>(null);
 
-  let busy = $state<"" | "list" | "sync" | "import" | "analyze">("");
+  let busy = $state<"" | "list" | "sync" | "import" | "analyze" | "embed">("");
+  let embedMsg = $state("");
   let error = $state("");
   let syncReport = $state<SyncSummary[]>([]);
 
@@ -105,6 +106,23 @@
     }
   }
 
+  async function embedAll() {
+    if (!profileId) return;
+    busy = "embed";
+    error = "";
+    embedMsg = "";
+    try {
+      const n = await jobsApi.embed(profileId);
+      embedMsg = n ? `Similitud calculada para ${n} textos.` : "Todas las vacantes recientes ya la tenían.";
+      busy = "";
+      await reload();
+    } catch (e) {
+      error = String(e);
+    } finally {
+      busy = "";
+    }
+  }
+
   async function importJob() {
     busy = "import";
     try {
@@ -168,7 +186,11 @@
       {busy === "sync" ? "Buscando en las fuentes…" : "Buscar vacantes nuevas"}
     </button>
     <button onclick={() => (showImport = !showImport)} aria-expanded={showImport}>Importar vacante</button>
+    <button onclick={embedAll} disabled={!profileId || busy !== ""} title="Compara el significado de tu CV con cada vacante (IA local, modelo de embeddings)">
+      {busy === "embed" ? "Calculando similitud…" : "Calcular similitud semántica"}
+    </button>
   </header>
+  {#if embedMsg}<p class="ok small" role="status">{embedMsg}</p>{/if}
 
   {#if !profiles.length}
     <p class="notice">Primero crea un perfil en <a href="/perfiles">Perfiles</a>: sus puestos buscados filtran las vacantes.</p>
@@ -300,6 +322,9 @@
             <h3>Compatibilidad: <span class="score {scoreClass(s.total)}">{s.total}</span> / 100</h3>
             <dl class="breakdown small">
               <dt>Habilidades</dt><dd>{s.breakdown.skills.toFixed(0)} / 45</dd>
+              {#if s.breakdown.semantic !== null}
+                <dt>Similitud con tu CV</dt><dd>{s.breakdown.semantic.toFixed(0)} / 15</dd>
+              {/if}
               <dt>Puesto</dt><dd>{s.breakdown.title.toFixed(0)} / 10</dd>
               <dt>Seniority</dt><dd>{s.breakdown.seniority.toFixed(0)} / 5</dd>
               <dt>Años ({s.years_experience.toFixed(1)})</dt><dd>{s.breakdown.years.toFixed(0)} / 10</dd>

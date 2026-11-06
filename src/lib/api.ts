@@ -199,6 +199,8 @@ export const jobsApi = {
     invoke<ImportedJob>("import_job_text", { title, company, url, text }),
   portals: (keywords: string) => invoke<{ name: string; url: string }[]>("assisted_portals", { keywords }),
   /** Empresas seguidas en Greenhouse, Lever o Ashby: una por línea (`greenhouse:gitlab`). */
+  /** Similitud semántica (IA local) de las vacantes recientes que no la tienen; devuelve cuántas calculó. */
+  embed: (profileId: string) => invoke<number>("embed_jobs", { profileId }),
   boards: () => invoke<string>("get_company_boards"),
   saveBoards: (text: string) => invoke<string>("save_company_boards", { text }),
 };

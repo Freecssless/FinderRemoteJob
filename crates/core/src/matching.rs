@@ -205,6 +205,39 @@ pub fn match_score(dict: &SkillDict, input: &MatchInput) -> MatchReport {
     }
 }
 
+/// Lo que representa al CV maestro en los embeddings: titular, habilidades, puestos y logros
+/// (sin nombre ni datos de contacto).
+pub fn cv_semantic_text(m: &CvMaster) -> String {
+    let mut parts = vec![m.basics.headline.clone()];
+    parts.push(
+        m.skills
+            .iter()
+            .map(|s| s.name.as_str())
+            .collect::<Vec<_>>()
+            .join(", "),
+    );
+    for e in &m.experience {
+        parts.push(e.title.clone());
+        parts.extend(e.bullets.iter().map(|b| b.text.clone()));
+    }
+    truncate_chars(&parts.join("\n"), SEMANTIC_MAX_CHARS)
+}
+
+/// Puesto y descripción de la vacante, recortados para que quepan en el modelo de embeddings.
+pub fn job_semantic_text(job: &Job) -> String {
+    truncate_chars(
+        &format!("{}\n{}", job.title, job.description),
+        SEMANTIC_MAX_CHARS,
+    )
+}
+
+/// ~1500 tokens: lo esencial de una vacante, y rápido en CPU.
+const SEMANTIC_MAX_CHARS: usize = 6000;
+
+fn truncate_chars(s: &str, max: usize) -> String {
+    s.chars().take(max).collect()
+}
+
 /// Similitud coseno entre dos embeddings (−1 a 1). `None` si difieren en tamaño o alguno es cero.
 pub fn cosine(a: &[f32], b: &[f32]) -> Option<f32> {
     if a.len() != b.len() || a.is_empty() {
@@ -631,6 +664,11 @@ mod tests {
         assert_eq!(cosine(&[1.0, 0.0], &[0.0, 1.0]), Some(0.0));
         assert_eq!(cosine(&[1.0], &[1.0, 2.0]), None);
         assert_eq!(cosine(&[0.0, 0.0], &[1.0, 1.0]), None);
+        let long = "á".repeat(10_000);
+        assert_eq!(
+            truncate_chars(&long, SEMANTIC_MAX_CHARS).chars().count(),
+            SEMANTIC_MAX_CHARS
+        );
     }
 
     #[test]

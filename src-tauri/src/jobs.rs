@@ -6,6 +6,7 @@ use finder_infra::core::matching::{MatchInput, MatchReport, match_score};
 use finder_infra::core::model::{CvMaster, Job, JobRequirements, Profile};
 use finder_infra::llm::LlmClient;
 use finder_infra::llm::tasks::extract_requirements;
+use finder_infra::semantic::{self, Vectors};
 use finder_infra::sources::boards::Board;
 use finder_infra::sources::{self, ASSISTED_PORTALS, Query, Source, manual};
 use serde::Serialize;
@@ -93,6 +94,7 @@ pub(crate) fn score(
     ctx: &(Profile, CvMaster),
     job: &Job,
     today: &str,
+    vectors: &Vectors,
 ) -> MatchReport {
     let req = requirements(&state.dict, job);
     match_score(
@@ -102,7 +104,7 @@ pub(crate) fn score(
             master: &ctx.1,
             job,
             requirements: &req,
-            semantic: None,
+            semantic: vectors.similarity(&job.id),
             today,
         },
     )
@@ -128,10 +130,13 @@ pub async fn list_jobs(
         .map_err(err)?;
     let ctx = profile_and_cv(&state, profile_id.as_deref()).await?;
     let today = this_month(&state).await?;
+    let vectors = vectors(&state, profile_id.as_deref()).await?;
     let mut rows: Vec<JobRow> = jobs
         .into_iter()
         .map(|job| JobRow {
-            score: ctx.as_ref().map(|c| score(&state, c, &job, &today)),
+            score: ctx
+                .as_ref()
+                .map(|c| score(&state, c, &job, &today, &vectors)),
             analyzed: job.requirements.is_some(),
             id: job.id,
             title: job.title,
@@ -162,10 +167,52 @@ pub async fn get_job(
         .ok_or("La vacante ya no existe.")?;
     let ctx = profile_and_cv(&state, profile_id.as_deref()).await?;
     let today = this_month(&state).await?;
+    let vectors = vectors(&state, profile_id.as_deref()).await?;
     Ok(JobDetail {
-        score: ctx.as_ref().map(|c| score(&state, c, &job, &today)),
+        score: ctx
+            .as_ref()
+            .map(|c| score(&state, c, &job, &today, &vectors)),
         job,
     })
+}
+
+/// Embeddings guardados del perfil (vacío sin perfil o sin configuración de IA válida).
+pub(crate) async fn vectors(state: &AppState, profile_id: Option<&str>) -> CmdResult<Vectors> {
+    let (Some(id), Ok(config)) = (profile_id, state.llm()) else {
+        return Ok(Vectors::default());
+    };
+    Vectors::load(&state.db, &config.embed_model, id)
+        .await
+        .map_err(err)
+}
+
+/// Calcula con la IA local los embeddings que falten (CV del perfil y estas vacantes).
+async fn embed(state: &AppState, profile_id: &str, jobs: &[Job]) -> CmdResult<usize> {
+    let Some((_, master)) = profile_and_cv(state, Some(profile_id)).await? else {
+        return Ok(0);
+    };
+    let config = state.llm()?;
+    let client = LlmClient::new(config.local.clone()).map_err(err)?;
+    semantic::ensure(
+        &state.db,
+        &client,
+        &config.embed_model,
+        semantic::items(profile_id, &master, jobs),
+    )
+    .await
+    .map_err(|e| {
+        format!(
+            "No se pudo calcular la similitud semántica ({e}). ¿Está Ollama abierto y descargado el modelo «{}»? (ollama pull {})",
+            config.embed_model, config.embed_model
+        )
+    })
+}
+
+/// Similitud semántica de las vacantes recientes que aún no la tienen. Devuelve cuántas calculó.
+#[tauri::command]
+pub async fn embed_jobs(state: State<'_, AppState>, profile_id: String) -> CmdResult<usize> {
+    let jobs = state.db.list_jobs(LIST_LIMIT).await.map_err(err)?;
+    embed(&state, &profile_id, &jobs).await
 }
 
 /// Analiza los requisitos con la IA local y los guarda (se hace una vez por vacante).
@@ -191,6 +238,10 @@ pub async fn analyze_job(
         .set_job_requirements(&job_id, &req)
         .await
         .map_err(err)?;
+    // Si falla (modelo de embeddings sin descargar), el análisis igual sirve.
+    if let Some(p) = &profile_id {
+        embed(&state, p, std::slice::from_ref(&job)).await.ok();
+    }
     get_job(state, job_id, profile_id).await
 }
 
@@ -216,17 +267,21 @@ pub async fn sync_jobs(
         email: keys.email,
     };
     let mut out = Vec::new();
+    let mut new_ids = Vec::new();
     for source in Source::ALL.into_iter().filter(|s| s.applies(&q)) {
         out.push(
             match sources::sync(&state.db, &state.http, source, &q).await {
-                Ok(r) => SyncSummary {
-                    source: r.source,
-                    skipped_too_soon: r.skipped_too_soon,
-                    fetched: r.fetched,
-                    kept: r.kept,
-                    new: r.new_jobs.len(),
-                    error: None,
-                },
+                Ok(r) => {
+                    new_ids.extend(r.new_jobs.iter().cloned());
+                    SyncSummary {
+                        source: r.source,
+                        skipped_too_soon: r.skipped_too_soon,
+                        fetched: r.fetched,
+                        kept: r.kept,
+                        new: r.new_jobs.len(),
+                        error: None,
+                    }
+                }
                 Err(e) => SyncSummary {
                     source: source.id(),
                     skipped_too_soon: false,
@@ -237,6 +292,16 @@ pub async fn sync_jobs(
                 },
             },
         );
+    }
+    // Similitud semántica de las nuevas; si la IA local no está, se calcula después con el botón.
+    let mut new_jobs = Vec::new();
+    for id in &new_ids {
+        if let Some(j) = state.db.get_job(id).await.map_err(err)? {
+            new_jobs.push(j);
+        }
+    }
+    if !new_jobs.is_empty() {
+        embed(&state, &profile_id, &new_jobs).await.ok();
     }
     Ok(out)
 }

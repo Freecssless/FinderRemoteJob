@@ -208,7 +208,14 @@ async fn save(
         .await
         .map_err(err)?
         .ok_or("El perfil ya no existe.")?;
-    let score = jobs::score(state, &(profile, s.master.clone()), &s.job, &s.today);
+    let vectors = jobs::vectors(state, Some(&s.profile_id)).await?;
+    let score = jobs::score(
+        state,
+        &(profile, s.master.clone()),
+        &s.job,
+        &s.today,
+        &vectors,
+    );
     let application_id = state
         .db
         .upsert_found(&s.job.id, &s.profile_id, score.total)

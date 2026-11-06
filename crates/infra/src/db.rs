@@ -3,6 +3,7 @@
 //! Las consultas usan `sqlx::query` en tiempo de ejecución (no las macros `query!`), para no
 //! exigir una base de datos ni `DATABASE_URL` al compilar.
 
+use std::collections::HashMap;
 use std::path::Path;
 use std::str::FromStr;
 
@@ -628,6 +629,55 @@ impl Db {
             .collect())
     }
 
+    /// Embeddings guardados de un modelo cuyos dueños empiezan con `prefix` → (hash del texto, vector).
+    pub async fn embeddings(
+        &self,
+        model: &str,
+        prefix: &str,
+    ) -> Result<HashMap<String, (String, Vec<f32>)>> {
+        let rows: Vec<(String, String, Vec<u8>)> = sqlx::query_as(
+            "SELECT owner, text_hash, vector FROM embeddings
+             WHERE model = ?1 AND substr(owner, 1, length(?2)) = ?2",
+        )
+        .bind(model)
+        .bind(prefix)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|(owner, hash, bytes)| {
+                let v = bytes
+                    .as_chunks::<4>()
+                    .0
+                    .iter()
+                    .map(|c| f32::from_le_bytes(*c))
+                    .collect();
+                (owner, (hash, v))
+            })
+            .collect())
+    }
+
+    pub async fn put_embedding(
+        &self,
+        owner: &str,
+        model: &str,
+        text_hash: &str,
+        vector: &[f32],
+    ) -> Result<()> {
+        let bytes: Vec<u8> = vector.iter().flat_map(|x| x.to_le_bytes()).collect();
+        sqlx::query(
+            "INSERT INTO embeddings (owner, model, text_hash, vector) VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(owner, model) DO UPDATE SET text_hash = ?3, vector = ?4",
+        )
+        .bind(owner)
+        .bind(model)
+        .bind(text_hash)
+        .bind(bytes)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
     pub async fn setting(&self, key: &str) -> Result<Option<String>> {
         Ok(
             sqlx::query_scalar("SELECT value FROM settings WHERE key = ?")
@@ -1162,6 +1212,15 @@ mod tests {
         db.set_setting("llm.FRJ_WRITER", None).await?;
         assert_eq!(db.settings_with_prefix("llm.").await?.len(), 1);
         assert!(db.setting("llm.no_existe").await?.is_none());
+        db.put_embedding("job:1", "bge-m3", "h1", &[0.5, -1.0])
+            .await?;
+        db.put_embedding("job:1", "bge-m3", "h2", &[0.25, 2.0])
+            .await?;
+        db.put_embedding("cv:p", "bge-m3", "h3", &[1.0]).await?;
+        let jobs = db.embeddings("bge-m3", "job:").await?;
+        assert_eq!(jobs.len(), 1);
+        assert_eq!(jobs["job:1"], ("h2".to_string(), vec![0.25, 2.0]));
+        assert!(db.embeddings("otro-modelo", "job:").await?.is_empty());
         Ok(())
     }
 

@@ -60,13 +60,14 @@ pub async fn application_queue(
         .map(|r| (r.application.job_id.clone(), r.application))
         .collect();
     let today = jobs::this_month(&state).await?;
+    let vectors = jobs::vectors(&state, Some(&ctx.0.id)).await?;
     let mut items: Vec<QueueItem> = Vec::new();
     for job in state.db.list_jobs(JOBS_SCANNED).await.map_err(err)? {
         let app = board.get(&job.id);
         if app.is_some_and(|a| !pending(a.status)) {
             continue;
         }
-        let score = jobs::score(&state, &ctx, &job, &today).total;
+        let score = jobs::score(&state, &ctx, &job, &today, &vectors).total;
         if score < MIN_SCORE {
             continue;
         }
