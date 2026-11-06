@@ -175,6 +175,9 @@ export const SOURCE_LABELS: Record<string, string> = {
   getonboard: "Get on Board",
   jobicy: "Jobicy",
   himalayas: "Himalayas",
+  greenhouse: "Greenhouse",
+  lever: "Lever",
+  ashby: "Ashby",
   manual: "Importada",
 };
 
@@ -192,6 +195,9 @@ export const jobsApi = {
   importText: (title: string, company: string, url: string, text: string) =>
     invoke<ImportedJob>("import_job_text", { title, company, url, text }),
   portals: (keywords: string) => invoke<{ name: string; url: string }[]>("assisted_portals", { keywords }),
+  /** Empresas seguidas en Greenhouse, Lever o Ashby: una por línea (`greenhouse:gitlab`). */
+  boards: () => invoke<string>("get_company_boards"),
+  saveBoards: (text: string) => invoke<string>("save_company_boards", { text }),
 };
 
 // Perfil activo, recordado entre pantallas y sesiones (solo comodidad: si falla, se elige el primero).

@@ -190,3 +190,10 @@
 - La URL guardada es su `applicationLink` y la fuente se muestra en cada vacante, como piden sus condiciones.
 - Salario mensual convertido a anual (×12); otros periodos (por hora…) se omiten.
 - `sources::search` reúne la búsqueda por palabra clave que usaban Get on Board y ahora Himalayas.
+
+### Empresas que sigues: Greenhouse, Lever y Ashby (Fase 2)
+- En Ajustes, «Empresas que sigues»: pegas la URL de la página de empleos de una empresa (boards.greenhouse.io, job-boards.greenhouse.io, jobs.lever.co, jobs.ashbyhq.com) o `sistema:slug`. Se guarda como `greenhouse:gitlab` en `settings` (`sources.boards`); una línea no reconocida se rechaza con aviso.
+- Tres fuentes nuevas (`sources::boards`, migración `0003_company_boards.sql`) con sus APIs públicas de publicaciones, sin clave. Solo se consultan si sigues alguna empresa en ese sistema; las vacantes pasan por el mismo filtro de puestos del perfil.
+- Una empresa que falla (slug mal escrito) no impide traer las demás.
+- Lever y Ashby no dan el nombre de la empresa: se toma del slug. Ashby agrega el rango de compensación a la descripción.
+- `Db::setting` para leer un ajuste suelto.

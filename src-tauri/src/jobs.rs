@@ -6,6 +6,7 @@ use finder_infra::core::matching::{MatchInput, MatchReport, match_score};
 use finder_infra::core::model::{CvMaster, Job, JobRequirements, Profile};
 use finder_infra::llm::LlmClient;
 use finder_infra::llm::tasks::extract_requirements;
+use finder_infra::sources::boards::Board;
 use finder_infra::sources::{self, ASSISTED_PORTALS, Query, Source, manual};
 use serde::Serialize;
 use tauri::State;
@@ -208,9 +209,10 @@ pub async fn sync_jobs(
         .ok_or("El perfil ya no existe.")?;
     let q = Query {
         keywords: profile.target_titles,
+        boards: company_boards(&state).await?,
     };
     let mut out = Vec::new();
-    for source in Source::ALL {
+    for source in Source::ALL.into_iter().filter(|s| s.applies(&q)) {
         out.push(
             match sources::sync(&state.db, &state.http, source, &q).await {
                 Ok(r) => SyncSummary {
@@ -284,4 +286,61 @@ pub fn assisted_portals(keywords: String) -> Vec<PortalLink> {
             url: p.search_url(&keywords),
         })
         .collect()
+}
+
+// ---------------------------------------------------------------------------
+// Empresas seguidas (Greenhouse, Lever, Ashby)
+// ---------------------------------------------------------------------------
+
+const BOARDS_KEY: &str = "sources.boards";
+
+async fn company_boards(state: &AppState) -> CmdResult<Vec<Board>> {
+    let text = state.db.setting(BOARDS_KEY).await.map_err(err)?;
+    Ok(text
+        .iter()
+        .flat_map(|t| t.lines())
+        .filter_map(Board::parse)
+        .collect())
+}
+
+/// Una empresa por línea, como `greenhouse:gitlab`.
+#[tauri::command]
+pub async fn get_company_boards(state: State<'_, AppState>) -> CmdResult<String> {
+    Ok(state
+        .db
+        .setting(BOARDS_KEY)
+        .await
+        .map_err(err)?
+        .unwrap_or_default())
+}
+
+/// Acepta URLs de páginas de empleo o `sistema:slug`; guarda la forma `sistema:slug`.
+#[tauri::command]
+pub async fn save_company_boards(state: State<'_, AppState>, text: String) -> CmdResult<String> {
+    let mut out: Vec<String> = Vec::new();
+    let mut bad: Vec<&str> = Vec::new();
+    for line in text.lines().map(str::trim).filter(|l| !l.is_empty()) {
+        match Board::parse(line) {
+            Some(b) => {
+                let s = format!("{}:{}", b.ats.id(), b.slug);
+                if !out.contains(&s) {
+                    out.push(s);
+                }
+            }
+            None => bad.push(line),
+        }
+    }
+    if !bad.is_empty() {
+        return Err(format!(
+            "No se reconoce: {}. Usa la URL de su página de empleos en Greenhouse, Lever o Ashby.",
+            bad.join(", ")
+        ));
+    }
+    let joined = out.join("\n");
+    state
+        .db
+        .set_setting(BOARDS_KEY, (!joined.is_empty()).then_some(joined.as_str()))
+        .await
+        .map_err(err)?;
+    Ok(joined)
 }

@@ -8,6 +8,7 @@
 //! - **Portales asistidos** ([`ASSISTED_PORTALS`]): LinkedIn, Indeed, OCC… Solo se genera el enlace
 //!   de búsqueda para abrirlo en el navegador. Aquí no hay scraping ni postulación automática.
 
+pub mod boards;
 pub mod getonboard;
 pub mod himalayas;
 pub mod jobicy;
@@ -102,6 +103,8 @@ impl RawJob {
 #[derive(Debug, Clone, Default)]
 pub struct Query {
     pub keywords: Vec<String>,
+    /// Empresas seguidas en Greenhouse, Lever o Ashby.
+    pub boards: Vec<boards::Board>,
 }
 
 // ---------------------------------------------------------------------------
@@ -116,16 +119,22 @@ pub enum Source {
     GetOnBoard,
     Jobicy,
     Himalayas,
+    Greenhouse,
+    Lever,
+    Ashby,
 }
 
 impl Source {
-    pub const ALL: [Source; 6] = [
+    pub const ALL: [Source; 9] = [
         Source::RemoteOk,
         Source::Remotive,
         Source::Wwr,
         Source::GetOnBoard,
         Source::Jobicy,
         Source::Himalayas,
+        Source::Greenhouse,
+        Source::Lever,
+        Source::Ashby,
     ];
 
     /// Igual que `sources.id` en la base de datos.
@@ -137,6 +146,9 @@ impl Source {
             Source::GetOnBoard => "getonboard",
             Source::Jobicy => "jobicy",
             Source::Himalayas => "himalayas",
+            Source::Greenhouse => "greenhouse",
+            Source::Lever => "lever",
+            Source::Ashby => "ashby",
         }
     }
 
@@ -149,6 +161,23 @@ impl Source {
         }
     }
 
+    /// Empresas seguidas en este sistema (vacío para las demás fuentes).
+    fn boards(self, q: &Query) -> Vec<&boards::Board> {
+        let ats = match self {
+            Source::Greenhouse => boards::Ats::Greenhouse,
+            Source::Lever => boards::Ats::Lever,
+            Source::Ashby => boards::Ats::Ashby,
+            _ => return vec![],
+        };
+        q.boards.iter().filter(|b| b.ats == ats).collect()
+    }
+
+    /// Las fuentes por empresa solo se consultan si sigues alguna empresa en ese sistema.
+    pub fn applies(self, q: &Query) -> bool {
+        !matches!(self, Source::Greenhouse | Source::Lever | Source::Ashby)
+            || !self.boards(q).is_empty()
+    }
+
     /// Descarga y lee las vacantes (sin filtrar ni guardar).
     pub async fn fetch(self, client: &Client, q: &Query) -> Result<Vec<RawJob>> {
         match self {
@@ -158,6 +187,9 @@ impl Source {
             Source::Jobicy => jobicy::parse(&get_text(client, jobicy::URL).await?),
             Source::GetOnBoard => search(client, q, getonboard::url, getonboard::parse).await,
             Source::Himalayas => search(client, q, himalayas::url, himalayas::parse).await,
+            Source::Greenhouse | Source::Lever | Source::Ashby => {
+                company_boards(client, &self.boards(q)).await
+            }
         }
     }
 }
@@ -178,6 +210,28 @@ async fn search(
         }
     }
     Ok(all)
+}
+
+/// Una petición por empresa. Una empresa que falla (slug mal escrito, página cerrada) no tumba a
+/// las demás; solo si fallan todas se informa el error.
+async fn company_boards(client: &Client, list: &[&boards::Board]) -> Result<Vec<RawJob>> {
+    let mut all = Vec::new();
+    let mut first_err = None;
+    for b in list {
+        match get_text(client, &b.api_url())
+            .await
+            .and_then(|body| b.parse_jobs(&body))
+        {
+            Ok(jobs) => all.extend(jobs),
+            Err(e) => {
+                first_err.get_or_insert(e);
+            }
+        }
+    }
+    match first_err {
+        Some(e) if all.is_empty() => Err(e),
+        _ => Ok(all),
+    }
 }
 
 /// Resultado de sincronizar una fuente.
@@ -202,6 +256,9 @@ pub async fn sync(db: &Db, client: &Client, source: Source, q: &Query) -> Result
         kept: 0,
         new_jobs: Vec::new(),
     };
+    if !source.applies(q) {
+        return Ok(report);
+    }
     if !db
         .source_due(source.id(), source.min_interval_minutes())
         .await?
@@ -589,7 +646,8 @@ mod tests {
     fn ids_de_fuentes_coinciden_con_la_migracion() {
         let sql = concat!(
             include_str!("../../migrations/0001_init.sql"),
-            include_str!("../../migrations/0002_himalayas.sql")
+            include_str!("../../migrations/0002_himalayas.sql"),
+            include_str!("../../migrations/0003_company_boards.sql")
         );
         for s in Source::ALL {
             assert!(
@@ -608,6 +666,10 @@ mod tests {
         let client = http_client()?;
         let q = Query {
             keywords: vec!["editor".into()],
+            boards: ["greenhouse:gitlab", "lever:spotify", "ashby:ramp"]
+                .into_iter()
+                .filter_map(boards::Board::parse)
+                .collect(),
         };
         for s in Source::ALL {
             let jobs = s.fetch(&client, &q).await?;

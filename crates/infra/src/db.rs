@@ -628,6 +628,15 @@ impl Db {
             .collect())
     }
 
+    pub async fn setting(&self, key: &str) -> Result<Option<String>> {
+        Ok(
+            sqlx::query_scalar("SELECT value FROM settings WHERE key = ?")
+                .bind(key)
+                .fetch_optional(&self.pool)
+                .await?,
+        )
+    }
+
     /// Guarda un ajuste; `None` lo borra.
     pub async fn set_setting(&self, key: &str, value: Option<&str>) -> Result<()> {
         match value {
@@ -1152,6 +1161,7 @@ mod tests {
         );
         db.set_setting("llm.FRJ_WRITER", None).await?;
         assert_eq!(db.settings_with_prefix("llm.").await?.len(), 1);
+        assert!(db.setting("llm.no_existe").await?.is_none());
         Ok(())
     }
 

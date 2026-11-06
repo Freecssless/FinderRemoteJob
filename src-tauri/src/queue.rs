@@ -169,15 +169,9 @@ pub async fn get_faq(state: State<'_, AppState>, profile_id: String) -> CmdResul
             });
         }
     }
-    let stored = state
-        .db
-        .settings_with_prefix(&faq_key(&profile_id))
-        .await
-        .map_err(err)?
-        .into_iter()
-        .find(|(k, _)| k.is_empty());
+    let stored = state.db.setting(&faq_key(&profile_id)).await.map_err(err)?;
     let custom = match stored {
-        Some((_, json)) => serde_json::from_str(&json).map_err(err)?,
+        Some(json) => serde_json::from_str(&json).map_err(err)?,
         None => starter(),
     };
     Ok(FaqView { from_cv, custom })

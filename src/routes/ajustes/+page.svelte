@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { settingsApi, type LlmSettings } from "$lib/api";
+  import { jobsApi, settingsApi, type LlmSettings } from "$lib/api";
 
   let s = $state<LlmSettings | null>(null);
   let values = $state<Record<string, string>>({});
@@ -19,8 +19,24 @@
     keys = { ANTHROPIC_API_KEY: "", FRJ_OPENAI_API_KEY: "" };
   }
 
+  let boards = $state("");
+  let boardsMsg = $state("");
+  let boardsError = $state("");
+
+  async function saveBoards() {
+    boardsMsg = "";
+    boardsError = "";
+    try {
+      boards = await jobsApi.saveBoards(boards);
+      boardsMsg = "Guardado. Se consultan al sincronizar en Vacantes.";
+    } catch (e) {
+      boardsError = String(e);
+    }
+  }
+
   async function init() {
     try {
+      boards = await jobsApi.boards();
       show(await settingsApi.get());
     } catch (e) {
       error = String(e);
@@ -163,6 +179,24 @@
       <button class="primary" onclick={save} disabled={saving}>{saving ? "Guardando…" : "Guardar"}</button>
       {#if msg}<span class="ok small" role="status">{msg}</span>{/if}
     </div>
+
+    <section class="card">
+      <h2>Empresas que sigues</h2>
+      <p class="muted small">
+        Vacantes de empresas concretas que publican en Greenhouse, Lever o Ashby. Pega la dirección de su página de
+        empleos, una por línea (por ejemplo <code>https://jobs.lever.co/empresa</code>). Al sincronizar se traen las que
+        coinciden con los puestos de tu perfil.
+      </p>
+      <label>
+        Páginas de empleo
+        <textarea rows="5" bind:value={boards} placeholder={"https://boards.greenhouse.io/empresa\nhttps://jobs.ashbyhq.com/empresa"}></textarea>
+      </label>
+      {#if boardsError}<p class="danger small" role="alert">{boardsError}</p>{/if}
+      <div class="row">
+        <button onclick={saveBoards}>Guardar empresas</button>
+        {#if boardsMsg}<span class="ok small" role="status">{boardsMsg}</span>{/if}
+      </div>
+    </section>
   {:else if !error}
     <p class="muted">Cargando…</p>
   {/if}
