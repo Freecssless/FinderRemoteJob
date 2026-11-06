@@ -2,7 +2,7 @@
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { goto } from "$app/navigation";
   import {
-    api, jobsApi, rememberedProfile, rememberProfile, SOURCE_LABELS,
+    api, boardApi, jobsApi, rememberedProfile, rememberProfile, scoreClass, SOURCE_LABELS,
     type JobDetail, type JobRow, type Profile, type SyncSummary,
   } from "$lib/api";
 
@@ -25,6 +25,7 @@
   let imp = $state({ url: "", title: "", company: "", text: "" });
 
   let portals = $state<{ name: string; url: string }[]>([]);
+  let added = $state<string | null>(null);
 
   const profile = $derived(profiles.find((p) => p.id === profileId) ?? null);
   const hasScores = $derived(rows.some((r) => r.score !== null));
@@ -68,6 +69,16 @@
     if (profileId) rememberProfile(profileId);
     await Promise.all([reload(), loadPortals()]);
     if (selectedId) await select(selectedId);
+  }
+
+  async function addToBoard() {
+    if (!detail || !profileId) return;
+    try {
+      await boardApi.add(detail.job.id, profileId);
+      added = detail.job.id;
+    } catch (e) {
+      error = String(e);
+    }
   }
 
   async function select(id: string) {
@@ -139,7 +150,6 @@
     return `${s.new} nuevas (${s.kept} de ${s.fetched} coinciden con tus puestos)`;
   }
 
-  const scoreClass = (n: number) => (n >= 70 ? "high" : n >= 45 ? "mid" : "low");
   const date = (iso: string | null) => (iso ? iso.slice(0, 10) : "");
 
   init();
@@ -271,6 +281,9 @@
           <div class="row">
             <button class="primary" onclick={() => goto(`/optimizador?job=${job.id}`)} disabled={!s}
               title={s ? "" : "El perfil necesita CV maestro"}>Adaptar mi CV</button>
+            <button onclick={addToBoard} disabled={!s || busy !== ""}>
+              {added === job.id ? "En el tablero ✓" : "Agregar al tablero"}
+            </button>
             {#if job.url}<button onclick={() => openUrl(job.url)}>Abrir anuncio</button>{/if}
             <button onclick={analyze} disabled={busy !== ""}>
               {busy === "analyze" ? "Analizando con IA local…" : job.requirements ? "Volver a analizar con IA" : "Analizar requisitos con IA"}
@@ -346,13 +359,6 @@
   }
   .job.active { border-color: var(--accent); background: var(--accent-soft); }
   .jobtext { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
-  .score {
-    display: inline-block; min-width: 2.2rem; padding: 0.1rem 0.35rem; border-radius: 6px;
-    text-align: center; font-weight: 700; font-variant-numeric: tabular-nums;
-  }
-  .score.high { background: var(--ok); color: var(--surface); }
-  .score.mid { background: var(--accent-soft); color: var(--accent); }
-  .score.low { background: var(--hover); color: var(--muted); }
   .detail { display: flex; flex-direction: column; gap: 0.75rem; min-width: 0; position: sticky; top: 0; max-height: calc(100vh - 3rem); overflow: auto; }
   .breakdown { display: grid; grid-template-columns: auto auto; gap: 0.2rem 1rem; margin: 0 0 0.5rem; justify-content: start; }
   .breakdown dd { margin: 0; font-variant-numeric: tabular-nums; }

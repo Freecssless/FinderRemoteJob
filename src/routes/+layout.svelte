@@ -12,7 +12,7 @@
     { href: "/perfiles", label: "Perfiles", ready: true },
     { href: "/vacantes", label: "Vacantes", ready: true },
     { href: "/optimizador", label: "Optimizador", ready: true },
-    { href: "/tablero", label: "Tablero", ready: false },
+    { href: "/tablero", label: "Tablero", ready: true },
   ];
 </script>
 

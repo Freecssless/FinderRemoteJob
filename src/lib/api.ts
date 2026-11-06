@@ -177,6 +177,9 @@ export const SOURCE_LABELS: Record<string, string> = {
   manual: "Importada",
 };
 
+/** Clase CSS de la insignia `.score` según el puntaje (0–100). */
+export const scoreClass = (n: number) => (n >= 70 ? "high" : n >= 45 ? "mid" : "low");
+
 export const jobsApi = {
   list: (profileId: string | null, query: string) =>
     invoke<JobRow[]>("list_jobs", { profileId, query }),
@@ -259,4 +262,72 @@ export const optimizerApi = {
     invoke<OptimizerView | null>("get_optimization", { jobId, profileId }),
   run: (jobId: string, profileId: string) => invoke<OptimizerView>("run_optimizer", { jobId, profileId }),
   save: (jobId: string, choices: Choices) => invoke<SavedCv>("save_optimized", { jobId, choices }),
+};
+
+// ---------------------------------------------------------------------------
+// Tablero
+// ---------------------------------------------------------------------------
+
+export type Status =
+  | "Encontrada" | "Evaluada" | "CvAdaptado" | "Postulada" | "EnProceso"
+  | "Entrevista" | "Oferta" | "Rechazada" | "SinRespuesta" | "Descartada";
+
+/** Columnas del Kanban, en el orden de `Status::ALL`. */
+export const STATUSES: { id: Status; label: string }[] = [
+  { id: "Encontrada", label: "Encontrada" },
+  { id: "Evaluada", label: "Evaluada" },
+  { id: "CvAdaptado", label: "CV adaptado" },
+  { id: "Postulada", label: "Postulada" },
+  { id: "EnProceso", label: "En proceso" },
+  { id: "Entrevista", label: "Entrevista" },
+  { id: "Oferta", label: "Oferta" },
+  { id: "Rechazada", label: "Rechazada" },
+  { id: "SinRespuesta", label: "Sin respuesta" },
+  { id: "Descartada", label: "Descartada" },
+];
+export const STATUS_LABELS = Object.fromEntries(STATUSES.map((s) => [s.id, s.label])) as Record<Status, string>;
+
+export interface Application {
+  id: string;
+  job_id: string;
+  profile_id: string;
+  status: Status;
+  match_score: number | null;
+  cv_version_id: string | null;
+  cover_letter: string | null;
+  applied_at: string | null;
+  first_response_at: string | null;
+  next_step: string | null;
+  next_step_at: string | null;
+  notes: string | null;
+  updated_at: string;
+}
+export interface BoardRow {
+  application: Application;
+  job_title: string;
+  company: string | null;
+  source_id: string;
+  url: string;
+  found_at: string;
+}
+export interface CvVersion {
+  id: string;
+  ats_before: number | null;
+  ats_after: number | null;
+  missing: string[];
+  pdf_path: string | null;
+  docx_path: string | null;
+  created_at: string;
+}
+export interface StatusChange { from: Status | null; to: Status; at: string }
+export interface ApplicationDetail { history: StatusChange[]; cv: CvVersion | null }
+
+export const boardApi = {
+  list: (profileId: string) => invoke<BoardRow[]>("list_board", { profileId }),
+  setStatus: (applicationId: string, status: Status) =>
+    invoke<Application>("set_application_status", { applicationId, status }),
+  saveNotes: (applicationId: string, notes: string, nextStep: string, nextStepAt: string) =>
+    invoke<void>("save_application_notes", { applicationId, notes, nextStep, nextStepAt }),
+  detail: (applicationId: string) => invoke<ApplicationDetail>("application_detail", { applicationId }),
+  add: (jobId: string, profileId: string) => invoke<string>("add_to_board", { jobId, profileId }),
 };

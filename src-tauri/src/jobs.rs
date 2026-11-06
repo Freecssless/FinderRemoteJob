@@ -69,7 +69,7 @@ fn requirements(dict: &SkillDict, job: &Job) -> JobRequirements {
 }
 
 /// Perfil y CV maestro con los que se compara; `None` si falta cualquiera de los dos.
-async fn profile_and_cv(
+pub(crate) async fn profile_and_cv(
     state: &AppState,
     profile_id: Option<&str>,
 ) -> CmdResult<Option<(Profile, CvMaster)>> {
@@ -108,7 +108,7 @@ pub(crate) fn score(
 }
 
 /// "AAAA-MM" de hoy, del reloj de SQLite (igual que el resto de fechas de la app).
-async fn this_month(state: &AppState) -> CmdResult<String> {
+pub(crate) async fn this_month(state: &AppState) -> CmdResult<String> {
     Ok(state.db.now().await.map_err(err)?.chars().take(7).collect())
 }
 

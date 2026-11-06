@@ -61,7 +61,7 @@ pub struct BoardFilter {
 }
 
 /// Fila del tablero: la postulación con los datos de su vacante.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct BoardRow {
     pub application: Application,
     pub job_title: String,

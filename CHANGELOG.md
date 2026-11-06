@@ -10,10 +10,10 @@
 | 4 | Guardián antiinvención (`core::guard`) | ✅ Terminado |
 | 5 | Base de datos SQLite + migraciones (`infra::db`) | ✅ Terminado |
 | 6 | Fuentes de vacantes: Remote OK, Remotive, WWR, Get on Board, Jobicy + importación manual (`infra::sources`) | ✅ Terminado |
-| 7 | Cliente LLM (Ollama / OpenAI-compatible / Anthropic) + importación de CV PDF/DOCX | ✅ Terminado (prueba en vivo con Ollama pendiente) |
+| 7 | Cliente LLM (Ollama / OpenAI-compatible / Anthropic) + importación de CV PDF/DOCX | ✅ Terminado (probado en vivo con Ollama) |
 | 8 | Generación de PDF (Typst) y DOCX + prueba de ida y vuelta (`infra::docgen`) | ✅ Terminado |
 | 9 | Flujo completo del optimizador de CV | ✅ Terminado (probado en vivo con qwen3:8b) |
-| 10 | App Tauri + interfaz Svelte (perfiles, vacantes, optimizador, tablero) | 🔄 En curso: 10a, 10b y 10c hechas |
+| 10 | App Tauri + interfaz Svelte (perfiles, vacantes, optimizador, tablero) | ✅ Terminado (10a–10d; recordatorios y notificaciones pendientes) |
 
 ## Registro
 
@@ -129,3 +129,11 @@
   - Requisitos: se descartan "habilidades" que son frases del anuncio (`is_skill_like`), también en vacantes ya analizadas.
   - Guardián: el resumen se respalda con todo el CV, y las empresas cuentan como respaldo ("Canal de YouTube" → YouTube).
   - Ida y vuelta del PDF: pdf-extract pega líneas ("VillegasEditor"); ya no cuenta como palabra perdida ni se puntúa ese texto (costaba 8 puntos de legibilidad).
+
+### Módulo 10d: pantalla Tablero
+- `src-tauri/src/board.rs`: `list_board`, `set_application_status` (fija «postulada el» y «primera respuesta» según `core::pipeline`, con historial), `save_application_notes`, `application_detail` (historial y CV enviado) y `add_to_board`.
+- Kanban por perfil con las 10 columnas de estado: arrastrar una tarjeta cambia su estado (también desde un selector en la ficha, accesible con teclado). Búsqueda por puesto o empresa.
+- Ficha: anuncio, compatibilidad, fechas, CV enviado (ATS antes → después, abrir PDF/DOCX), notas, próximo paso con fecha (en rojo si ya venció) e historial.
+- Vacantes: botón «Agregar al tablero» (entra como «Encontrada» con su compatibilidad).
+- `tauri.conf.json`: `dragDropEnabled: false` (la app no recibe archivos arrastrados; así funciona el arrastre del Kanban en todas las plataformas).
+- Pendiente (plan §5.3): recordatorios automáticos a los 7 y 21 días y notificaciones del sistema.

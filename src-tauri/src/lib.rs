@@ -1,5 +1,6 @@
 //! Puente Tauri: comandos delgados sobre `finder-infra`. Aquí no hay lógica de dominio.
 
+mod board;
 mod envfile;
 mod jobs;
 mod optimizer;
@@ -199,6 +200,11 @@ pub fn run() {
             optimizer::get_optimization,
             optimizer::run_optimizer,
             optimizer::save_optimized,
+            board::list_board,
+            board::set_application_status,
+            board::save_application_notes,
+            board::application_detail,
+            board::add_to_board,
         ])
         .run(tauri::generate_context!())
         .expect("no se pudo iniciar la app de Tauri");

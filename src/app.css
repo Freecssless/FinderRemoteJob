@@ -82,3 +82,12 @@ button.link { border: none; background: none; padding: 0.1rem 0.3rem; color: var
 .ok { color: var(--ok); }
 .notice { background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 8px; padding: 0.75rem 1rem; }
 .notice ul { margin: 0.4rem 0 0; padding-left: 1.2rem; }
+
+/* Insignia de puntaje (compatibilidad o ATS): ver scoreClass() en api.ts. */
+.score {
+  display: inline-block; min-width: 2.2rem; padding: 0.1rem 0.35rem; border-radius: 6px;
+  text-align: center; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.score.high { background: var(--ok); color: var(--surface); }
+.score.mid { background: var(--accent-soft); color: var(--accent); }
+.score.low { background: var(--hover); color: var(--muted); }
