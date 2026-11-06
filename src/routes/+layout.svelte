@@ -15,6 +15,7 @@
     { href: "/perfiles", label: "Perfiles", ready: true },
     { href: "/vacantes", label: "Vacantes", ready: true },
     { href: "/optimizador", label: "Optimizador", ready: true },
+    { href: "/cola", label: "Postular", ready: true },
     { href: "/tablero", label: "Tablero", ready: true },
     { href: "/estadisticas", label: "Estadísticas", ready: true },
     { href: "/ajustes", label: "Ajustes", ready: true },

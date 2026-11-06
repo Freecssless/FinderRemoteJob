@@ -447,3 +447,35 @@ export function costLabel(c: Cost): string {
   if (c.usd === null) return `${tokens} (pon los precios en Ajustes para ver el costo)`;
   return `≈ US$ ${c.usd < 0.01 ? c.usd.toFixed(4) : c.usd.toFixed(2)} (${tokens})`;
 }
+
+// ---------------------------------------------------------------------------
+// Cola de postulación asistida y respuestas frecuentes (plan §3)
+// ---------------------------------------------------------------------------
+
+export interface QueueItem {
+  job_id: string;
+  title: string;
+  company: string | null;
+  url: string;
+  score: number;
+  application_id: string | null;
+  status: Status | null;
+  pdf_path: string | null;
+  cover_letter: string | null;
+}
+
+export interface Faq {
+  question: string;
+  answer: string;
+}
+
+export interface FaqView {
+  from_cv: Faq[];
+  custom: Faq[];
+}
+
+export const queueApi = {
+  list: (profileId: string) => invoke<QueueItem[]>("application_queue", { profileId }),
+  faq: (profileId: string) => invoke<FaqView>("get_faq", { profileId }),
+  saveFaq: (profileId: string, items: Faq[]) => invoke<void>("save_faq", { profileId, items }),
+};

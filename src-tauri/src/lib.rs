@@ -6,6 +6,7 @@ mod jobs;
 mod letter;
 mod optimizer;
 mod reminders;
+mod queue;
 mod settings;
 
 use finder_infra::core::ats::keywords::SkillDict;
@@ -109,7 +110,8 @@ async fn update_profile(state: State<'_, AppState>, profile: Profile) -> CmdResu
 
 #[tauri::command]
 async fn delete_profile(state: State<'_, AppState>, id: String) -> CmdResult<()> {
-    state.db.delete_profile(&id).await.map_err(err)
+    state.db.delete_profile(&id).await.map_err(err)?;
+    queue::delete_faq(&state, &id).await
 }
 
 #[tauri::command]
@@ -235,6 +237,9 @@ pub fn run() {
             settings::save_llm_settings,
             settings::delete_api_key,
             settings::estimate_cost,
+            queue::application_queue,
+            queue::get_faq,
+            queue::save_faq,
         ])
         .run(tauri::generate_context!())
         .expect("no se pudo iniciar la app de Tauri");

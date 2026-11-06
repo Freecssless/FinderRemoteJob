@@ -178,3 +178,9 @@
 - Con Claude o un proveedor compatible con OpenAI, el Optimizador muestra antes de generar los tokens aproximados y el costo en USD de la propuesta de CV y de la carta (`optimizer::estimate_tokens`, `letter::estimate_tokens`, comando `estimate_cost`).
 - Los precios (USD por millón de tokens de entrada y salida) los escribe el usuario en Ajustes, por proveedor; la app no trae precios fijos que se queden viejos. Sin precios, solo se muestran los tokens.
 - Estimado simple: ~3 caracteres por token y salida fija (1.5 k el CV, 0.6 k la carta); no cuenta el razonamiento de Claude ni la segunda vuelta de la carta.
+
+### Cola de postulación asistida y respuestas frecuentes (Fase 2)
+- Pantalla Postular: las 20 vacantes más compatibles (≥ 70) del perfil que aún no enviaste (sin postulación, o en Encontrada / Evaluada / CV adaptado), con si ya tienen CV adaptado y carta.
+- «Abrir y postular» abre el anuncio en el navegador, copia la carta al portapapeles y muestra el PDF en su carpeta para arrastrarlo. «Ya me postulé» la agrega al tablero si hace falta y la pasa a Postulada (fecha y recordatorio de seguimiento como en el Tablero).
+- Respuestas frecuentes por perfil: las calculadas del CV maestro (años de experiencia, años por habilidad, idiomas) y las tuyas (salario, disponibilidad, visa, horario…), editables y con botón de copiar. Se guardan en `settings` (`faq.<perfil>`) y se borran con el perfil.
+- La app no llena formularios ni entra a tus cuentas: tú envías la solicitud.
