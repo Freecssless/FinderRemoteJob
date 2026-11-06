@@ -8,10 +8,12 @@
 //! - **Portales asistidos** ([`ASSISTED_PORTALS`]): LinkedIn, Indeed, OCC… Solo se genera el enlace
 //!   de búsqueda para abrirlo en el navegador. Aquí no hay scraping ni postulación automática.
 
+pub mod adzuna;
 pub mod boards;
 pub mod getonboard;
 pub mod himalayas;
 pub mod jobicy;
+pub mod jooble;
 pub mod manual;
 pub mod remoteok;
 pub mod remotive;
@@ -105,6 +107,9 @@ pub struct Query {
     pub keywords: Vec<String>,
     /// Empresas seguidas en Greenhouse, Lever o Ashby.
     pub boards: Vec<boards::Board>,
+    /// Fuentes con clave: solo se consultan si el usuario puso la suya en Ajustes.
+    pub adzuna: Option<adzuna::Credentials>,
+    pub jooble: Option<jooble::Credentials>,
 }
 
 // ---------------------------------------------------------------------------
@@ -122,10 +127,12 @@ pub enum Source {
     Greenhouse,
     Lever,
     Ashby,
+    Adzuna,
+    Jooble,
 }
 
 impl Source {
-    pub const ALL: [Source; 9] = [
+    pub const ALL: [Source; 11] = [
         Source::RemoteOk,
         Source::Remotive,
         Source::Wwr,
@@ -135,6 +142,8 @@ impl Source {
         Source::Greenhouse,
         Source::Lever,
         Source::Ashby,
+        Source::Adzuna,
+        Source::Jooble,
     ];
 
     /// Igual que `sources.id` en la base de datos.
@@ -149,6 +158,8 @@ impl Source {
             Source::Greenhouse => "greenhouse",
             Source::Lever => "lever",
             Source::Ashby => "ashby",
+            Source::Adzuna => "adzuna",
+            Source::Jooble => "jooble",
         }
     }
 
@@ -157,6 +168,8 @@ impl Source {
     pub fn min_interval_minutes(self) -> u32 {
         match self {
             Source::Remotive => 6 * 60,
+            // La clave gratuita de Jooble tiene 500 consultas en total.
+            Source::Jooble => 24 * 60,
             _ => 60,
         }
     }
@@ -174,8 +187,12 @@ impl Source {
 
     /// Las fuentes por empresa solo se consultan si sigues alguna empresa en ese sistema.
     pub fn applies(self, q: &Query) -> bool {
-        !matches!(self, Source::Greenhouse | Source::Lever | Source::Ashby)
-            || !self.boards(q).is_empty()
+        match self {
+            Source::Greenhouse | Source::Lever | Source::Ashby => !self.boards(q).is_empty(),
+            Source::Adzuna => q.adzuna.is_some(),
+            Source::Jooble => q.jooble.is_some() && !q.keywords.is_empty(),
+            _ => true,
+        }
     }
 
     /// Descarga y lee las vacantes (sin filtrar ni guardar).
@@ -189,6 +206,30 @@ impl Source {
             Source::Himalayas => search(client, q, himalayas::url, himalayas::parse).await,
             Source::Greenhouse | Source::Lever | Source::Ashby => {
                 company_boards(client, &self.boards(q)).await
+            }
+            Source::Adzuna => {
+                let Some(c) = &q.adzuna else {
+                    return Ok(vec![]);
+                };
+                let mut all: Vec<RawJob> = Vec::new();
+                for kw in q.keywords.iter().take(3) {
+                    let body = send_private(client.get(adzuna::url(c, kw)?), "adzuna").await?;
+                    for job in adzuna::parse(&body, &c.country)? {
+                        if !all.iter().any(|j| j.external_id == job.external_id) {
+                            all.push(job);
+                        }
+                    }
+                }
+                Ok(all)
+            }
+            Source::Jooble => {
+                let Some(c) = &q.jooble else {
+                    return Ok(vec![]);
+                };
+                let req = client
+                    .post(jooble::url(c)?)
+                    .json(&jooble::body(&q.keywords));
+                jooble::parse(&send_private(req, "jooble").await?)
             }
         }
     }
@@ -332,6 +373,20 @@ async fn get_text(client: &Client, url: &str) -> Result<String> {
         });
     }
     Ok(resp.text().await?)
+}
+
+/// Para APIs con la clave en la URL: los errores nunca muestran la URL (la clave quedaría en
+/// pantalla o en un registro).
+async fn send_private(req: reqwest::RequestBuilder, source_id: &str) -> Result<String> {
+    let resp = req.send().await.map_err(|e| e.without_url())?;
+    let status = resp.status();
+    if !status.is_success() {
+        return Err(SourceError::Status {
+            status,
+            url: format!("la API de {source_id}"),
+        });
+    }
+    Ok(resp.text().await.map_err(|e| e.without_url())?)
 }
 
 /// Deserializa cada elemento por separado: si un anuncio viene mal formado se omite,
@@ -647,7 +702,8 @@ mod tests {
         let sql = concat!(
             include_str!("../../migrations/0001_init.sql"),
             include_str!("../../migrations/0002_himalayas.sql"),
-            include_str!("../../migrations/0003_company_boards.sql")
+            include_str!("../../migrations/0003_company_boards.sql"),
+            include_str!("../../migrations/0004_adzuna_jooble.sql")
         );
         for s in Source::ALL {
             assert!(
@@ -656,6 +712,33 @@ mod tests {
                 s.id()
             );
         }
+    }
+
+    #[tokio::test]
+    async fn los_errores_no_muestran_la_clave()
+    -> std::result::Result<(), Box<dyn std::error::Error>> {
+        // Puerto cerrado en la máquina local: falla sin salir a internet.
+        let req = http_client()?.get("http://127.0.0.1:9/api/CLAVE_SECRETA");
+        let e = send_private(req, "jooble")
+            .await
+            .err()
+            .ok_or("debía fallar")?;
+        assert!(!e.to_string().contains("CLAVE_SECRETA"), "{e}");
+        Ok(())
+    }
+
+    #[test]
+    fn fuentes_con_clave_solo_si_hay_clave() {
+        let mut q = Query {
+            keywords: vec!["editor".into()],
+            ..Default::default()
+        };
+        assert!(!Source::Adzuna.applies(&q) && !Source::Jooble.applies(&q));
+        q.jooble = Some(jooble::Credentials {
+            key: "k".into(),
+            domain: "mx.jooble.org".into(),
+        });
+        assert!(Source::Jooble.applies(&q));
     }
 
     /// Consulta real a internet. Correr a mano: `cargo test -p finder-infra -- --ignored --nocapture`
@@ -670,8 +753,9 @@ mod tests {
                 .into_iter()
                 .filter_map(boards::Board::parse)
                 .collect(),
+            ..Default::default()
         };
-        for s in Source::ALL {
+        for s in Source::ALL.into_iter().filter(|s| s.applies(&q)) {
             let jobs = s.fetch(&client, &q).await?;
             println!("{:<11} {:>4} vacantes", s.id(), jobs.len());
             assert!(!jobs.is_empty(), "{} no devolvió vacantes", s.id());

@@ -1,0 +1,34 @@
+{
+ "__CLASS__": "Adzuna::API::Response::JobSearchResults",
+ "count": 2,
+ "results": [
+  {
+   "__CLASS__": "Adzuna::API::Response::Job",
+   "id": "4912345678",
+   "title": "Editor de video remoto",
+   "description": "Buscamos editor de video con Premiere y After Effects para contenido de YouTube...",
+   "created": "2026-11-02T18:07:39Z",
+   "redirect_url": "https://www.adzuna.com.mx/land/ad/4912345678?se=abc",
+   "company": {"__CLASS__": "Adzuna::API::Response::Company", "display_name": "Productora Ejemplo"},
+   "location": {"__CLASS__": "Adzuna::API::Response::Location", "area": ["México", "Ciudad de México"], "display_name": "Ciudad de México"},
+   "category": {"__CLASS__": "Adzuna::API::Response::Category", "label": "Creative & Design Jobs", "tag": "creative-design-jobs"},
+   "salary_min": 180000,
+   "salary_max": 240000,
+   "salary_is_predicted": "0",
+   "contract_time": "full_time"
+  },
+  {
+   "__CLASS__": "Adzuna::API::Response::Job",
+   "id": "4912345679",
+   "title": "Video Editor",
+   "description": "Edit short-form videos...",
+   "created": "2026-11-01T10:00:00Z",
+   "redirect_url": "https://www.adzuna.com.mx/land/ad/4912345679",
+   "company": {"display_name": "Otra Empresa"},
+   "location": {"area": ["México"], "display_name": "México"},
+   "salary_min": 150000,
+   "salary_max": 150000,
+   "salary_is_predicted": 1
+  }
+ ]
+}

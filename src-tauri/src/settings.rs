@@ -10,6 +10,7 @@ use finder_infra::db::Db;
 use finder_infra::letter;
 use finder_infra::llm::{Backend, LlmConfig};
 use finder_infra::optimizer::{self, TokenEstimate};
+use finder_infra::sources::{adzuna, jooble};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
@@ -18,7 +19,7 @@ use crate::{AppState, CmdResult, err};
 const KEYRING_SERVICE: &str = "FinderRemoteJob";
 const PREFIX: &str = "llm.";
 /// Valores normales (se guardan en la base de datos).
-const PLAIN: [&str; 12] = [
+const PLAIN: [&str; 15] = [
     "FRJ_WRITER",
     "FRJ_LOCAL_URL",
     "FRJ_LOCAL_MODEL",
@@ -32,9 +33,18 @@ const PLAIN: [&str; 12] = [
     "FRJ_ANTHROPIC_PRICE_OUT",
     "FRJ_OPENAI_PRICE_IN",
     "FRJ_OPENAI_PRICE_OUT",
+    // Fuentes de vacantes con clave.
+    "FRJ_ADZUNA_APP_ID",
+    "FRJ_ADZUNA_COUNTRY",
+    "FRJ_JOOBLE_DOMAIN",
 ];
 /// Claves de API (se guardan en el llavero).
-const SECRETS: [&str; 2] = ["ANTHROPIC_API_KEY", "FRJ_OPENAI_API_KEY"];
+const SECRETS: [&str; 4] = [
+    "ANTHROPIC_API_KEY",
+    "FRJ_OPENAI_API_KEY",
+    "FRJ_ADZUNA_APP_KEY",
+    "FRJ_JOOBLE_KEY",
+];
 
 fn entry(key: &str) -> keyring::Result<keyring::Entry> {
     keyring::Entry::new(KEYRING_SERVICE, key)
@@ -50,6 +60,39 @@ fn external(file_vars: &HashMap<String, String>, key: &str) -> Option<String> {
         .ok()
         .or_else(|| file_vars.get(key).cloned())
         .filter(|v| !v.trim().is_empty())
+}
+
+/// Claves de Adzuna y Jooble (con la misma prioridad que el resto), si están completas.
+pub(crate) async fn source_keys(
+    state: &AppState,
+) -> CmdResult<(Option<adzuna::Credentials>, Option<jooble::Credentials>)> {
+    let stored: HashMap<String, String> = state
+        .db
+        .settings_with_prefix(PREFIX)
+        .await
+        .map_err(err)?
+        .into_iter()
+        .collect();
+    let get = |k: &str| {
+        external(&state.file_vars, k)
+            .or_else(|| stored.get(k).cloned())
+            .or_else(|| SECRETS.contains(&k).then(|| read_secret(k)).flatten())
+            .map(|v| v.trim().to_string())
+            .filter(|v| !v.is_empty())
+    };
+    let adzuna = match (get("FRJ_ADZUNA_APP_ID"), get("FRJ_ADZUNA_APP_KEY")) {
+        (Some(app_id), Some(app_key)) => Some(adzuna::Credentials {
+            app_id,
+            app_key,
+            country: get("FRJ_ADZUNA_COUNTRY").unwrap_or_else(|| "mx".into()),
+        }),
+        _ => None,
+    };
+    let jooble = get("FRJ_JOOBLE_KEY").map(|key| jooble::Credentials {
+        key,
+        domain: get("FRJ_JOOBLE_DOMAIN").unwrap_or_else(|| "mx.jooble.org".into()),
+    });
+    Ok((adzuna, jooble))
 }
 
 /// Configuración vigente con todas las fuentes.
@@ -154,6 +197,14 @@ pub async fn save_llm_settings(
             return Err(format!("Ajuste desconocido: {k}"));
         }
         let v = v.trim();
+        if k == "FRJ_ADZUNA_COUNTRY" && !v.is_empty() && !adzuna::COUNTRIES.contains(&v) {
+            return Err(format!("País de Adzuna no admitido: «{v}»."));
+        }
+        if k == "FRJ_JOOBLE_DOMAIN" && !v.is_empty() && !jooble::valid_domain(v) {
+            return Err(format!(
+                "Dominio de Jooble inválido: «{v}». Usa jooble.org o el de tu país, como mx.jooble.org."
+            ));
+        }
         if k.contains("_PRICE_") && !v.is_empty() && price(v).is_none() {
             return Err(format!(
                 "Precio inválido: «{v}». Escribe un número en USD por millón de tokens (p. ej. 3 o 0.25)."

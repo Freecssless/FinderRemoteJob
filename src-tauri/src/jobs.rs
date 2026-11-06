@@ -207,9 +207,12 @@ pub async fn sync_jobs(
         .await
         .map_err(err)?
         .ok_or("El perfil ya no existe.")?;
+    let (adzuna, jooble) = crate::settings::source_keys(&state).await?;
     let q = Query {
         keywords: profile.target_titles,
         boards: company_boards(&state).await?,
+        adzuna,
+        jooble,
     };
     let mut out = Vec::new();
     for source in Source::ALL.into_iter().filter(|s| s.applies(&q)) {

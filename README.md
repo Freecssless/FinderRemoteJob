@@ -77,7 +77,7 @@ cargo test -p finder-infra llm -- --ignored --nocapture
 
 ## Fuentes de vacantes y atribución
 
-Las vacantes automáticas vienen de Remote OK, Remotive, We Work Remotely, Get on Board, Jobicy y Himalayas, y de las empresas que sigas en Greenhouse, Lever o Ashby (Ajustes). Sus términos piden mencionar la fuente y enlazar al anuncio original; la app guarda ambos datos en cada vacante. Además, respeta un tiempo mínimo entre consultas (Remotive: 6 horas).
+Las vacantes automáticas vienen de Remote OK, Remotive, We Work Remotely, Get on Board, Jobicy y Himalayas, de Adzuna y Jooble si pones tu clave en Ajustes, y de las empresas que sigas en Greenhouse, Lever o Ashby (Ajustes). Sus términos piden mencionar la fuente y enlazar al anuncio original; la app guarda ambos datos en cada vacante. Además, respeta un tiempo mínimo entre consultas (Remotive: 6 horas).
 
 ## Licencias de terceros
 

@@ -3,7 +3,7 @@
 
   let s = $state<LlmSettings | null>(null);
   let values = $state<Record<string, string>>({});
-  let keys = $state<Record<string, string>>({ ANTHROPIC_API_KEY: "", FRJ_OPENAI_API_KEY: "" });
+  let keys = $state<Record<string, string>>({ ANTHROPIC_API_KEY: "", FRJ_OPENAI_API_KEY: "", FRJ_ADZUNA_APP_KEY: "", FRJ_JOOBLE_KEY: "" });
   let error = $state("");
   let msg = $state("");
   let saving = $state(false);
@@ -16,7 +16,7 @@
     // Sin elección guardada, se marca la que está en uso (p. ej. Claude si hay clave en .env).
     const inUse = v.writer?.startsWith("Claude") ? "anthropic" : v.writer?.startsWith("Compatible") ? "openai" : "local";
     values = { FRJ_WRITER: inUse, ...v.values };
-    keys = { ANTHROPIC_API_KEY: "", FRJ_OPENAI_API_KEY: "" };
+    keys = { ANTHROPIC_API_KEY: "", FRJ_OPENAI_API_KEY: "", FRJ_ADZUNA_APP_KEY: "", FRJ_JOOBLE_KEY: "" };
   }
 
   let boards = $state("");
@@ -73,7 +73,9 @@
     "FRJ_WRITER", "FRJ_LOCAL_URL", "FRJ_LOCAL_MODEL", "FRJ_EMBED_MODEL",
     "FRJ_ANTHROPIC_MODEL", "FRJ_ANTHROPIC_EFFORT", "FRJ_OPENAI_URL", "FRJ_OPENAI_MODEL",
     "FRJ_ANTHROPIC_PRICE_IN", "FRJ_ANTHROPIC_PRICE_OUT", "FRJ_OPENAI_PRICE_IN", "FRJ_OPENAI_PRICE_OUT",
+    "FRJ_ADZUNA_APP_ID", "FRJ_ADZUNA_COUNTRY", "FRJ_JOOBLE_DOMAIN",
   ];
+  const ADZUNA_COUNTRIES = ["mx", "us", "ca", "br", "es", "gb", "de", "fr", "it", "nl", "be", "at", "ch", "pl", "au", "nz", "sg", "in", "za"];
   const locked = (k: string) => s?.overridden.includes(k) ?? false;
 
   init();
@@ -175,6 +177,31 @@
       {/if}
     </section>
 
+    <section class="card">
+      <h2>Fuentes de vacantes con clave</h2>
+      <p class="muted small">
+        Opcionales y gratuitas. Sin clave, estas fuentes no se consultan. Las claves van al llavero del sistema.
+      </p>
+      <h3 class="small">Adzuna</h3>
+      <p class="muted small">Crea tu clave en developer.adzuna.com (uso personal permitido).</p>
+      {@render field("FRJ_ADZUNA_APP_ID", "App ID", "")}
+      {@render apiKey("FRJ_ADZUNA_APP_KEY", "App Key")}
+      <label>
+        País
+        <select bind:value={values.FRJ_ADZUNA_COUNTRY} disabled={locked("FRJ_ADZUNA_COUNTRY")}>
+          <option value="">Por defecto (mx)</option>
+          {#each ADZUNA_COUNTRIES as c}<option value={c}>{c}</option>{/each}
+        </select>
+      </label>
+      <h3 class="small">Jooble</h3>
+      <p class="muted small">
+        Pide la clave en el sitio de tu país (por ejemplo mx.jooble.org/api/about): cada clave solo da vacantes de su
+        país. La gratuita tiene 500 consultas en total, así que se consulta una vez al día.
+      </p>
+      {@render field("FRJ_JOOBLE_DOMAIN", "Dominio", "mx.jooble.org")}
+      {@render apiKey("FRJ_JOOBLE_KEY", "Clave")}
+    </section>
+
     <div class="row">
       <button class="primary" onclick={save} disabled={saving}>{saving ? "Guardando…" : "Guardar"}</button>
       {#if msg}<span class="ok small" role="status">{msg}</span>{/if}
@@ -206,6 +233,7 @@
   .page { display: flex; flex-direction: column; gap: 0.75rem; max-width: 720px; }
   section { display: flex; flex-direction: column; gap: 0.6rem; }
   section h2, section p { margin: 0; }
+  section h3 { margin: 0.4rem 0 0; }
   .choice { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.3rem; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .link.small { align-self: flex-start; }

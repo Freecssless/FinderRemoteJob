@@ -197,3 +197,10 @@
 - Una empresa que falla (slug mal escrito) no impide traer las demás.
 - Lever y Ashby no dan el nombre de la empresa: se toma del slug. Ashby agrega el rango de compensación a la descripción.
 - `Db::setting` para leer un ajuste suelto.
+
+### Fuentes con clave: Adzuna y Jooble (Fase 2)
+- Dos fuentes nuevas (`sources::adzuna`, `sources::jooble`, migración `0004_adzuna_jooble.sql`) que solo se consultan si pones tu clave gratuita en Ajustes → «Fuentes de vacantes con clave». Las claves van al llavero del sistema; App ID, país y dominio a `settings`. También se pueden fijar en `.env`.
+- Adzuna: búsqueda por puesto (máx. 3) en el país elegido (por defecto `mx`); no se guarda el salario que Adzuna "predice".
+- Jooble: la clave gratuita tiene 500 consultas en total, así que se consulta una vez al día con todos los puestos en una sola petición. La clave es por país (dominio `mx.jooble.org` por defecto).
+- La clave va dentro de la URL de ambas APIs: los errores nunca muestran la URL (`send_private`), con prueba.
+- Los ejemplos de prueba de ambas están armados con el formato de su documentación; falta una prueba con respuesta real.
