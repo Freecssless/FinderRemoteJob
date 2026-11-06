@@ -3,7 +3,7 @@
 
   let s = $state<LlmSettings | null>(null);
   let values = $state<Record<string, string>>({});
-  let keys = $state<Record<string, string>>({ ANTHROPIC_API_KEY: "", FRJ_OPENAI_API_KEY: "", FRJ_ADZUNA_APP_KEY: "", FRJ_JOOBLE_KEY: "" });
+  let keys = $state<Record<string, string>>({ ANTHROPIC_API_KEY: "", FRJ_OPENAI_API_KEY: "", FRJ_ADZUNA_APP_KEY: "", FRJ_JOOBLE_KEY: "", FRJ_IMAP_PASSWORD: "" });
   let error = $state("");
   let msg = $state("");
   let saving = $state(false);
@@ -16,7 +16,7 @@
     // Sin elección guardada, se marca la que está en uso (p. ej. Claude si hay clave en .env).
     const inUse = v.writer?.startsWith("Claude") ? "anthropic" : v.writer?.startsWith("Compatible") ? "openai" : "local";
     values = { FRJ_WRITER: inUse, ...v.values };
-    keys = { ANTHROPIC_API_KEY: "", FRJ_OPENAI_API_KEY: "", FRJ_ADZUNA_APP_KEY: "", FRJ_JOOBLE_KEY: "" };
+    keys = { ANTHROPIC_API_KEY: "", FRJ_OPENAI_API_KEY: "", FRJ_ADZUNA_APP_KEY: "", FRJ_JOOBLE_KEY: "", FRJ_IMAP_PASSWORD: "" };
   }
 
   let boards = $state("");
@@ -74,6 +74,7 @@
     "FRJ_ANTHROPIC_MODEL", "FRJ_ANTHROPIC_EFFORT", "FRJ_OPENAI_URL", "FRJ_OPENAI_MODEL",
     "FRJ_ANTHROPIC_PRICE_IN", "FRJ_ANTHROPIC_PRICE_OUT", "FRJ_OPENAI_PRICE_IN", "FRJ_OPENAI_PRICE_OUT",
     "FRJ_ADZUNA_APP_ID", "FRJ_ADZUNA_COUNTRY", "FRJ_JOOBLE_DOMAIN",
+    "FRJ_IMAP_HOST", "FRJ_IMAP_PORT", "FRJ_IMAP_USER",
   ];
   const ADZUNA_COUNTRIES = ["mx", "us", "ca", "br", "es", "gb", "de", "fr", "it", "nl", "be", "at", "ch", "pl", "au", "nz", "sg", "in", "za"];
   const locked = (k: string) => s?.overridden.includes(k) ?? false;
@@ -200,6 +201,23 @@
       </p>
       {@render field("FRJ_JOOBLE_DOMAIN", "Dominio", "mx.jooble.org")}
       {@render apiKey("FRJ_JOOBLE_KEY", "Clave")}
+    </section>
+
+    <section class="card">
+      <h2>Alertas por correo</h2>
+      <p class="muted small">
+        Crea alertas de empleo en LinkedIn, Indeed, OCC, Computrabajo o Bumeran para que te lleguen al correo. Al
+        sincronizar, la app lee esos avisos de los últimos 14 días (solo de esos remitentes, sin marcarlos como leídos
+        ni moverlos) y agrega las vacantes. Nunca entra a esos portales.
+      </p>
+      <p class="muted small">
+        Gmail y Outlook piden una <strong>contraseña de aplicación</strong> (no la de tu cuenta) y tener IMAP activado.
+        Gmail: servidor <code>imap.gmail.com</code>.
+      </p>
+      {@render field("FRJ_IMAP_HOST", "Servidor IMAP", "imap.gmail.com")}
+      {@render field("FRJ_IMAP_PORT", "Puerto (TLS)", "993")}
+      {@render field("FRJ_IMAP_USER", "Usuario (tu correo)", "")}
+      {@render apiKey("FRJ_IMAP_PASSWORD", "Contraseña de aplicación")}
     </section>
 
     <div class="row">

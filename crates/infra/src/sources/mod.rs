@@ -10,6 +10,7 @@
 
 pub mod adzuna;
 pub mod boards;
+pub mod email;
 pub mod getonboard;
 pub mod himalayas;
 pub mod jobicy;
@@ -110,6 +111,8 @@ pub struct Query {
     /// Fuentes con clave: solo se consultan si el usuario puso la suya en Ajustes.
     pub adzuna: Option<adzuna::Credentials>,
     pub jooble: Option<jooble::Credentials>,
+    /// Buzón con las alertas de LinkedIn, Indeed, OCC…
+    pub email: Option<email::ImapConfig>,
 }
 
 // ---------------------------------------------------------------------------
@@ -129,10 +132,11 @@ pub enum Source {
     Ashby,
     Adzuna,
     Jooble,
+    Email,
 }
 
 impl Source {
-    pub const ALL: [Source; 11] = [
+    pub const ALL: [Source; 12] = [
         Source::RemoteOk,
         Source::Remotive,
         Source::Wwr,
@@ -144,6 +148,7 @@ impl Source {
         Source::Ashby,
         Source::Adzuna,
         Source::Jooble,
+        Source::Email,
     ];
 
     /// Igual que `sources.id` en la base de datos.
@@ -160,6 +165,7 @@ impl Source {
             Source::Ashby => "ashby",
             Source::Adzuna => "adzuna",
             Source::Jooble => "jooble",
+            Source::Email => "email",
         }
     }
 
@@ -191,6 +197,7 @@ impl Source {
             Source::Greenhouse | Source::Lever | Source::Ashby => !self.boards(q).is_empty(),
             Source::Adzuna => q.adzuna.is_some(),
             Source::Jooble => q.jooble.is_some() && !q.keywords.is_empty(),
+            Source::Email => q.email.is_some(),
             _ => true,
         }
     }
@@ -221,6 +228,17 @@ impl Source {
                     }
                 }
                 Ok(all)
+            }
+            Source::Email => {
+                let Some(c) = &q.email else {
+                    return Ok(vec![]);
+                };
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_or(0, |d| d.as_secs() as i64);
+                let since = epoch_to_iso(now - i64::from(email::DAYS) * 86_400);
+                let mails = email::fetch(c, &since).await?;
+                Ok(mails.iter().flat_map(|m| email::parse_alert(m)).collect())
             }
             Source::Jooble => {
                 let Some(c) = &q.jooble else {
@@ -703,7 +721,8 @@ mod tests {
             include_str!("../../migrations/0001_init.sql"),
             include_str!("../../migrations/0002_himalayas.sql"),
             include_str!("../../migrations/0003_company_boards.sql"),
-            include_str!("../../migrations/0004_adzuna_jooble.sql")
+            include_str!("../../migrations/0004_adzuna_jooble.sql"),
+            include_str!("../../migrations/0005_email.sql")
         );
         for s in Source::ALL {
             assert!(

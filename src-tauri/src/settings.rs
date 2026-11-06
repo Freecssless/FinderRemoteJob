@@ -10,7 +10,7 @@ use finder_infra::db::Db;
 use finder_infra::letter;
 use finder_infra::llm::{Backend, LlmConfig};
 use finder_infra::optimizer::{self, TokenEstimate};
-use finder_infra::sources::{adzuna, jooble};
+use finder_infra::sources::{adzuna, email, jooble};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
@@ -19,7 +19,7 @@ use crate::{AppState, CmdResult, err};
 const KEYRING_SERVICE: &str = "FinderRemoteJob";
 const PREFIX: &str = "llm.";
 /// Valores normales (se guardan en la base de datos).
-const PLAIN: [&str; 15] = [
+const PLAIN: [&str; 18] = [
     "FRJ_WRITER",
     "FRJ_LOCAL_URL",
     "FRJ_LOCAL_MODEL",
@@ -37,13 +37,18 @@ const PLAIN: [&str; 15] = [
     "FRJ_ADZUNA_APP_ID",
     "FRJ_ADZUNA_COUNTRY",
     "FRJ_JOOBLE_DOMAIN",
+    // Alertas por correo (IMAP).
+    "FRJ_IMAP_HOST",
+    "FRJ_IMAP_PORT",
+    "FRJ_IMAP_USER",
 ];
 /// Claves de API (se guardan en el llavero).
-const SECRETS: [&str; 4] = [
+const SECRETS: [&str; 5] = [
     "ANTHROPIC_API_KEY",
     "FRJ_OPENAI_API_KEY",
     "FRJ_ADZUNA_APP_KEY",
     "FRJ_JOOBLE_KEY",
+    "FRJ_IMAP_PASSWORD",
 ];
 
 fn entry(key: &str) -> keyring::Result<keyring::Entry> {
@@ -63,9 +68,13 @@ fn external(file_vars: &HashMap<String, String>, key: &str) -> Option<String> {
 }
 
 /// Claves de Adzuna y Jooble (con la misma prioridad que el resto), si están completas.
-pub(crate) async fn source_keys(
-    state: &AppState,
-) -> CmdResult<(Option<adzuna::Credentials>, Option<jooble::Credentials>)> {
+pub(crate) struct SourceKeys {
+    pub adzuna: Option<adzuna::Credentials>,
+    pub jooble: Option<jooble::Credentials>,
+    pub email: Option<email::ImapConfig>,
+}
+
+pub(crate) async fn source_keys(state: &AppState) -> CmdResult<SourceKeys> {
     let stored: HashMap<String, String> = state
         .db
         .settings_with_prefix(PREFIX)
@@ -92,7 +101,26 @@ pub(crate) async fn source_keys(
         key,
         domain: get("FRJ_JOOBLE_DOMAIN").unwrap_or_else(|| "mx.jooble.org".into()),
     });
-    Ok((adzuna, jooble))
+    let email = match (
+        get("FRJ_IMAP_HOST"),
+        get("FRJ_IMAP_USER"),
+        get("FRJ_IMAP_PASSWORD"),
+    ) {
+        (Some(host), Some(user), Some(password)) => Some(email::ImapConfig {
+            host,
+            port: get("FRJ_IMAP_PORT")
+                .and_then(|p| p.parse().ok())
+                .unwrap_or(993),
+            user,
+            password,
+        }),
+        _ => None,
+    };
+    Ok(SourceKeys {
+        adzuna,
+        jooble,
+        email,
+    })
 }
 
 /// Configuración vigente con todas las fuentes.
@@ -203,6 +231,18 @@ pub async fn save_llm_settings(
         if k == "FRJ_JOOBLE_DOMAIN" && !v.is_empty() && !jooble::valid_domain(v) {
             return Err(format!(
                 "Dominio de Jooble inválido: «{v}». Usa jooble.org o el de tu país, como mx.jooble.org."
+            ));
+        }
+        if k == "FRJ_IMAP_PORT" && !v.is_empty() && v.parse::<u16>().map_or(true, |p| p == 0) {
+            return Err(format!("Puerto IMAP inválido: «{v}» (suele ser 993)."));
+        }
+        if k == "FRJ_IMAP_HOST"
+            && !v
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-'))
+        {
+            return Err(format!(
+                "Servidor IMAP inválido: «{v}» (por ejemplo imap.gmail.com)."
             ));
         }
         if k.contains("_PRICE_") && !v.is_empty() && price(v).is_none() {

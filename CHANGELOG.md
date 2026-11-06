@@ -204,3 +204,10 @@
 - Jooble: la clave gratuita tiene 500 consultas en total, así que se consulta una vez al día con todos los puestos en una sola petición. La clave es por país (dominio `mx.jooble.org` por defecto).
 - La clave va dentro de la URL de ambas APIs: los errores nunca muestran la URL (`send_private`), con prueba.
 - Los ejemplos de prueba de ambas están armados con el formato de su documentación; falta una prueba con respuesta real.
+
+### Lector de alertas por correo (Fase 2)
+- Nueva fuente `email` (`sources::email`, migración `0005_email.sql`): por IMAP con TLS lee los correos de alertas de LinkedIn, Indeed, OCC, Computrabajo y Bumeran de los últimos 14 días y saca los enlaces a vacantes (título del enlace; empresa y ubicación del texto de alrededor). La app nunca entra a esos portales.
+- El buzón se abre en solo lectura (`EXAMINE`) y los correos se bajan con `BODY.PEEK[]`: no se marcan como leídos ni se mueven. Solo se buscan esos remitentes (constantes; no entra texto del usuario en la búsqueda IMAP).
+- Ajustes → «Alertas por correo»: servidor, puerto, usuario y contraseña de aplicación (al llavero). También en `.env`.
+- Dependencias nuevas: `async-imap`, `mail-parser`, `tokio-rustls` y `rustls-platform-verifier` (certificados del sistema).
+- La lectura de cada alerta es heurística y se probó solo con un correo armado a mano: falta afinarla con alertas reales.

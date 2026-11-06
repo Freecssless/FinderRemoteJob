@@ -180,6 +180,7 @@ export const SOURCE_LABELS: Record<string, string> = {
   ashby: "Ashby",
   adzuna: "Adzuna",
   jooble: "Jooble",
+  email: "Alertas por correo",
   manual: "Importada",
 };
 
