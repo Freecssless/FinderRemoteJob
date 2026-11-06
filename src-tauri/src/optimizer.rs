@@ -3,7 +3,7 @@
 //! La propuesta se guarda en memoria por vacante: la interfaz solo envía las decisiones del
 //! usuario al guardar, y puede volver a la pantalla sin repetir las llamadas a la IA.
 
-use finder_infra::core::document::Choices;
+use finder_infra::core::document::{Choices, Template};
 use finder_infra::core::guard::Checked;
 use finder_infra::core::model::{CvMaster, Job};
 use finder_infra::llm::LlmClient;
@@ -178,6 +178,7 @@ pub async fn save_optimized(
     state: State<'_, AppState>,
     job_id: String,
     choices: Choices,
+    template: Template,
 ) -> CmdResult<SavedCv> {
     // Se saca de la sesión para no mantener el candado durante el guardado (hay `await`).
     let s =
@@ -189,13 +190,18 @@ pub async fn save_optimized(
         state.sessions.lock().map_err(err)?.insert(job_id, s);
         return Err(msg.into());
     }
-    let result = save(&state, &s, &choices).await;
+    let result = save(&state, &s, &choices, template).await;
     // Se conserva la sesión: el usuario puede cambiar decisiones y guardar otra versión.
     state.sessions.lock().map_err(err)?.insert(job_id, s);
     result
 }
 
-async fn save(state: &AppState, s: &Session, choices: &Choices) -> CmdResult<SavedCv> {
+async fn save(
+    state: &AppState,
+    s: &Session,
+    choices: &Choices,
+    template: Template,
+) -> CmdResult<SavedCv> {
     let profile = state
         .db
         .get_profile(&s.profile_id)
@@ -215,6 +221,7 @@ async fn save(state: &AppState, s: &Session, choices: &Choices) -> CmdResult<Sav
         &input(s),
         &s.opt,
         choices,
+        template,
         &SaveTarget {
             profile_id: &s.profile_id,
             application_id: &application_id,

@@ -2,7 +2,7 @@
   import { openPath, openUrl } from "@tauri-apps/plugin-opener";
   import { goto } from "$app/navigation";
   import {
-    api, boardApi, rememberedProfile, rememberProfile, scoreClass, REMINDER_LABELS, SOURCE_LABELS, STATUSES,
+    api, boardApi, rememberedProfile, rememberProfile, scoreClass, REMINDER_LABELS, SOURCE_LABELS, STATUSES, TEMPLATE_LABELS,
     STATUS_LABELS, type ApplicationDetail, type BoardRow, type Profile, type Reminder, type ReminderDays,
     type Status,
   } from "$lib/api";
@@ -394,7 +394,7 @@
       {:else if detail.cv}
         {@const cv = detail.cv}
         <p class="small">
-          Versión del {day(cv.created_at)} · ATS {cv.ats_before ?? "?"} → <strong>{cv.ats_after ?? "?"}</strong>
+          {TEMPLATE_LABELS[cv.variant] ?? cv.variant} · {day(cv.created_at)} · ATS {cv.ats_before ?? "?"} → <strong>{cv.ats_after ?? "?"}</strong>
         </p>
         {#if cv.missing.length}<p class="muted small">Le falta: {cv.missing.join(", ")}</p>{/if}
         <div class="row">

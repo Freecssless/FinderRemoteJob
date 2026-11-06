@@ -152,3 +152,10 @@
 ### Vista de lista y filtros del Tablero (plan §5.4)
 - Tablero: botón Kanban / Lista. La lista es una tabla (puesto, empresa, portal, estado, fecha, compatibilidad); al pulsar el puesto se abre la misma ficha.
 - Filtros por portal, rango de fechas (de postulación, o de hallazgo si aún no te postulas) y compatibilidad mínima, en las dos vistas; el filtro por estado solo en la lista (en el Kanban ya son las columnas). «Quitar filtros» los limpia.
+
+### Plantillas Compacta y Técnica (plan §4.6)
+- `core::document::Template` (Clásica, Compacta, Técnica) decide el orden de las secciones (`CvDocument::sections`); PDF, DOCX, texto plano y prueba de ida y vuelta usan ese mismo orden.
+- Compacta: letra de 9.5 pt y márgenes y espacios más chicos para caber en una página. Técnica: Habilidades justo después del Resumen. Como el CV maestro no tiene sección de proyectos, la Técnica no puede ponerlos antes que Educación, como pedía el plan.
+- Una sola plantilla Typst (`templates/cv.typ`, antes `clasica.typ`) con el orden que le pasa Rust.
+- Optimizador: eliges la plantilla al guardar; se guarda como `variant` (sale en la ficha del Tablero y en Estadísticas «Por plantilla de CV»).
+- Pruebas de ida y vuelta para las tres plantillas en PDF y DOCX, español e inglés.

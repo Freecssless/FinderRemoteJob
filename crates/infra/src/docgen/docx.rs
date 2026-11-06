@@ -2,7 +2,7 @@ use docx_rs::{
     AbstractNumbering, Docx, IndentLevel, Level, LevelJc, LevelText, LineSpacing, NumberFormat,
     Numbering, NumberingId, Paragraph, Run, RunFonts, SpecialIndentType, Start, Style, StyleType,
 };
-use finder_core::document::CvDocument;
+use finder_core::document::{CvDocument, Section, Template};
 
 use super::{DocError, Result};
 
@@ -13,6 +13,7 @@ const BULLETS: usize = 1;
 
 /// DOCX del CV con la misma estructura que el PDF.
 pub fn render_docx(doc: &CvDocument) -> Result<Vec<u8>> {
+    let compact = doc.template == Template::Compacta;
     let fonts = RunFonts::new()
         .ascii("Arial")
         .hi_ansi("Arial")
@@ -20,7 +21,7 @@ pub fn render_docx(doc: &CvDocument) -> Result<Vec<u8>> {
         .east_asia("Arial");
     let mut d = Docx::new()
         .default_fonts(fonts)
-        .default_size(21) // 10.5 pt
+        .default_size(if compact { 19 } else { 21 }) // 9.5 / 10.5 pt
         .page_size(12_240, 15_840) // carta, igual que el PDF
         .add_style(
             Style::new(HEADING, StyleType::Paragraph)
@@ -28,7 +29,11 @@ pub fn render_docx(doc: &CvDocument) -> Result<Vec<u8>> {
                 .size(23)
                 .bold()
                 .outline_lvl(0)
-                .line_spacing(LineSpacing::new().before(240).after(80)),
+                .line_spacing(if compact {
+                    LineSpacing::new().before(160).after(40)
+                } else {
+                    LineSpacing::new().before(240).after(80)
+                }),
         )
         .add_abstract_numbering(
             AbstractNumbering::new(BULLETS).add_level(
@@ -63,50 +68,39 @@ pub fn render_docx(doc: &CvDocument) -> Result<Vec<u8>> {
     }
     d = d.add_paragraph(text(&doc.contact.join(" | ")));
 
-    let h = &doc.headings;
-    if let Some(s) = &doc.summary {
-        d = d.add_paragraph(heading(h.summary)).add_paragraph(text(s));
-    }
-    if !doc.experience.is_empty() {
-        d = d.add_paragraph(heading(h.experience));
-        for e in &doc.experience {
-            d = d
-                .add_paragraph(
+    for sec in doc.sections() {
+        d = d.add_paragraph(heading(doc.heading(sec)));
+        let list = |items: &[String]| text(&items.join(", "));
+        d = match sec {
+            Section::Summary => d.add_paragraph(text(doc.summary.as_deref().unwrap_or_default())),
+            Section::Experience => doc.experience.iter().fold(d, |d, e| {
+                let d = d
+                    .add_paragraph(
+                        Paragraph::new()
+                            .add_run(Run::new().add_text(&e.title).bold())
+                            .add_run(Run::new().add_text(format!(" — {}", e.company))),
+                    )
+                    .add_paragraph(
+                        Paragraph::new().add_run(Run::new().add_text(&e.dates).italic()),
+                    );
+                e.bullets.iter().fold(d, |d, b| d.add_paragraph(bullet(b)))
+            }),
+            Section::Education => doc.education.iter().fold(d, |d, e| {
+                let dates = if e.dates.is_empty() {
+                    String::new()
+                } else {
+                    format!(", {}", e.dates)
+                };
+                d.add_paragraph(
                     Paragraph::new()
-                        .add_run(Run::new().add_text(&e.title).bold())
-                        .add_run(Run::new().add_text(format!(" — {}", e.company))),
+                        .add_run(Run::new().add_text(&e.degree).bold())
+                        .add_run(Run::new().add_text(format!(" — {}{dates}", e.institution))),
                 )
-                .add_paragraph(Paragraph::new().add_run(Run::new().add_text(&e.dates).italic()));
-            for b in &e.bullets {
-                d = d.add_paragraph(bullet(b));
-            }
-        }
-    }
-    if !doc.education.is_empty() {
-        d = d.add_paragraph(heading(h.education));
-        for e in &doc.education {
-            let dates = if e.dates.is_empty() {
-                String::new()
-            } else {
-                format!(", {}", e.dates)
-            };
-            d = d.add_paragraph(
-                Paragraph::new()
-                    .add_run(Run::new().add_text(&e.degree).bold())
-                    .add_run(Run::new().add_text(format!(" — {}{dates}", e.institution))),
-            );
-        }
-    }
-    for (title, items) in [
-        (h.skills, &doc.skills),
-        (h.certifications, &doc.certifications),
-        (h.languages, &doc.languages),
-    ] {
-        if !items.is_empty() {
-            d = d
-                .add_paragraph(heading(title))
-                .add_paragraph(text(&items.join(", ")));
-        }
+            }),
+            Section::Skills => d.add_paragraph(list(&doc.skills)),
+            Section::Certifications => d.add_paragraph(list(&doc.certifications)),
+            Section::Languages => d.add_paragraph(list(&doc.languages)),
+        };
     }
 
     let mut buf = std::io::Cursor::new(Vec::new());

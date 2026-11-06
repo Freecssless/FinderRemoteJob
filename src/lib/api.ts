@@ -257,11 +257,21 @@ export interface SavedCv {
   missing: string[];
 }
 
+/** Plantillas del CV (plan §4.6); se guardan como `variant`. */
+export type Template = "clasica" | "compacta" | "tecnica";
+export const TEMPLATES: { id: Template; label: string; hint: string }[] = [
+  { id: "clasica", label: "Clásica", hint: "Una columna, espaciado cómodo." },
+  { id: "compacta", label: "Compacta", hint: "Letra y márgenes más chicos para caber en una página." },
+  { id: "tecnica", label: "Técnica", hint: "Habilidades arriba, antes de la experiencia." },
+];
+export const TEMPLATE_LABELS: Record<string, string> = Object.fromEntries(TEMPLATES.map((t) => [t.id, t.label]));
+
 export const optimizerApi = {
   get: (jobId: string, profileId: string) =>
     invoke<OptimizerView | null>("get_optimization", { jobId, profileId }),
   run: (jobId: string, profileId: string) => invoke<OptimizerView>("run_optimizer", { jobId, profileId }),
-  save: (jobId: string, choices: Choices) => invoke<SavedCv>("save_optimized", { jobId, choices }),
+  save: (jobId: string, choices: Choices, template: Template) =>
+    invoke<SavedCv>("save_optimized", { jobId, choices, template }),
 };
 
 // ---------------------------------------------------------------------------
@@ -312,6 +322,7 @@ export interface BoardRow {
 }
 export interface CvVersion {
   id: string;
+  variant: string;
   ats_before: number | null;
   ats_after: number | null;
   missing: string[];

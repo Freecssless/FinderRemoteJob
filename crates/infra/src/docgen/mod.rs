@@ -31,7 +31,7 @@ mod tests {
     use crate::cvfile::CvFileKind;
     use finder_core::ats::keywords::{SkillDict, extract_terms};
     use finder_core::ats::score::{ats_score, with_roundtrip};
-    use finder_core::document::{CvDocument, DocLang};
+    use finder_core::document::{CvDocument, DocLang, Template};
     use finder_core::model::CvMaster;
 
     type R = std::result::Result<(), Box<dyn std::error::Error>>;
@@ -46,34 +46,60 @@ mod tests {
         Ok(d)
     }
 
+    const TEMPLATES: [Template; 3] = [Template::Clasica, Template::Compacta, Template::Tecnica];
+
     #[test]
     fn pdf_ida_y_vuelta_sin_perdidas() -> R {
-        let d = doc(DocLang::Es)?;
-        let pdf = render_pdf(&d)?;
-        assert!(pdf.starts_with(b"%PDF"));
-        let rt = verify(&d, &pdf, CvFileKind::Pdf)?;
-        assert!(
-            rt.ok(),
-            "faltan {:?}; orden {}\n{}",
-            rt.missing_words,
-            rt.sections_in_order,
-            rt.text
-        );
+        for t in TEMPLATES {
+            let mut d = doc(DocLang::Es)?;
+            d.template = t;
+            let pdf = render_pdf(&d)?;
+            assert!(pdf.starts_with(b"%PDF"));
+            let rt = verify(&d, &pdf, CvFileKind::Pdf)?;
+            assert!(
+                rt.ok(),
+                "{t:?}: faltan {:?}; orden {}\n{}",
+                rt.missing_words,
+                rt.sections_in_order,
+                rt.text
+            );
+        }
         Ok(())
     }
 
     #[test]
     fn docx_ida_y_vuelta_sin_perdidas() -> R {
         for lang in [DocLang::Es, DocLang::En] {
-            let d = doc(lang)?;
-            let rt = verify(&d, &render_docx(&d)?, CvFileKind::Docx)?;
-            assert!(
-                rt.ok(),
-                "{lang:?}: faltan {:?}; orden {}",
-                rt.missing_words,
-                rt.sections_in_order
-            );
+            for t in TEMPLATES {
+                let mut d = doc(lang)?;
+                d.template = t;
+                let rt = verify(&d, &render_docx(&d)?, CvFileKind::Docx)?;
+                assert!(
+                    rt.ok(),
+                    "{lang:?} {t:?}: faltan {:?}; orden {}",
+                    rt.missing_words,
+                    rt.sections_in_order
+                );
+            }
         }
+        Ok(())
+    }
+
+    /// La Técnica pone Habilidades antes que Experiencia, y el PDF respeta ese orden.
+    #[test]
+    fn la_tecnica_pone_habilidades_primero() -> R {
+        let mut d = doc(DocLang::Es)?;
+        d.template = Template::Tecnica;
+        assert_eq!(
+            &d.section_headings()[..3],
+            ["Resumen", "Habilidades", "Experiencia profesional"]
+        );
+        let text = verify(&d, &render_pdf(&d)?, CvFileKind::Pdf)?.text;
+        let pos = |h: &str| text.find(h);
+        assert!(
+            pos("HABILIDADES") < pos("EXPERIENCIA PROFESIONAL"),
+            "{text}"
+        );
         Ok(())
     }
 
@@ -150,10 +176,17 @@ mod tests {
     fn muestras_para_revision_visual() -> R {
         let dir = std::env::temp_dir().join("finder-muestras");
         std::fs::create_dir_all(&dir)?;
-        let d = doc(DocLang::Es)?;
-        let stem = d.file_stem("Editor de Video", Some("Agencia X"));
-        std::fs::write(dir.join(format!("{stem}.pdf")), render_pdf(&d)?)?;
-        std::fs::write(dir.join(format!("{stem}.docx")), render_docx(&d)?)?;
+        for t in TEMPLATES {
+            let mut d = doc(DocLang::Es)?;
+            d.template = t;
+            let stem = format!(
+                "{}_{}",
+                d.file_stem("Editor de Video", Some("Agencia X")),
+                t.as_str()
+            );
+            std::fs::write(dir.join(format!("{stem}.pdf")), render_pdf(&d)?)?;
+            std::fs::write(dir.join(format!("{stem}.docx")), render_docx(&d)?)?;
+        }
         println!("{}", dir.display());
         Ok(())
     }

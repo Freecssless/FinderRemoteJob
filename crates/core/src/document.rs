@@ -5,7 +5,7 @@
 //! El contenido viene del CV maestro ([`CvDocument::from_master`]); el optimizador (módulo 9)
 //! sustituye resumen, bullets y orden de habilidades por los ya validados por el guardián.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::ats::keywords::{SkillDict, contains_word, normalize};
 use crate::guard::{Checked, GuardReport};
@@ -111,9 +111,72 @@ impl Headings {
     }
 }
 
+/// Plantilla del CV (plan §4.6). Se guarda como `variant` para las estadísticas.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Template {
+    /// Una columna, espaciado cómodo.
+    #[default]
+    Clasica,
+    /// Letra y márgenes más chicos para caber en una página.
+    Compacta,
+    /// Habilidades justo después del resumen, antes de la experiencia.
+    Tecnica,
+}
+
+impl Template {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Clasica => "clasica",
+            Self::Compacta => "compacta",
+            Self::Tecnica => "tecnica",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        [Self::Clasica, Self::Compacta, Self::Tecnica]
+            .into_iter()
+            .find(|t| t.as_str() == s)
+    }
+
+    fn order(self) -> [Section; 6] {
+        use Section::*;
+        match self {
+            Self::Clasica | Self::Compacta => [
+                Summary,
+                Experience,
+                Education,
+                Skills,
+                Certifications,
+                Languages,
+            ],
+            Self::Tecnica => [
+                Summary,
+                Skills,
+                Experience,
+                Education,
+                Certifications,
+                Languages,
+            ],
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Section {
+    Summary,
+    Experience,
+    Education,
+    Skills,
+    Certifications,
+    Languages,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct CvDocument {
     pub lang: DocLang,
+    pub template: Template,
     pub headings: Headings,
     pub name: String,
     pub headline: String,
@@ -154,6 +217,7 @@ impl CvDocument {
             .collect();
         Self {
             lang,
+            template: Template::default(),
             headings: Headings::for_lang(lang),
             name: b.name.clone(),
             headline: b.headline.clone(),
@@ -324,40 +388,61 @@ impl CvDocument {
         self.skills = out;
     }
 
+    /// Secciones con contenido, en el orden de la plantilla. PDF, DOCX y texto plano siguen este
+    /// orden; la prueba de ida y vuelta lo verifica.
+    pub fn sections(&self) -> Vec<Section> {
+        self.template
+            .order()
+            .into_iter()
+            .filter(|s| match s {
+                Section::Summary => self.summary.is_some(),
+                Section::Experience => !self.experience.is_empty(),
+                Section::Education => !self.education.is_empty(),
+                Section::Skills => !self.skills.is_empty(),
+                Section::Certifications => !self.certifications.is_empty(),
+                Section::Languages => !self.languages.is_empty(),
+            })
+            .collect()
+    }
+
+    pub fn heading(&self, s: Section) -> &'static str {
+        let h = &self.headings;
+        match s {
+            Section::Summary => h.summary,
+            Section::Experience => h.experience,
+            Section::Education => h.education,
+            Section::Skills => h.skills,
+            Section::Certifications => h.certifications,
+            Section::Languages => h.languages,
+        }
+    }
+
     /// Texto plano en el mismo orden que las plantillas: lo que un ATS debería poder leer.
     pub fn to_plain_text(&self) -> String {
-        let h = &self.headings;
         let mut out = vec![self.name.clone()];
         if !self.headline.is_empty() {
             out.push(self.headline.clone());
         }
         out.push(self.contact.join(" | "));
-        if let Some(s) = &self.summary {
-            out.extend([String::new(), h.summary.to_uppercase(), s.clone()]);
-        }
-        if !self.experience.is_empty() {
-            out.extend([String::new(), h.experience.to_uppercase()]);
-            for e in &self.experience {
-                out.push(format!("{} — {}", e.title, e.company));
-                out.push(e.dates.clone());
-                out.extend(e.bullets.iter().map(|b| format!("- {b}")));
-            }
-        }
-        if !self.education.is_empty() {
-            out.extend([String::new(), h.education.to_uppercase()]);
-            out.extend(
-                self.education
-                    .iter()
-                    .map(|e| format!("{} — {}, {}", e.degree, e.institution, e.dates)),
-            );
-        }
-        for (heading, items) in [
-            (h.skills, &self.skills),
-            (h.certifications, &self.certifications),
-            (h.languages, &self.languages),
-        ] {
-            if !items.is_empty() {
-                out.extend([String::new(), heading.to_uppercase(), items.join(", ")]);
+        for sec in self.sections() {
+            out.extend([String::new(), self.heading(sec).to_uppercase()]);
+            match sec {
+                Section::Summary => out.extend(self.summary.clone()),
+                Section::Experience => {
+                    for e in &self.experience {
+                        out.push(format!("{} — {}", e.title, e.company));
+                        out.push(e.dates.clone());
+                        out.extend(e.bullets.iter().map(|b| format!("- {b}")));
+                    }
+                }
+                Section::Education => out.extend(
+                    self.education
+                        .iter()
+                        .map(|e| format!("{} — {}, {}", e.degree, e.institution, e.dates)),
+                ),
+                Section::Skills => out.push(self.skills.join(", ")),
+                Section::Certifications => out.push(self.certifications.join(", ")),
+                Section::Languages => out.push(self.languages.join(", ")),
             }
         }
         out.join("\n")
@@ -365,18 +450,10 @@ impl CvDocument {
 
     /// Encabezados de las secciones presentes, en orden (para la prueba de ida y vuelta).
     pub fn section_headings(&self) -> Vec<&'static str> {
-        let h = &self.headings;
-        [
-            (h.summary, self.summary.is_some()),
-            (h.experience, !self.experience.is_empty()),
-            (h.education, !self.education.is_empty()),
-            (h.skills, !self.skills.is_empty()),
-            (h.certifications, !self.certifications.is_empty()),
-            (h.languages, !self.languages.is_empty()),
-        ]
-        .into_iter()
-        .filter_map(|(name, present)| present.then_some(name))
-        .collect()
+        self.sections()
+            .into_iter()
+            .map(|s| self.heading(s))
+            .collect()
     }
 
     /// Nombre de archivo del plan: `Nombre_Apellido_Puesto_Empresa` (sin acentos ni símbolos).

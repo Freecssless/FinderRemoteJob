@@ -7,7 +7,7 @@ use typst_layout::PagedDocument;
 
 use super::{DocError, Result};
 
-const CLASICA: &str = include_str!("../../templates/clasica.typ");
+const TEMPLATE: &str = include_str!("../../templates/cv.typ");
 const FONTS: [&[u8]; 3] = [
     include_bytes!("../../assets/fonts/LiberationSans-Regular.ttf"),
     include_bytes!("../../assets/fonts/LiberationSans-Bold.ttf"),
@@ -17,15 +17,17 @@ const FONTS: [&[u8]; 3] = [
 /// El motor (plantilla + fuentes ya cargadas) se construye una vez y se reutiliza.
 static ENGINE: LazyLock<TypstEngine<typst_as_lib::TypstTemplateMainFile>> = LazyLock::new(|| {
     TypstEngine::builder()
-        .main_file(CLASICA)
+        .main_file(TEMPLATE)
         .fonts(FONTS)
         .build()
 });
 
-/// PDF del CV con la plantilla Clásica.
+/// PDF del CV con su plantilla (`doc.template`).
 pub fn render_pdf(doc: &CvDocument) -> Result<Vec<u8>> {
     let mut inputs = Dict::new();
-    inputs.insert("data".into(), serde_json::to_string(doc)?.into_value());
+    let mut data = serde_json::to_value(doc)?;
+    data["sections"] = serde_json::to_value(doc.sections())?;
+    inputs.insert("data".into(), data.to_string().into_value());
 
     let compiled: PagedDocument = ENGINE
         .compile_with_input(inputs)

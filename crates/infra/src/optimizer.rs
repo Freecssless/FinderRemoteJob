@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use finder_core::ats::keywords::{SkillDict, extract_terms};
 use finder_core::ats::requirements::is_skill_like;
 use finder_core::ats::score::{AtsReport, Gaps, ats_score, classify_gaps, with_roundtrip};
-use finder_core::document::{Choices, CvDocument, DocLang};
+use finder_core::document::{Choices, CvDocument, DocLang, Template};
 use finder_core::guard::{Draft, GuardReport, validate};
 use finder_core::matching::years_of_experience;
 use finder_core::model::{Basics, CvMaster, CvVersion, Job, JobRequirements, Status};
@@ -245,9 +245,11 @@ pub async fn save(
     input: &OptimizeInput<'_>,
     opt: &Optimization,
     choices: &Choices,
+    template: Template,
     target: &SaveTarget<'_>,
 ) -> Result<CvVersion> {
-    let doc = build_document(dict, input, &opt.review, choices, &opt.prepared);
+    let mut doc = build_document(dict, input, &opt.review, choices, &opt.prepared);
+    doc.template = template;
     let pdf = docgen::render_pdf(&doc)?;
     let docx = docgen::render_docx(&doc)?;
     let rt = docgen::verify(&doc, &pdf, CvFileKind::Pdf)?;
@@ -274,7 +276,7 @@ pub async fn save(
         id,
         profile_id: target.profile_id.to_string(),
         job_id: Some(input.job.id.clone()),
-        variant: "clasica".into(),
+        variant: template.as_str().into(),
         content_json: serde_json::to_string(&doc)?,
         master_hash: master_hash(input.master)?,
         ats_before: Some(opt.prepared.ats_before.total),
@@ -618,7 +620,16 @@ mod tests {
             application_id: &app,
             out_dir: &dir,
         };
-        let v = save(&db, &dict, &input, &opt, &choices, &target).await?;
+        let v = save(
+            &db,
+            &dict,
+            &input,
+            &opt,
+            &choices,
+            Template::Tecnica,
+            &target,
+        )
+        .await?;
 
         assert!(v.pdf_path.as_deref().is_some_and(|p| Path::new(p).exists()));
         assert!(
@@ -645,6 +656,7 @@ mod tests {
             (Status::CvAdaptado, Some(v.id.clone()))
         );
         assert_eq!(v.master_hash, master_hash(&m)?);
+        assert_eq!(v.variant, "tecnica");
         std::fs::remove_dir_all(&dir)?;
         Ok(())
     }

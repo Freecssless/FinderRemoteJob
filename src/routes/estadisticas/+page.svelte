@@ -1,12 +1,11 @@
 <script lang="ts">
-  import { api, statsApi, SOURCE_LABELS, type GroupStat, type Profile, type Stats } from "$lib/api";
+  import { api, statsApi, SOURCE_LABELS, TEMPLATE_LABELS, type GroupStat, type Profile, type Stats } from "$lib/api";
 
   let profiles = $state<Profile[]>([]);
   let profileId = $state<string>("");
   let stats = $state<Stats | null>(null);
   let error = $state("");
 
-  const VARIANTS: Record<string, string> = { clasica: "Clásica" };
   const profileName = (id: string) => profiles.find((p) => p.id === id)?.name ?? id;
   const fmt = (n: number | null, suffix = "") => (n === null ? "—" : `${Math.round(n * 10) / 10}${suffix}`);
   const share = (part: number, total: number) => (total ? Math.round((100 * part) / total) : 0);
@@ -16,7 +15,7 @@
       ? [
           { title: "Por portal", rows: stats.by_source, label: (g: string) => SOURCE_LABELS[g] ?? g },
           ...(profileId ? [] : [{ title: "Por perfil", rows: stats.by_profile, label: profileName }]),
-          { title: "Por plantilla de CV", rows: stats.by_variant, label: (g: string) => VARIANTS[g] ?? g },
+          { title: "Por plantilla de CV", rows: stats.by_variant, label: (g: string) => TEMPLATE_LABELS[g] ?? g },
           { title: "Por ATS del CV enviado", rows: stats.by_ats, label: (g: string) => g },
         ]
       : [],

@@ -2,8 +2,8 @@
   import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
   import { page } from "$app/state";
   import {
-    api, jobsApi, optimizerApi, rememberedProfile,
-    type Choices, type JobDetail, type OptimizerView, type Profile, type SavedCv,
+    api, jobsApi, optimizerApi, rememberedProfile, TEMPLATES,
+    type Choices, type Template, type JobDetail, type OptimizerView, type Profile, type SavedCv,
   } from "$lib/api";
 
   const jobId = $derived(page.url.searchParams.get("job"));
@@ -13,6 +13,7 @@
   let view = $state<OptimizerView | null>(null);
   let choices = $state<Choices>({ summary: false, bullets: [] });
   let saved = $state<SavedCv | null>(null);
+  let template = $state<Template>("clasica");
   let busy = $state<"" | "load" | "run" | "save">("load");
   let error = $state("");
 
@@ -65,7 +66,7 @@
     busy = "save";
     error = "";
     try {
-      saved = await optimizerApi.save(jobId, $state.snapshot(choices));
+      saved = await optimizerApi.save(jobId, $state.snapshot(choices), template);
     } catch (e) {
       error = String(e);
     } finally {
@@ -212,6 +213,15 @@
       {/each}
 
       <div class="card save">
+        <fieldset class="templates">
+          <legend>Plantilla</legend>
+          {#each TEMPLATES as t}
+            <label class="inline" title={t.hint}>
+              <input type="radio" name="template" value={t.id} bind:group={template} />
+              {t.label} <span class="muted small">{t.hint}</span>
+            </label>
+          {/each}
+        </fieldset>
         <button class="primary" onclick={save} disabled={busy !== ""}>
           {busy === "save" ? "Generando PDF y DOCX…" : saved ? "Guardar otra versión" : "Guardar CV"}
         </button>
@@ -238,6 +248,8 @@
 {/if}
 
 <style>
+  .templates { flex-basis: 100%; border: 0; padding: 0; margin: 0 0 0.5rem; display: flex; flex-direction: column; gap: 0.2rem; }
+  .templates legend { font-weight: 600; margin-bottom: 0.2rem; }
   .page { display: flex; flex-direction: column; gap: 0.75rem; max-width: 960px; }
   header h1 { margin-bottom: 0.25rem; }
   header p { margin: 0; }
