@@ -47,9 +47,17 @@ pub(crate) async fn complete_json(
         .json(&chat_body(model, system, user, schema));
     let resp = with_key(req, api_key).send().await?;
     if !resp.status().is_success() {
-        return Err(api_error(resp).await);
+        return Err(fail(resp, model).await);
     }
     parse_chat(&resp.json::<Value>().await?)
+}
+
+/// Ollama responde 404 cuando el modelo no está descargado: se explica qué hacer.
+async fn fail(resp: reqwest::Response, model: &str) -> LlmError {
+    if resp.status() == reqwest::StatusCode::NOT_FOUND {
+        return LlmError::ModelNotFound(model.to_string());
+    }
+    api_error(resp).await
 }
 
 pub(crate) fn parse_chat(v: &Value) -> Result<Value> {
@@ -80,7 +88,7 @@ pub(crate) async fn embed(
         .json(&json!({ "model": model, "input": texts }));
     let resp = with_key(req, api_key).send().await?;
     if !resp.status().is_success() {
-        return Err(api_error(resp).await);
+        return Err(fail(resp, model).await);
     }
     parse_embeddings(&resp.json::<Value>().await?, texts.len())
 }

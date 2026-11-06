@@ -13,7 +13,7 @@
 | 7 | Cliente LLM (Ollama / OpenAI-compatible / Anthropic) + importación de CV PDF/DOCX | ✅ Terminado (prueba en vivo con Ollama pendiente) |
 | 8 | Generación de PDF (Typst) y DOCX + prueba de ida y vuelta (`infra::docgen`) | ✅ Terminado |
 | 9 | Flujo completo del optimizador de CV | ✅ Terminado (prueba en vivo con IA pendiente) |
-| 10 | App Tauri + interfaz Svelte (perfiles, vacantes, optimizador, tablero) | ⏳ Pendiente |
+| 10 | App Tauri + interfaz Svelte (perfiles, vacantes, optimizador, tablero) | 🔄 En curso: 10a hecha |
 
 ## Registro
 
@@ -94,3 +94,11 @@
 - Ejemplo de prueba: ATS 67 → 69 con un borrador honesto; lo que sigue faltando (TikTok, Instagram…) no está en el maestro y se queda como hueco.
 - Carta de presentación: pasa a la fase 2 (decisión del usuario).
 - Pendiente: probar en vivo con Ollama o Claude (`cargo test -p finder-infra optimizer -- --ignored --nocapture`).
+
+### Módulo 10a: esqueleto de la app y pantalla Perfiles
+- `src-tauri` (`finder-app`) en el workspace; interfaz SvelteKit 5 + TypeScript en `src/` con `adapter-static`.
+- Base de datos en la carpeta de datos de la app; `.env` leído sin tocar el entorno del proceso (`envfile.rs`, con prueba) y pasado a `LlmConfig::from_lookup`.
+- Comandos: perfiles (listar, crear, editar, borrar), CV maestro (leer, guardar) e importar PDF/DOCX con la IA **local**. Al guardar se recalculan las cifras de cada logro.
+- Pantalla Perfiles: formulario del perfil, borrado con confirmación, importación con avisos de revisión, editor completo del CV maestro (ids estables para el guardián) y aviso de cambios sin guardar.
+- Probado por el usuario en la app: importar su CV con Ollama (qwen3:8b) y guardarlo.
+- `LlmError::ModelNotFound`: el 404 de Ollama por modelo no descargado se explica en español con el comando `ollama pull`.

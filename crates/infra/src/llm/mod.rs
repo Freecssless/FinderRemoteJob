@@ -30,6 +30,10 @@ pub enum LlmError {
     Http(#[from] reqwest::Error),
     #[error("la IA respondió {status}: {message}")]
     Api { status: StatusCode, message: String },
+    #[error(
+        "no se encontró el modelo «{0}» (o la URL de la IA es incorrecta). Si usas Ollama, descárgalo con: ollama pull {0}"
+    )]
+    ModelNotFound(String),
     #[error("el modelo se negó a responder ({0})")]
     Refusal(String),
     #[error("la respuesta se cortó por longitud; intenta con un texto más corto")]

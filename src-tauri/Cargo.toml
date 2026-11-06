@@ -1,0 +1,24 @@
+[package]
+name = "finder-app"
+description = "App de escritorio de FinderRemoteJob (Tauri 2): comandos delgados sobre finder-infra."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+# El sufijo _lib evita choque de nombres con el binario en Windows (cargo#8519).
+name = "finder_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+finder-infra = { path = "../crates/infra" }
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

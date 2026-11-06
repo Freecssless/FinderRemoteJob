@@ -16,7 +16,8 @@ El diseño completo está en [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) y el
 |---|---|---|
 | `crates/core` | `finder-core` | Dominio puro: modelos, ATS, compatibilidad, guardián. **Sin IO**; se reutiliza en móvil |
 | `crates/infra` | `finder-infra` | SQLite, clientes LLM, fuentes de vacantes, PDF/DOCX |
-| `src-tauri`, `src` | — | App Tauri 2 + Svelte (módulo 10, pendiente) |
+| `src-tauri` | `finder-app` | App de escritorio Tauri 2: comandos delgados sobre `finder-infra` |
+| `src` | — | Interfaz SvelteKit 5 + TypeScript (`adapter-static`) |
 
 ## Requisitos
 
@@ -35,6 +36,18 @@ cargo build
 cargo test
 cargo clippy --all-targets
 ```
+
+### App de escritorio
+
+```bash
+npm install
+npm run tauri dev     # desarrollo con recarga en caliente
+npm run check         # tipos de la interfaz
+```
+
+- La base de datos vive en `~/.local/share/com.finderremotejob.app/finder.db` (Linux).
+- El `.env` se busca en `~/.config/com.finderremotejob.app/.env` y, en desarrollo, en el directorio actual y sus padres (la raíz del repo). Una variable real del entorno gana sobre el archivo.
+- Si la ventana sale en blanco en Linux, prueba `WEBKIT_DISABLE_DMABUF_RENDERER=1 npm run tauri dev`.
 
 ## IA y claves de API
 

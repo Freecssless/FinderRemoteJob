@@ -14,3 +14,6 @@ config.local.toml
 
 # Escritorio KDE
 .directory
+
+# Tauri
+/src-tauri/gen/schemas

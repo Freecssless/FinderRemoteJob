@@ -1,6 +1,5 @@
 [workspace]
-# src-tauri se agrega en el módulo 10 (requiere webkit2gtk-4.1 instalado).
-members = ["crates/*"]
+members = ["crates/*", "src-tauri"]
 resolver = "3"
 
 [workspace.package]
