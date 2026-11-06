@@ -5,15 +5,19 @@
 
   let { children } = $props();
   let info = $state<AppInfo | null>(null);
-  api.appInfo().then((i) => (info = i)).catch(() => {});
+  // Se vuelve a pedir al navegar: los Ajustes pueden cambiar los modelos.
+  $effect(() => {
+    void page.url.pathname;
+    api.appInfo().then((i) => (info = i)).catch(() => {});
+  });
 
-  // Las demás secciones llegan en las parte 10d.
   const nav = [
     { href: "/perfiles", label: "Perfiles", ready: true },
     { href: "/vacantes", label: "Vacantes", ready: true },
     { href: "/optimizador", label: "Optimizador", ready: true },
     { href: "/tablero", label: "Tablero", ready: true },
     { href: "/estadisticas", label: "Estadísticas", ready: true },
+    { href: "/ajustes", label: "Ajustes", ready: true },
   ];
 </script>
 

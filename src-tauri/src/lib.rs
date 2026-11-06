@@ -6,6 +6,7 @@ mod jobs;
 mod letter;
 mod optimizer;
 mod reminders;
+mod settings;
 
 use finder_infra::core::ats::keywords::SkillDict;
 use finder_infra::core::guard::numbers;
@@ -26,7 +27,10 @@ pub(crate) fn err(e: impl std::fmt::Display) -> String {
 
 pub(crate) struct AppState {
     db: Db,
-    llm: Result<LlmConfig, String>,
+    /// Se recarga al guardar los Ajustes.
+    llm: std::sync::RwLock<Result<LlmConfig, String>>,
+    /// Variables del `.env` (para recargar la configuración).
+    file_vars: std::collections::HashMap<String, String>,
     dict: SkillDict,
     http: finder_infra::sources::Client,
     /// Carpeta de datos de la app (base de datos y `cvs/`).
@@ -46,6 +50,13 @@ struct AppInfo {
     llm_error: Option<String>,
 }
 
+impl AppState {
+    /// Configuración de IA vigente (o el motivo por el que no es válida).
+    pub(crate) fn llm(&self) -> CmdResult<LlmConfig> {
+        self.llm.read().map_err(err)?.clone()
+    }
+}
+
 #[derive(Debug, Serialize)]
 struct ImportPreview {
     cv: CvMaster,
@@ -55,7 +66,13 @@ struct ImportPreview {
 
 #[tauri::command]
 fn app_info(state: State<'_, AppState>) -> AppInfo {
-    state.info.clone()
+    let llm = state.llm();
+    AppInfo {
+        local_model: llm.as_ref().ok().map(|c| c.local.model.clone()),
+        writer_model: llm.as_ref().ok().map(|c| c.writer.model.clone()),
+        llm_error: llm.err(),
+        ..state.info.clone()
+    }
 }
 
 #[tauri::command]
@@ -134,7 +151,7 @@ async fn import_cv(
 ) -> CmdResult<ImportPreview> {
     let kind = CvFileKind::from_name(&file_name)
         .ok_or("Solo se pueden importar archivos .pdf o .docx.")?;
-    let config = state.llm.as_ref().map_err(Clone::clone)?;
+    let config = state.llm()?;
     let client = LlmClient::new(config.local.clone()).map_err(err)?;
     let imported = llm_import_cv(&client, &bytes, kind).await.map_err(err)?;
     Ok(ImportPreview {
@@ -161,21 +178,19 @@ pub fn run() {
                 .and_then(|p| std::fs::read_to_string(p).ok())
                 .map(|t| envfile::parse(&t))
                 .unwrap_or_default();
-            let llm = LlmConfig::from_lookup(|k| {
-                std::env::var(k).ok().or_else(|| file_vars.get(k).cloned())
-            })
-            .map_err(err);
+            let llm = tauri::async_runtime::block_on(settings::load(&db, &file_vars));
 
             let info = AppInfo {
                 db_path: db_path.display().to_string(),
                 env_file: env_file.map(|p| p.display().to_string()),
-                local_model: llm.as_ref().ok().map(|c| c.local.model.clone()),
-                writer_model: llm.as_ref().ok().map(|c| c.writer.model.clone()),
-                llm_error: llm.as_ref().err().cloned(),
+                local_model: None,
+                writer_model: None,
+                llm_error: None,
             };
             app.manage(AppState {
                 db,
-                llm,
+                llm: std::sync::RwLock::new(llm),
+                file_vars,
                 dict: SkillDict::builtin()?,
                 http: finder_infra::sources::http_client()?,
                 data_dir,
@@ -216,6 +231,9 @@ pub fn run() {
             reminders::complete_reminder,
             reminders::get_reminder_days,
             reminders::set_reminder_days,
+            settings::get_llm_settings,
+            settings::save_llm_settings,
+            settings::delete_api_key,
         ])
         .run(tauri::generate_context!())
         .expect("no se pudo iniciar la app de Tauri");

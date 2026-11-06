@@ -124,7 +124,7 @@ pub async fn run_optimizer(
     if stored.cv.experience.is_empty() {
         return Err("Tu CV maestro no tiene experiencia: no hay nada que adaptar.".into());
     }
-    let config = state.llm.as_ref().map_err(Clone::clone)?;
+    let config = state.llm()?;
     let local = LlmClient::new(config.local.clone()).map_err(err)?;
     let writer = LlmClient::new(config.writer.clone()).map_err(err)?;
 

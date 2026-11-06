@@ -166,3 +166,10 @@
 - `Db::set_cover_letter`; comandos `write_cover_letter` y `save_cover_letter` (este último agrega la vacante al tablero si no estaba).
 - Optimizador: tarjeta «Carta de presentación» para generar, ver los párrafos rechazados con su motivo, editar, guardar y copiar. Tablero: la ficha muestra la carta guardada con «Copiar carta».
 - Probado en vivo con qwen3:8b (CPU): unos 40–70 s; 2 de 3 párrafos aprobados tras la segunda vuelta.
+
+### Ajustes de IA y claves en el llavero (Fase 2)
+- Pantalla Ajustes: IA local (URL, modelo, embeddings) y redactor (local, Claude o compatible con OpenAI) con modelo, esfuerzo y URL. Al guardar, la configuración se recarga sin reiniciar la app.
+- Las claves de API van al llavero del sistema (`keyring`: KWallet / GNOME Keyring vía Secret Service, Credential Manager en Windows, Keychain en macOS), nunca a la base de datos. Se pueden borrar desde la pantalla.
+- Prioridad: variable de entorno > `.env` > Ajustes > valor por defecto. Los campos fijados por el entorno o el `.env` aparecen bloqueados con el aviso.
+- `Db::settings_with_prefix` y `Db::set_setting` (tabla `settings`, prefijo `llm.`).
+- La pantalla recuerda qué se envía a una API externa: vacante y CV maestro sin nombre, correo, teléfono, ubicación ni enlaces.

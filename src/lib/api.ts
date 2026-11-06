@@ -405,3 +405,25 @@ export interface Stats {
 export const statsApi = {
   get: (profileId: string | null) => invoke<Stats>("get_stats", { profileId }),
 };
+
+// ---------------------------------------------------------------------------
+// Ajustes de IA
+// ---------------------------------------------------------------------------
+
+export interface LlmSettings {
+  values: Record<string, string>;
+  saved_keys: string[];
+  overridden: string[];
+  env_file: string | null;
+  writer: string | null;
+  local: string | null;
+  error: string | null;
+  keyring_error: string | null;
+}
+
+export const settingsApi = {
+  get: () => invoke<LlmSettings>("get_llm_settings"),
+  save: (values: Record<string, string>, keys: Record<string, string>) =>
+    invoke<LlmSettings>("save_llm_settings", { input: { values, keys } }),
+  deleteKey: (key: string) => invoke<LlmSettings>("delete_api_key", { key }),
+};

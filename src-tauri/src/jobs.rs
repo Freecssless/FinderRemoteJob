@@ -180,7 +180,7 @@ pub async fn analyze_job(
         .await
         .map_err(err)?
         .ok_or("La vacante ya no existe.")?;
-    let config = state.llm.as_ref().map_err(Clone::clone)?;
+    let config = state.llm()?;
     let client = LlmClient::new(config.local.clone()).map_err(err)?;
     let req = extract_requirements(&client, &state.dict, &job.title, &job.description)
         .await

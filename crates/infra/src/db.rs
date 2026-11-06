@@ -615,6 +615,35 @@ impl Db {
         Ok(())
     }
 
+    /// Ajustes cuyo nombre empieza con `prefix` (sin el prefijo).
+    pub async fn settings_with_prefix(&self, prefix: &str) -> Result<Vec<(String, String)>> {
+        let rows: Vec<(String, String)> =
+            sqlx::query_as("SELECT key, value FROM settings WHERE substr(key, 1, length(?1)) = ?1")
+                .bind(prefix)
+                .fetch_all(&self.pool)
+                .await?;
+        Ok(rows
+            .into_iter()
+            .map(|(k, v)| (k[prefix.len()..].to_string(), v))
+            .collect())
+    }
+
+    /// Guarda un ajuste; `None` lo borra.
+    pub async fn set_setting(&self, key: &str, value: Option<&str>) -> Result<()> {
+        match value {
+            Some(v) => sqlx::query(
+                "INSERT INTO settings (key, value) VALUES (?1, ?2)
+                 ON CONFLICT(key) DO UPDATE SET value = ?2",
+            )
+            .bind(key)
+            .bind(v),
+            None => sqlx::query("DELETE FROM settings WHERE key = ?").bind(key),
+        }
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
     /// Plazos de los recordatorios (tabla `settings`; por defecto 7 y 21 días).
     pub async fn reminder_days(&self) -> Result<ReminderDays> {
         let get = |key: &'static str| {
@@ -1100,6 +1129,29 @@ mod tests {
             (Some(70), "manual", None)
         );
         assert!(db.stat_inputs(Some("otro")).await?.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn ajustes_por_prefijo() -> R {
+        let (db, _, _) = setup().await?;
+        db.set_setting("llm.FRJ_WRITER", Some("anthropic")).await?;
+        db.set_setting("llm.FRJ_LOCAL_MODEL", Some("qwen3:8b"))
+            .await?;
+        db.set_setting("llm.FRJ_LOCAL_MODEL", Some("qwen3:4b"))
+            .await?;
+        db.set_setting("otra_cosa", Some("x")).await?;
+        let mut got = db.settings_with_prefix("llm.").await?;
+        got.sort();
+        assert_eq!(
+            got,
+            [
+                ("FRJ_LOCAL_MODEL".to_string(), "qwen3:4b".to_string()),
+                ("FRJ_WRITER".into(), "anthropic".into())
+            ]
+        );
+        db.set_setting("llm.FRJ_WRITER", None).await?;
+        assert_eq!(db.settings_with_prefix("llm.").await?.len(), 1);
         Ok(())
     }
 

@@ -40,7 +40,7 @@ pub async fn write_cover_letter(
     if master.experience.is_empty() {
         return Err("Tu CV maestro no tiene experiencia: no hay logros que contar.".into());
     }
-    let config = state.llm.as_ref().map_err(Clone::clone)?;
+    let config = state.llm()?;
     let writer = LlmClient::new(config.writer.clone()).map_err(err)?;
     let today = jobs::this_month(&state).await?;
     let l = letter::write(&writer, &state.dict, &master, &job, &today)
