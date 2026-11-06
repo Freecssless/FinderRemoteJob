@@ -1,7 +1,9 @@
 //! Puente Tauri: comandos delgados sobre `finder-infra`. Aquí no hay lógica de dominio.
 
 mod envfile;
+mod jobs;
 
+use finder_infra::core::ats::keywords::SkillDict;
 use finder_infra::core::guard::numbers;
 use finder_infra::core::model::{CvMaster, Profile, RemotePref};
 use finder_infra::cvfile::CvFileKind;
@@ -12,15 +14,17 @@ use serde::Serialize;
 use tauri::{Manager, State};
 
 /// Los errores llegan a la interfaz como texto ya en español.
-type CmdResult<T> = Result<T, String>;
+pub(crate) type CmdResult<T> = Result<T, String>;
 
-fn err(e: impl std::fmt::Display) -> String {
+pub(crate) fn err(e: impl std::fmt::Display) -> String {
     e.to_string()
 }
 
-struct AppState {
+pub(crate) struct AppState {
     db: Db,
     llm: Result<LlmConfig, String>,
+    dict: SkillDict,
+    http: finder_infra::sources::Client,
     info: AppInfo,
 }
 
@@ -160,7 +164,13 @@ pub fn run() {
                 writer_model: llm.as_ref().ok().map(|c| c.writer.model.clone()),
                 llm_error: llm.as_ref().err().cloned(),
             };
-            app.manage(AppState { db, llm, info });
+            app.manage(AppState {
+                db,
+                llm,
+                dict: SkillDict::builtin()?,
+                http: finder_infra::sources::http_client()?,
+                info,
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -172,6 +182,13 @@ pub fn run() {
             get_cv,
             save_cv,
             import_cv,
+            jobs::list_jobs,
+            jobs::get_job,
+            jobs::analyze_job,
+            jobs::sync_jobs,
+            jobs::import_job_url,
+            jobs::import_job_text,
+            jobs::assisted_portals,
         ])
         .run(tauri::generate_context!())
         .expect("no se pudo iniciar la app de Tauri");

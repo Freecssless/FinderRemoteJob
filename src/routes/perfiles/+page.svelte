@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { api, emptyCv, REMOTE_LABELS, type CvMaster, type Profile, type RemotePref } from "$lib/api";
+  import { api, emptyCv, rememberedProfile, rememberProfile, REMOTE_LABELS, type CvMaster, type Profile, type RemotePref } from "$lib/api";
   import CvEditor from "$lib/components/CvEditor.svelte";
 
   let profiles = $state<Profile[]>([]);
@@ -46,7 +46,10 @@
   async function load() {
     try {
       profiles = await api.listProfiles();
-      if (!selectedId && profiles.length) await open(profiles[0].id);
+      if (!selectedId && profiles.length) {
+        const saved = rememberedProfile();
+        await open(profiles.some((p) => p.id === saved) ? saved! : profiles[0].id);
+      }
       if (!profiles.length) startNew();
     } catch (e) {
       fail(e);
@@ -82,6 +85,7 @@
     if (!p) return;
     creating = false;
     selectedId = id;
+    rememberProfile(id);
     confirmDelete = false;
     warnings = [];
     sourceText = null;

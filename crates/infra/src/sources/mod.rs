@@ -20,7 +20,8 @@ use std::time::Duration;
 use ego_tree::iter::Edge;
 use finder_core::ats::keywords::normalize;
 use finder_core::model::{Id, Job, dedupe_key};
-use reqwest::{Client, StatusCode, Url};
+pub use reqwest::Client;
+use reqwest::{StatusCode, Url};
 use scraper::{Html, Node};
 
 use crate::db::{Db, DbError};

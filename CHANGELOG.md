@@ -13,7 +13,7 @@
 | 7 | Cliente LLM (Ollama / OpenAI-compatible / Anthropic) + importación de CV PDF/DOCX | ✅ Terminado (prueba en vivo con Ollama pendiente) |
 | 8 | Generación de PDF (Typst) y DOCX + prueba de ida y vuelta (`infra::docgen`) | ✅ Terminado |
 | 9 | Flujo completo del optimizador de CV | ✅ Terminado (prueba en vivo con IA pendiente) |
-| 10 | App Tauri + interfaz Svelte (perfiles, vacantes, optimizador, tablero) | 🔄 En curso: 10a hecha |
+| 10 | App Tauri + interfaz Svelte (perfiles, vacantes, optimizador, tablero) | 🔄 En curso: 10a y 10b hechas |
 
 ## Registro
 
@@ -102,3 +102,11 @@
 - Pantalla Perfiles: formulario del perfil, borrado con confirmación, importación con avisos de revisión, editor completo del CV maestro (ids estables para el guardián) y aviso de cambios sin guardar.
 - Probado por el usuario en la app: importar su CV con Ollama (qwen3:8b) y guardarlo.
 - `LlmError::ModelNotFound`: el 404 de Ollama por modelo no descargado se explica en español con el comando `ollama pull`.
+
+### Módulo 10b: pantalla Vacantes
+- `src-tauri/src/jobs.rs`: sincronizar las cinco fuentes con los puestos buscados del perfil (cada una respeta su intervalo; si una falla, las demás siguen), importar por enlace o texto pegado, lista y ficha con compatibilidad, y análisis de requisitos con la IA local, que se guarda en la vacante.
+- La compatibilidad se calcula al vuelo para el perfil elegido (hasta 500 vacantes). Si una vacante no se ha analizado con IA, se usan los términos del diccionario.
+- Filtros: búsqueda de texto completo, fuente y "ocultar poco relevantes y bloqueadas". Enlaces de búsqueda a LinkedIn, Indeed, OCC, Computrabajo y Bumeran (se abren en el navegador).
+- El perfil activo se recuerda entre pantallas (`localStorage`, solo como comodidad).
+- Probado por el usuario en la app.
+- `finder_infra::sources::Client` se reexporta para que la app no dependa de `reqwest` directamente.
