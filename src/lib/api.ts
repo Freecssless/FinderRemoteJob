@@ -178,9 +178,6 @@ export const SOURCE_LABELS: Record<string, string> = {
   greenhouse: "Greenhouse",
   lever: "Lever",
   ashby: "Ashby",
-  adzuna: "Adzuna",
-  jooble: "Jooble",
-  email: "Alertas por correo",
   manual: "Importada",
 };
 
@@ -269,18 +266,6 @@ export interface SavedCv {
   missing: string[];
 }
 
-/** Carta de presentación: párrafos propuestos con su revisión y el texto ya armado. */
-export interface LetterView {
-  paragraphs: { text: string; issues: string[] }[];
-  text: string;
-}
-
-export const letterApi = {
-  write: (jobId: string, profileId: string) => invoke<LetterView>("write_cover_letter", { jobId, profileId }),
-  save: (jobId: string, profileId: string, text: string) =>
-    invoke<void>("save_cover_letter", { jobId, profileId, text }),
-};
-
 /** Plantillas del CV (plan §4.6); se guardan como `variant`. */
 export type Template = "clasica" | "compacta" | "tecnica";
 export const TEMPLATES: { id: Template; label: string; hint: string }[] = [
@@ -328,7 +313,6 @@ export interface Application {
   status: Status;
   match_score: number | null;
   cv_version_id: string | null;
-  cover_letter: string | null;
   applied_at: string | null;
   first_response_at: string | null;
   next_step: string | null;
@@ -428,6 +412,7 @@ export interface LlmSettings {
   overridden: string[];
   env_file: string | null;
   writer: string | null;
+  writer_kind: "local" | "anthropic" | "openai" | null;
   local: string | null;
   error: string | null;
   keyring_error: string | null;
@@ -438,27 +423,7 @@ export const settingsApi = {
   save: (values: Record<string, string>, keys: Record<string, string>) =>
     invoke<LlmSettings>("save_llm_settings", { input: { values, keys } }),
   deleteKey: (key: string) => invoke<LlmSettings>("delete_api_key", { key }),
-  /** `null` si el redactor es local (no cuesta). */
-  estimate: (jobId: string, profileId: string) => invoke<CostView | null>("estimate_cost", { jobId, profileId }),
 };
-
-/** Tokens aproximados y costo en USD (sin precios en Ajustes, `usd` es null). */
-export interface Cost {
-  input: number;
-  output: number;
-  usd: number | null;
-}
-
-export interface CostView {
-  cv: Cost;
-  letter: Cost;
-}
-
-export function costLabel(c: Cost): string {
-  const tokens = `~${Math.round(c.input / 100) / 10} k tokens de entrada + ~${Math.round(c.output / 100) / 10} k de salida`;
-  if (c.usd === null) return `${tokens} (pon los precios en Ajustes para ver el costo)`;
-  return `≈ US$ ${c.usd < 0.01 ? c.usd.toFixed(4) : c.usd.toFixed(2)} (${tokens})`;
-}
 
 // ---------------------------------------------------------------------------
 // Cola de postulación asistida y respuestas frecuentes (plan §3)
@@ -473,7 +438,6 @@ export interface QueueItem {
   application_id: string | null;
   status: Status | null;
   pdf_path: string | null;
-  cover_letter: string | null;
 }
 
 export interface Faq {

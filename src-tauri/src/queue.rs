@@ -26,7 +26,6 @@ pub struct QueueItem {
     application_id: Option<String>,
     status: Option<Status>,
     pdf_path: Option<String>,
-    cover_letter: Option<String>,
     #[serde(skip)]
     cv_version_id: Option<String>,
 }
@@ -77,7 +76,6 @@ pub async fn application_queue(
             status: app.map(|a| a.status),
             pdf_path: None,
             cv_version_id: app.and_then(|a| a.cv_version_id.clone()),
-            cover_letter: app.and_then(|a| a.cover_letter.clone()),
             job_id: job.id,
             title: job.title,
             company: job.company,

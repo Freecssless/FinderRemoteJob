@@ -345,8 +345,6 @@ pub struct Application {
     #[serde(default)]
     pub cv_version_id: Option<Id>,
     #[serde(default)]
-    pub cover_letter: Option<String>,
-    #[serde(default)]
     pub applied_at: Option<String>,
     #[serde(default)]
     pub first_response_at: Option<String>,

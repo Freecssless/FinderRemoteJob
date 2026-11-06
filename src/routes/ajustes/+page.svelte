@@ -1,37 +1,75 @@
 <script lang="ts">
   import { jobsApi, settingsApi, type LlmSettings } from "$lib/api";
 
+  const NO_KEYS = { ANTHROPIC_API_KEY: "", FRJ_OPENAI_API_KEY: "" };
+  /** Proveedores con la dirección y el modelo ya puestos (compatibles con la API de OpenAI). */
+  const PRESETS = {
+    gemini: {
+      label: "Gemini (Google)",
+      url: "https://generativelanguage.googleapis.com/v1beta/openai",
+      model: "gemini-3.8-flash",
+      keyUrl: "aistudio.google.com/apikey",
+      hint: "Tiene plan gratuito.",
+    },
+    openai: {
+      label: "ChatGPT (OpenAI)",
+      url: "https://api.openai.com/v1",
+      model: "gpt-6.1-terra",
+      keyUrl: "platform.openai.com/api-keys",
+      hint: "De pago por uso.",
+    },
+  } as const;
+  type Preset = keyof typeof PRESETS;
+  const FIELDS = [
+    "FRJ_WRITER", "FRJ_LOCAL_URL", "FRJ_LOCAL_MODEL", "FRJ_EMBED_MODEL",
+    "FRJ_ANTHROPIC_MODEL", "FRJ_ANTHROPIC_EFFORT", "FRJ_OPENAI_URL", "FRJ_OPENAI_MODEL",
+  ];
+  const EFFORTS = ["low", "medium", "high", "xhigh", "max"];
+
   let s = $state<LlmSettings | null>(null);
   let values = $state<Record<string, string>>({});
-  let keys = $state<Record<string, string>>({ ANTHROPIC_API_KEY: "", FRJ_OPENAI_API_KEY: "", FRJ_ADZUNA_APP_KEY: "", FRJ_JOOBLE_KEY: "", FRJ_IMAP_PASSWORD: "" });
+  let keys = $state<Record<string, string>>({ ...NO_KEYS });
   let error = $state("");
   let msg = $state("");
   let saving = $state(false);
-
-  const EFFORTS = ["low", "medium", "high", "xhigh", "max"];
-  const writer = $derived(values.FRJ_WRITER || "local");
-
-  function show(v: LlmSettings) {
-    s = v;
-    // Sin elección guardada, se marca la que está en uso (p. ej. Claude si hay clave en .env).
-    const inUse = v.writer?.startsWith("Claude") ? "anthropic" : v.writer?.startsWith("Compatible") ? "openai" : "local";
-    values = { FRJ_WRITER: inUse, ...v.values };
-    keys = { ANTHROPIC_API_KEY: "", FRJ_OPENAI_API_KEY: "", FRJ_ADZUNA_APP_KEY: "", FRJ_JOOBLE_KEY: "", FRJ_IMAP_PASSWORD: "" };
-  }
 
   let boards = $state("");
   let boardsMsg = $state("");
   let boardsError = $state("");
 
-  async function saveBoards() {
-    boardsMsg = "";
-    boardsError = "";
-    try {
-      boards = await jobsApi.saveBoards(boards);
-      boardsMsg = "Guardado. Se consultan al sincronizar en Vacantes.";
-    } catch (e) {
-      boardsError = String(e);
+  const writer = $derived(values.FRJ_WRITER || "local");
+  /** Qué proveedor de la tercera opción está elegido, según su dirección. */
+  const preset = $derived<Preset | null>(
+    (Object.keys(PRESETS) as Preset[]).find((p) => (values.FRJ_OPENAI_URL ?? "").startsWith(PRESETS[p].url)) ?? null,
+  );
+  const locked = (k: string) => s?.overridden.includes(k) ?? false;
+  const hasKey = (k: string) => !!keys[k]?.trim() || (s?.saved_keys.includes(k) ?? false) || locked(k);
+
+  function show(v: LlmSettings) {
+    s = v;
+    // Sin elección guardada, se marca la que está en uso.
+    values = { FRJ_WRITER: v.writer_kind ?? "local", ...v.values };
+    keys = { ...NO_KEYS };
+  }
+
+  function choosePreset(p: Preset) {
+    values.FRJ_OPENAI_URL = PRESETS[p].url;
+    values.FRJ_OPENAI_MODEL = PRESETS[p].model;
+  }
+
+  function chooseWriter(w: string) {
+    values.FRJ_WRITER = w;
+    if (w === "openai" && !values.FRJ_OPENAI_URL) choosePreset("gemini");
+  }
+
+  /** Lo que falta para que la opción elegida funcione, en palabras simples. */
+  function missing(): string {
+    if (writer === "anthropic" && !hasKey("ANTHROPIC_API_KEY")) return "Pega tu clave de Claude.";
+    if (writer === "openai") {
+      if (!values.FRJ_OPENAI_URL?.trim() || !values.FRJ_OPENAI_MODEL?.trim()) return "Elige Gemini o ChatGPT.";
+      if (preset && !hasKey("FRJ_OPENAI_API_KEY")) return `Pega tu clave de ${PRESETS[preset].label}.`;
     }
+    return "";
   }
 
   async function init() {
@@ -44,14 +82,19 @@
   }
 
   async function save() {
-    saving = true;
     error = "";
     msg = "";
+    const why = missing();
+    if (why) {
+      error = why;
+      return;
+    }
+    saving = true;
     try {
       // Se envían todos los campos conocidos: uno vacío vuelve al valor por defecto.
       const all = Object.fromEntries(FIELDS.map((f) => [f, values[f] ?? ""]));
       show(await settingsApi.save(all, $state.snapshot(keys)));
-      msg = "Guardado. Se usa desde ahora, sin reiniciar.";
+      msg = "Guardado. Ya se usa, sin reiniciar.";
     } catch (e) {
       error = String(e);
     } finally {
@@ -60,7 +103,7 @@
   }
 
   async function removeKey(k: string) {
-    if (!confirm("¿Borrar la clave del llavero del sistema?")) return;
+    if (!confirm("¿Borrar la clave guardada?")) return;
     try {
       show(await settingsApi.deleteKey(k));
       msg = "Clave borrada.";
@@ -69,15 +112,16 @@
     }
   }
 
-  const FIELDS = [
-    "FRJ_WRITER", "FRJ_LOCAL_URL", "FRJ_LOCAL_MODEL", "FRJ_EMBED_MODEL",
-    "FRJ_ANTHROPIC_MODEL", "FRJ_ANTHROPIC_EFFORT", "FRJ_OPENAI_URL", "FRJ_OPENAI_MODEL",
-    "FRJ_ANTHROPIC_PRICE_IN", "FRJ_ANTHROPIC_PRICE_OUT", "FRJ_OPENAI_PRICE_IN", "FRJ_OPENAI_PRICE_OUT",
-    "FRJ_ADZUNA_APP_ID", "FRJ_ADZUNA_COUNTRY", "FRJ_JOOBLE_DOMAIN",
-    "FRJ_IMAP_HOST", "FRJ_IMAP_PORT", "FRJ_IMAP_USER",
-  ];
-  const ADZUNA_COUNTRIES = ["mx", "us", "ca", "br", "es", "gb", "de", "fr", "it", "nl", "be", "at", "ch", "pl", "au", "nz", "sg", "in", "za"];
-  const locked = (k: string) => s?.overridden.includes(k) ?? false;
+  async function saveBoards() {
+    boardsMsg = "";
+    boardsError = "";
+    try {
+      boards = await jobsApi.saveBoards(boards);
+      boardsMsg = "Guardado. Se consultan al buscar vacantes nuevas.";
+    } catch (e) {
+      boardsError = String(e);
+    }
+  }
 
   init();
 </script>
@@ -86,16 +130,8 @@
   <label>
     {label}
     <input bind:value={values[key]} {placeholder} disabled={locked(key)} />
-    {#if locked(key)}<span class="muted small">Definido en el entorno o en .env: ese valor manda.</span>{/if}
+    {#if locked(key)}<span class="muted small">Lo fija el archivo .env.</span>{/if}
   </label>
-{/snippet}
-
-{#snippet prices(p: string)}
-  <div class="prices">
-    {@render field(`${p}_PRICE_IN`, "Precio de entrada (USD por millón de tokens)", "")}
-    {@render field(`${p}_PRICE_OUT`, "Precio de salida (USD por millón de tokens)", "")}
-  </div>
-  <p class="muted small">Cópialos de la página de precios de tu proveedor. Solo sirven para mostrarte el costo estimado antes de generar.</p>
 {/snippet}
 
 {#snippet apiKey(key: string, label: string)}
@@ -105,10 +141,9 @@
       type="password"
       autocomplete="off"
       bind:value={keys[key]}
-      placeholder={s?.saved_keys.includes(key) ? "Guardada en el llavero (escribe otra para cambiarla)" : "Pega tu clave"}
+      placeholder={s?.saved_keys.includes(key) ? "Ya está guardada (pega otra para cambiarla)" : "Pega aquí tu clave"}
       disabled={locked(key) || !!s?.keyring_error}
     />
-    {#if locked(key)}<span class="muted small">Definida en el entorno o en .env: esa manda.</span>{/if}
   </label>
   {#if s?.saved_keys.includes(key)}
     <button class="link small" onclick={() => removeKey(key)}>Borrar clave guardada</button>
@@ -120,128 +155,112 @@
   {#if error}<p class="danger" role="alert">{error}</p>{/if}
 
   {#if s}
-    <section class="card status">
-      <h2>En uso</h2>
-      {#if s.error}
-        <p class="danger">{s.error}</p>
-      {:else}
-        <p>IA local: <strong>{s.local}</strong></p>
-        <p>Redactor de CV y cartas: <strong>{s.writer}</strong></p>
-      {/if}
-      {#if s.env_file}<p class="muted small">Archivo .env: {s.env_file}</p>{/if}
-    </section>
-
     <section class="card">
-      <h2>IA local</h2>
-      <p class="muted small">Analiza vacantes e importa tu CV. Nada sale de tu equipo.</p>
-      {@render field("FRJ_LOCAL_URL", "URL de Ollama", "http://localhost:11434/v1")}
-      {@render field("FRJ_LOCAL_MODEL", "Modelo", "qwen3:8b")}
-      {@render field("FRJ_EMBED_MODEL", "Modelo de embeddings", "bge-m3")}
-    </section>
-
-    <section class="card">
-      <h2>Redactor de CV y cartas</h2>
+      <h2>¿Qué IA adapta tus CV?</h2>
       <p class="muted small">
-        Con una API externa la redacción suele ser mejor y más rápida. Se envían la vacante y tu CV maestro
-        <strong>sin</strong> nombre, correo, teléfono, ubicación ni enlaces.
+        Puedes cambiarla cuando quieras. A una IA en internet solo se envían la vacante y tu experiencia, nunca tu nombre,
+        correo, teléfono ni dirección.
       </p>
+
       <fieldset class="choice" disabled={locked("FRJ_WRITER")}>
-        <legend class="sr-only">Proveedor</legend>
-        {#each [["local", "Local (el mismo modelo de Ollama)"], ["anthropic", "Claude (Anthropic)"], ["openai", "Compatible con OpenAI (OpenAI, Gemini, Groq, OpenRouter…)"]] as [id, label]}
-          <label class="inline"><input type="radio" value={id} bind:group={values.FRJ_WRITER} /> {label}</label>
-        {/each}
-        {#if locked("FRJ_WRITER")}<span class="muted small">Definido en el entorno o en .env: ese valor manda.</span>{/if}
+        <legend class="sr-only">IA</legend>
+        <label class="option" class:on={writer === "local"}>
+          <input type="radio" name="writer" checked={writer === "local"} onchange={() => chooseWriter("local")} />
+          <span><strong>En tu computadora (gratis)</strong><br />
+            <span class="muted small">Privado y sin costo. Necesita Ollama instalado y puede tardar varios minutos por CV.</span></span>
+        </label>
+        <label class="option" class:on={writer === "anthropic"}>
+          <input type="radio" name="writer" checked={writer === "anthropic"} onchange={() => chooseWriter("anthropic")} />
+          <span><strong>Claude</strong><br />
+            <span class="muted small">La mejor calidad y rápido. De pago por uso (centavos por CV).</span></span>
+        </label>
+        <label class="option" class:on={writer === "openai"}>
+          <input type="radio" name="writer" checked={writer === "openai"} onchange={() => chooseWriter("openai")} />
+          <span><strong>Gemini o ChatGPT</strong><br />
+            <span class="muted small">Rápido. Gemini tiene plan gratuito.</span></span>
+        </label>
+        {#if locked("FRJ_WRITER")}<span class="muted small">La elección la fija el archivo .env.</span>{/if}
       </fieldset>
 
       {#if writer === "anthropic"}
-        {@render apiKey("ANTHROPIC_API_KEY", "Clave de API de Anthropic")}
-        {@render field("FRJ_ANTHROPIC_MODEL", "Modelo", "claude-opus-5-5")}
-        <label>
-          Esfuerzo (más alto = mejor y más caro)
-          <select bind:value={values.FRJ_ANTHROPIC_EFFORT} disabled={locked("FRJ_ANTHROPIC_EFFORT")}>
-            <option value="">Por defecto (medium)</option>
-            {#each EFFORTS as e}<option value={e}>{e}</option>{/each}
-          </select>
-        </label>
-        {@render prices("FRJ_ANTHROPIC")}
+        <p class="small">Crea tu clave en <strong>console.anthropic.com</strong> → «API Keys» y pégala aquí.</p>
+        {@render apiKey("ANTHROPIC_API_KEY", "Clave de Claude")}
       {:else if writer === "openai"}
-        {@render field("FRJ_OPENAI_URL", "URL base", "https://api.openai.com/v1")}
-        {@render apiKey("FRJ_OPENAI_API_KEY", "Clave de API")}
-        {@render field("FRJ_OPENAI_MODEL", "Modelo", "")}
-        {@render prices("FRJ_OPENAI")}
+        <div class="row" role="group" aria-label="Proveedor">
+          {#each Object.entries(PRESETS) as [id, p]}
+            <button class:primary={preset === id} aria-pressed={preset === id} onclick={() => choosePreset(id as Preset)}>{p.label}</button>
+          {/each}
+        </div>
+        {#if preset}
+          <p class="small">{PRESETS[preset].hint} Crea tu clave en <strong>{PRESETS[preset].keyUrl}</strong> y pégala aquí.</p>
+        {:else}
+          <p class="muted small">Usas un proveedor propio (lo configuraste en Opciones avanzadas).</p>
+        {/if}
+        {@render apiKey("FRJ_OPENAI_API_KEY", "Clave")}
       {/if}
 
       {#if s.keyring_error}
-        <p class="danger small">El llavero del sistema no está disponible ({s.keyring_error}); no se pueden guardar claves.</p>
+        <p class="danger small">No se pueden guardar claves: el llavero del sistema no responde ({s.keyring_error}).</p>
+      {:else if writer !== "local"}
+        <p class="muted small">La clave se guarda cifrada en el llavero de tu sistema.</p>
+      {/if}
+
+      <div class="row">
+        <button class="primary" onclick={save} disabled={saving}>{saving ? "Guardando…" : "Guardar"}</button>
+        {#if msg}<span class="ok small" role="status">{msg}</span>{/if}
+      </div>
+      {#if s.error}
+        <p class="danger small">La IA elegida no está lista: revisa que la clave esté guardada. <span class="muted">({s.error})</span></p>
       {:else}
-        <p class="muted small">Las claves se guardan en el llavero del sistema (KWallet, GNOME Keyring o el de Windows), no en la base de datos.</p>
+        <p class="muted small">En uso: {s.writer}</p>
       {/if}
     </section>
 
-    <section class="card">
-      <h2>Fuentes de vacantes con clave</h2>
-      <p class="muted small">
-        Opcionales y gratuitas. Sin clave, estas fuentes no se consultan. Las claves van al llavero del sistema.
-      </p>
-      <h3 class="small">Adzuna</h3>
-      <p class="muted small">Crea tu clave en developer.adzuna.com (uso personal permitido).</p>
-      {@render field("FRJ_ADZUNA_APP_ID", "App ID", "")}
-      {@render apiKey("FRJ_ADZUNA_APP_KEY", "App Key")}
+    <details class="card advanced">
+      <summary>Opciones avanzadas</summary>
+
+      <h3>IA en tu computadora (Ollama)</h3>
+      {@render field("FRJ_LOCAL_URL", "Dirección de Ollama", "http://localhost:11434/v1")}
+      {@render field("FRJ_LOCAL_MODEL", "Modelo", "qwen3:8b")}
+      {@render field("FRJ_EMBED_MODEL", "Modelo de similitud (embeddings)", "bge-m3")}
+      <p class="muted small">En uso: {s.local ?? "—"}</p>
+
+      <h3>Claude</h3>
+      {@render field("FRJ_ANTHROPIC_MODEL", "Modelo", "claude-opus-5-5")}
       <label>
-        País
-        <select bind:value={values.FRJ_ADZUNA_COUNTRY} disabled={locked("FRJ_ADZUNA_COUNTRY")}>
-          <option value="">Por defecto (mx)</option>
-          {#each ADZUNA_COUNTRIES as c}<option value={c}>{c}</option>{/each}
+        Esfuerzo (más alto = mejor y más caro)
+        <select bind:value={values.FRJ_ANTHROPIC_EFFORT} disabled={locked("FRJ_ANTHROPIC_EFFORT")}>
+          <option value="">Por defecto (medium)</option>
+          {#each EFFORTS as e}<option value={e}>{e}</option>{/each}
         </select>
       </label>
-      <h3 class="small">Jooble</h3>
-      <p class="muted small">
-        Pide la clave en el sitio de tu país (por ejemplo mx.jooble.org/api/about): cada clave solo da vacantes de su
-        país. La gratuita tiene 500 consultas en total, así que se consulta una vez al día.
-      </p>
-      {@render field("FRJ_JOOBLE_DOMAIN", "Dominio", "mx.jooble.org")}
-      {@render apiKey("FRJ_JOOBLE_KEY", "Clave")}
-    </section>
 
-    <section class="card">
-      <h2>Alertas por correo</h2>
-      <p class="muted small">
-        Crea alertas de empleo en LinkedIn, Indeed, OCC, Computrabajo o Bumeran para que te lleguen al correo. Al
-        sincronizar, la app lee esos avisos de los últimos 14 días (solo de esos remitentes, sin marcarlos como leídos
-        ni moverlos) y agrega las vacantes. Nunca entra a esos portales.
-      </p>
-      <p class="muted small">
-        Gmail y Outlook piden una <strong>contraseña de aplicación</strong> (no la de tu cuenta) y tener IMAP activado.
-        Gmail: servidor <code>imap.gmail.com</code>.
-      </p>
-      {@render field("FRJ_IMAP_HOST", "Servidor IMAP", "imap.gmail.com")}
-      {@render field("FRJ_IMAP_PORT", "Puerto (TLS)", "993")}
-      {@render field("FRJ_IMAP_USER", "Usuario (tu correo)", "")}
-      {@render apiKey("FRJ_IMAP_PASSWORD", "Contraseña de aplicación")}
-    </section>
+      <h3>Proveedor compatible con OpenAI</h3>
+      <p class="muted small">Para Groq, OpenRouter u otro: su dirección y el nombre del modelo.</p>
+      {@render field("FRJ_OPENAI_URL", "Dirección", "https://api.openai.com/v1")}
+      {@render field("FRJ_OPENAI_MODEL", "Modelo", "")}
 
-    <div class="row">
-      <button class="primary" onclick={save} disabled={saving}>{saving ? "Guardando…" : "Guardar"}</button>
-      {#if msg}<span class="ok small" role="status">{msg}</span>{/if}
-    </div>
+      <div class="row">
+        <button onclick={save} disabled={saving}>{saving ? "Guardando…" : "Guardar"}</button>
+      </div>
 
-    <section class="card">
-      <h2>Empresas que sigues</h2>
+      <h3>Empresas que sigues</h3>
       <p class="muted small">
         Vacantes de empresas concretas que publican en Greenhouse, Lever o Ashby. Pega la dirección de su página de
-        empleos, una por línea (por ejemplo <code>https://jobs.lever.co/empresa</code>). Al sincronizar se traen las que
-        coinciden con los puestos de tu perfil.
+        empleos, una por línea.
       </p>
       <label>
         Páginas de empleo
-        <textarea rows="5" bind:value={boards} placeholder={"https://boards.greenhouse.io/empresa\nhttps://jobs.ashbyhq.com/empresa"}></textarea>
+        <textarea rows="4" bind:value={boards} placeholder={"https://boards.greenhouse.io/empresa\nhttps://jobs.lever.co/empresa"}></textarea>
       </label>
       {#if boardsError}<p class="danger small" role="alert">{boardsError}</p>{/if}
       <div class="row">
         <button onclick={saveBoards}>Guardar empresas</button>
         {#if boardsMsg}<span class="ok small" role="status">{boardsMsg}</span>{/if}
       </div>
-    </section>
+
+      {#if s.env_file}<p class="muted small">Archivo .env: {s.env_file} (lo que fija manda sobre esta pantalla).</p>{/if}
+    </details>
   {:else if !error}
     <p class="muted">Cargando…</p>
   {/if}
@@ -249,11 +268,15 @@
 
 <style>
   .page { display: flex; flex-direction: column; gap: 0.75rem; max-width: 720px; }
-  section { display: flex; flex-direction: column; gap: 0.6rem; }
-  section h2, section p { margin: 0; }
-  section h3 { margin: 0.4rem 0 0; }
-  .choice { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+  section, .advanced { display: flex; flex-direction: column; gap: 0.6rem; }
+  section h2, section p, .advanced p { margin: 0; }
+  .advanced h3 { margin: 0.6rem 0 0; }
+  .advanced summary { cursor: pointer; font-weight: 600; }
+  .advanced[open] summary { margin-bottom: 0.4rem; }
+  .choice { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+  .option { display: flex; flex-direction: row; gap: 0.6rem; align-items: flex-start; padding: 0.6rem; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
+  .option.on { border-color: var(--accent); background: var(--accent-soft); }
+  .option input { width: auto; margin-top: 0.2rem; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .link.small { align-self: flex-start; }
-  .prices { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.6rem; }
 </style>

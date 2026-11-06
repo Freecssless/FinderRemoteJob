@@ -56,7 +56,7 @@ La app usa dos "papeles" de IA:
 | Papel | Para qué | Por defecto |
 |---|---|---|
 | **Local** | Importar tu CV, clasificar requisitos de vacantes, similitud semántica | Ollama con `qwen3:8b` y `bge-m3`. Tu CV no sale del equipo |
-| **Redactor** | Reescribir CV y cartas (módulo 9) | Claude si defines `ANTHROPIC_API_KEY`; si no, el modelo local |
+| **Redactor** | Reescribir el CV (módulo 9) | Claude si defines `ANTHROPIC_API_KEY`; si no, el modelo local |
 
 Instalar la IA local (Arch/CachyOS):
 ```bash
@@ -77,7 +77,7 @@ cargo test -p finder-infra llm -- --ignored --nocapture
 
 ## Fuentes de vacantes y atribución
 
-Las vacantes automáticas vienen de Remote OK, Remotive, We Work Remotely, Get on Board, Jobicy y Himalayas, de Adzuna y Jooble si pones tu clave en Ajustes, de las empresas que sigas en Greenhouse, Lever o Ashby, y de las alertas de LinkedIn, Indeed, OCC, Computrabajo y Bumeran que te lleguen al correo (todo en Ajustes). Sus términos piden mencionar la fuente y enlazar al anuncio original; la app guarda ambos datos en cada vacante. Además, respeta un tiempo mínimo entre consultas (Remotive: 6 horas).
+Las vacantes automáticas vienen de Remote OK, Remotive, We Work Remotely, Get on Board, Jobicy y Himalayas, y de las empresas que sigas en Greenhouse, Lever o Ashby (Ajustes → Opciones avanzadas). Sus términos piden mencionar la fuente y enlazar al anuncio original; la app guarda ambos datos en cada vacante. Además, respeta un tiempo mínimo entre consultas (Remotive: 6 horas).
 
 ## Licencias de terceros
 

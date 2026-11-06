@@ -735,39 +735,15 @@ impl Db {
         Ok(())
     }
 
-    /// Vincula la versión de CV (y la carta) enviada a esta postulación.
-    /// Carta de presentación de la postulación (`None` la borra).
-    pub async fn set_cover_letter(&self, application_id: &str, text: Option<&str>) -> Result<()> {
-        let now = self.now().await?;
+    /// Vincula la versión de CV enviada a esta postulación.
+    pub async fn attach_cv_version(&self, application_id: &str, cv_version_id: &str) -> Result<()> {
         let r =
-            sqlx::query("UPDATE applications SET cover_letter = ?, updated_at = ? WHERE id = ?")
-                .bind(text)
-                .bind(now)
+            sqlx::query("UPDATE applications SET cv_version_id = ?, updated_at = ? WHERE id = ?")
+                .bind(cv_version_id)
+                .bind(self.now().await?)
                 .bind(application_id)
                 .execute(&self.pool)
                 .await?;
-        if r.rows_affected() == 0 {
-            return Err(DbError::NotFound(format!("postulación {application_id}")));
-        }
-        Ok(())
-    }
-
-    pub async fn attach_cv_version(
-        &self,
-        application_id: &str,
-        cv_version_id: &str,
-        cover_letter: Option<&str>,
-    ) -> Result<()> {
-        let r = sqlx::query(
-            "UPDATE applications SET cv_version_id = ?, cover_letter = COALESCE(?, cover_letter), updated_at = ?
-             WHERE id = ?",
-        )
-        .bind(cv_version_id)
-        .bind(cover_letter)
-        .bind(self.now().await?)
-        .bind(application_id)
-        .execute(&self.pool)
-        .await?;
         if r.rows_affected() == 0 {
             return Err(DbError::NotFound(format!("postulación {application_id}")));
         }
@@ -960,7 +936,6 @@ fn application_from_row(r: &SqliteRow) -> Result<Application> {
         status: parse_status("status", &r.try_get::<String, _>("status")?)?,
         match_score: r.try_get("match_score")?,
         cv_version_id: r.try_get("cv_version_id")?,
-        cover_letter: r.try_get("cover_letter")?,
         applied_at: r.try_get("applied_at")?,
         first_response_at: r.try_get("first_response_at")?,
         next_step: r.try_get("next_step")?,
@@ -1364,7 +1339,7 @@ mod tests {
             created_at: db.now().await?,
         };
         db.insert_cv_version(&v).await?;
-        db.attach_cv_version(&app_id, &v.id, Some("Carta")).await?;
+        db.attach_cv_version(&app_id, &v.id).await?;
 
         assert_eq!(db.get_cv_version(&v.id).await?, Some(v.clone()));
         assert_eq!(
@@ -1373,10 +1348,6 @@ mod tests {
         );
         let app = db.get_application(&app_id).await?.ok_or("falta")?;
         assert_eq!(app.cv_version_id, Some(v.id));
-        assert_eq!(app.cover_letter.as_deref(), Some("Carta"));
-        db.set_cover_letter(&app.id, Some("Otra carta")).await?;
-        let app = db.get_application(&app.id).await?.ok_or("falta")?;
-        assert_eq!(app.cover_letter.as_deref(), Some("Otra carta"));
 
         // Borrar el perfil borra sus versiones y postulaciones, pero no la vacante.
         db.delete_profile(&p.id).await?;

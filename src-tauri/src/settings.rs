@@ -7,10 +7,7 @@
 use std::collections::HashMap;
 
 use finder_infra::db::Db;
-use finder_infra::letter;
 use finder_infra::llm::{Backend, LlmConfig};
-use finder_infra::optimizer::{self, TokenEstimate};
-use finder_infra::sources::{adzuna, email, jooble};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
@@ -19,7 +16,7 @@ use crate::{AppState, CmdResult, err};
 const KEYRING_SERVICE: &str = "FinderRemoteJob";
 const PREFIX: &str = "llm.";
 /// Valores normales (se guardan en la base de datos).
-const PLAIN: [&str; 18] = [
+const PLAIN: [&str; 8] = [
     "FRJ_WRITER",
     "FRJ_LOCAL_URL",
     "FRJ_LOCAL_MODEL",
@@ -28,28 +25,9 @@ const PLAIN: [&str; 18] = [
     "FRJ_ANTHROPIC_EFFORT",
     "FRJ_OPENAI_URL",
     "FRJ_OPENAI_MODEL",
-    // Precios en USD por millón de tokens (los escribe el usuario; solo sirven para el estimado).
-    "FRJ_ANTHROPIC_PRICE_IN",
-    "FRJ_ANTHROPIC_PRICE_OUT",
-    "FRJ_OPENAI_PRICE_IN",
-    "FRJ_OPENAI_PRICE_OUT",
-    // Fuentes de vacantes con clave.
-    "FRJ_ADZUNA_APP_ID",
-    "FRJ_ADZUNA_COUNTRY",
-    "FRJ_JOOBLE_DOMAIN",
-    // Alertas por correo (IMAP).
-    "FRJ_IMAP_HOST",
-    "FRJ_IMAP_PORT",
-    "FRJ_IMAP_USER",
 ];
 /// Claves de API (se guardan en el llavero).
-const SECRETS: [&str; 5] = [
-    "ANTHROPIC_API_KEY",
-    "FRJ_OPENAI_API_KEY",
-    "FRJ_ADZUNA_APP_KEY",
-    "FRJ_JOOBLE_KEY",
-    "FRJ_IMAP_PASSWORD",
-];
+const SECRETS: [&str; 2] = ["ANTHROPIC_API_KEY", "FRJ_OPENAI_API_KEY"];
 
 fn entry(key: &str) -> keyring::Result<keyring::Entry> {
     keyring::Entry::new(KEYRING_SERVICE, key)
@@ -65,62 +43,6 @@ fn external(file_vars: &HashMap<String, String>, key: &str) -> Option<String> {
         .ok()
         .or_else(|| file_vars.get(key).cloned())
         .filter(|v| !v.trim().is_empty())
-}
-
-/// Claves de Adzuna y Jooble (con la misma prioridad que el resto), si están completas.
-pub(crate) struct SourceKeys {
-    pub adzuna: Option<adzuna::Credentials>,
-    pub jooble: Option<jooble::Credentials>,
-    pub email: Option<email::ImapConfig>,
-}
-
-pub(crate) async fn source_keys(state: &AppState) -> CmdResult<SourceKeys> {
-    let stored: HashMap<String, String> = state
-        .db
-        .settings_with_prefix(PREFIX)
-        .await
-        .map_err(err)?
-        .into_iter()
-        .collect();
-    let get = |k: &str| {
-        external(&state.file_vars, k)
-            .or_else(|| stored.get(k).cloned())
-            .or_else(|| SECRETS.contains(&k).then(|| read_secret(k)).flatten())
-            .map(|v| v.trim().to_string())
-            .filter(|v| !v.is_empty())
-    };
-    let adzuna = match (get("FRJ_ADZUNA_APP_ID"), get("FRJ_ADZUNA_APP_KEY")) {
-        (Some(app_id), Some(app_key)) => Some(adzuna::Credentials {
-            app_id,
-            app_key,
-            country: get("FRJ_ADZUNA_COUNTRY").unwrap_or_else(|| "mx".into()),
-        }),
-        _ => None,
-    };
-    let jooble = get("FRJ_JOOBLE_KEY").map(|key| jooble::Credentials {
-        key,
-        domain: get("FRJ_JOOBLE_DOMAIN").unwrap_or_else(|| "mx.jooble.org".into()),
-    });
-    let email = match (
-        get("FRJ_IMAP_HOST"),
-        get("FRJ_IMAP_USER"),
-        get("FRJ_IMAP_PASSWORD"),
-    ) {
-        (Some(host), Some(user), Some(password)) => Some(email::ImapConfig {
-            host,
-            port: get("FRJ_IMAP_PORT")
-                .and_then(|p| p.parse().ok())
-                .unwrap_or(993),
-            user,
-            password,
-        }),
-        _ => None,
-    };
-    Ok(SourceKeys {
-        adzuna,
-        jooble,
-        email,
-    })
 }
 
 /// Configuración vigente con todas las fuentes.
@@ -153,6 +75,8 @@ pub struct SettingsView {
     env_file: Option<String>,
     /// Configuración en uso ("Claude · claude-opus-5-5"), o el error si es inválida.
     writer: Option<String>,
+    /// Redactor en uso ("local", "anthropic", "openai").
+    writer_kind: Option<&'static str>,
     local: Option<String>,
     error: Option<String>,
     /// Si el llavero del sistema no está disponible (las claves no se pueden guardar).
@@ -192,6 +116,7 @@ async fn view(state: &AppState) -> CmdResult<SettingsView> {
             .collect(),
         env_file: state.info.env_file.clone(),
         writer: config.as_ref().ok().map(|c| describe(&c.writer)),
+        writer_kind: config.as_ref().ok().map(|c| kind(&c.writer)),
         local: config.as_ref().ok().map(|c| describe(&c.local)),
         error: config.err(),
         keyring_error,
@@ -200,11 +125,22 @@ async fn view(state: &AppState) -> CmdResult<SettingsView> {
 
 pub(crate) fn describe(e: &finder_infra::llm::Endpoint) -> String {
     let who = match &e.backend {
-        Backend::Ollama { .. } => "Local (Ollama)",
+        Backend::Ollama { .. } => "En tu computadora",
+        Backend::OpenAiCompat { base_url, .. } if base_url.contains("googleapis.com") => "Gemini",
+        Backend::OpenAiCompat { base_url, .. } if base_url.contains("api.openai.com") => "ChatGPT",
         Backend::OpenAiCompat { .. } => "Compatible con OpenAI",
-        Backend::Anthropic { .. } => "Claude (Anthropic)",
+        Backend::Anthropic { .. } => "Claude",
     };
     format!("{who} · {}", e.model)
+}
+
+/// Igual que `FRJ_WRITER`: "local", "anthropic" u "openai".
+fn kind(e: &finder_infra::llm::Endpoint) -> &'static str {
+    match e.backend {
+        Backend::Ollama { .. } => "local",
+        Backend::OpenAiCompat { .. } => "openai",
+        Backend::Anthropic { .. } => "anthropic",
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -225,31 +161,6 @@ pub async fn save_llm_settings(
             return Err(format!("Ajuste desconocido: {k}"));
         }
         let v = v.trim();
-        if k == "FRJ_ADZUNA_COUNTRY" && !v.is_empty() && !adzuna::COUNTRIES.contains(&v) {
-            return Err(format!("País de Adzuna no admitido: «{v}»."));
-        }
-        if k == "FRJ_JOOBLE_DOMAIN" && !v.is_empty() && !jooble::valid_domain(v) {
-            return Err(format!(
-                "Dominio de Jooble inválido: «{v}». Usa jooble.org o el de tu país, como mx.jooble.org."
-            ));
-        }
-        if k == "FRJ_IMAP_PORT" && !v.is_empty() && v.parse::<u16>().map_or(true, |p| p == 0) {
-            return Err(format!("Puerto IMAP inválido: «{v}» (suele ser 993)."));
-        }
-        if k == "FRJ_IMAP_HOST"
-            && !v
-                .chars()
-                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-'))
-        {
-            return Err(format!(
-                "Servidor IMAP inválido: «{v}» (por ejemplo imap.gmail.com)."
-            ));
-        }
-        if k.contains("_PRICE_") && !v.is_empty() && price(v).is_none() {
-            return Err(format!(
-                "Precio inválido: «{v}». Escribe un número en USD por millón de tokens (p. ej. 3 o 0.25)."
-            ));
-        }
         state
             .db
             .set_setting(&format!("{PREFIX}{k}"), (!v.is_empty()).then_some(v))
@@ -288,88 +199,8 @@ async fn reload(state: &AppState) -> CmdResult<SettingsView> {
     view(state).await
 }
 
-fn price(v: &str) -> Option<f64> {
-    v.replace(',', ".")
-        .parse::<f64>()
-        .ok()
-        .filter(|p| p.is_finite() && *p >= 0.0)
-}
-
-#[derive(Debug, Serialize)]
-pub struct Cost {
-    #[serde(flatten)]
-    tokens: TokenEstimate,
-    /// Sin precios en Ajustes, solo se muestran los tokens.
-    usd: Option<f64>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct CostView {
-    cv: Cost,
-    letter: Cost,
-}
-
-/// Costo aproximado de la propuesta de CV y de la carta con el redactor externo en uso.
-/// `None` si el redactor es local (no cuesta).
-#[tauri::command]
-pub async fn estimate_cost(
-    state: State<'_, AppState>,
-    job_id: String,
-    profile_id: String,
-) -> CmdResult<Option<CostView>> {
-    let prefix = match state.llm()?.writer.backend {
-        Backend::Ollama { .. } => return Ok(None),
-        Backend::Anthropic { .. } => "FRJ_ANTHROPIC",
-        Backend::OpenAiCompat { .. } => "FRJ_OPENAI",
-    };
-    let job = state
-        .db
-        .get_job(&job_id)
-        .await
-        .map_err(err)?
-        .ok_or("La vacante ya no existe.")?;
-    let Some((_, master)) = crate::jobs::profile_and_cv(&state, Some(&profile_id)).await? else {
-        return Ok(None);
-    };
-    let stored: HashMap<String, String> = state
-        .db
-        .settings_with_prefix(PREFIX)
-        .await
-        .map_err(err)?
-        .into_iter()
-        .collect();
-    let prices = ["IN", "OUT"].map(|side| {
-        let key = format!("{prefix}_PRICE_{side}");
-        external(&state.file_vars, &key)
-            .or_else(|| stored.get(&key).cloned())
-            .as_deref()
-            .and_then(price)
-    });
-    let cost = |tokens: TokenEstimate| Cost {
-        usd: match prices {
-            [Some(i), Some(o)] => {
-                Some((f64::from(tokens.input) * i + f64::from(tokens.output) * o) / 1e6)
-            }
-            _ => None,
-        },
-        tokens,
-    };
-    Ok(Some(CostView {
-        cv: cost(optimizer::estimate_tokens(&master, &job).map_err(err)?),
-        letter: cost(letter::estimate_tokens(&master, &job).map_err(err)?),
-    }))
-}
-
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn precios_con_coma_o_punto() {
-        assert_eq!(super::price("0,25"), Some(0.25));
-        assert_eq!(super::price("3"), Some(3.0));
-        assert_eq!(super::price("-1"), None);
-        assert_eq!(super::price("tres"), None);
-    }
-
     /// Toca el llavero real del sistema: `cargo test -p finder-app llavero -- --ignored`.
     #[test]
     #[ignore]

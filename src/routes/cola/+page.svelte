@@ -56,22 +56,14 @@
     }
   }
 
-  /** Abre el anuncio, copia la carta y muestra el PDF en su carpeta para arrastrarlo al formulario. */
+  /** Abre el anuncio y muestra el PDF en su carpeta para arrastrarlo al formulario. */
   async function openAndApply(it: QueueItem) {
     error = "";
     msg = "";
     try {
-      const done: string[] = [];
-      if (it.cover_letter) {
-        await navigator.clipboard.writeText(it.cover_letter);
-        done.push("la carta está en el portapapeles");
-      }
-      if (it.pdf_path) {
-        await revealItemInDir(it.pdf_path);
-        done.push("el PDF está en la ventana de archivos");
-      }
+      if (it.pdf_path) await revealItemInDir(it.pdf_path);
       await openUrl(it.url);
-      msg = done.length ? `Anuncio abierto; ${done.join(" y ")}.` : "Anuncio abierto.";
+      msg = it.pdf_path ? "Anuncio abierto; tu CV adaptado está en la ventana de archivos." : "Anuncio abierto.";
     } catch (e) {
       error = String(e);
     }
@@ -127,8 +119,8 @@
       <section aria-labelledby="queue-title">
         <h2 id="queue-title">Cola de hoy</h2>
         <p class="muted small">
-          Vacantes con compatibilidad de 70 o más que aún no enviaste. Prepara el CV y la carta, pulsa «Abrir y postular»
-          (abre el anuncio, copia la carta y te muestra el PDF), envía la solicitud tú y marca «Ya me postulé».
+          Vacantes con compatibilidad de 70 o más que aún no enviaste. Adapta tu CV, pulsa «Abrir y postular»
+          (abre el anuncio y te muestra el PDF), envía la solicitud tú y marca «Ya me postulé».
         </p>
         {#if msg}<p class="ok small" role="status">{msg}</p>{/if}
         {#if !items.length}
@@ -146,11 +138,11 @@
               </div>
               <p class="small muted">
                 {it.status ? STATUS_LABELS[it.status] : "Aún no está en el tablero"} ·
-                CV adaptado: {it.pdf_path ? "sí" : "no"} · Carta: {it.cover_letter ? "sí" : "no"}
+                CV adaptado: {it.pdf_path ? "sí" : "no"}
               </p>
               <div class="row">
-                {#if !it.pdf_path || !it.cover_letter}
-                  <button onclick={() => goto(`/optimizador?job=${encodeURIComponent(it.job_id)}`)}>Preparar CV y carta</button>
+                {#if !it.pdf_path}
+                  <button onclick={() => goto(`/optimizador?job=${encodeURIComponent(it.job_id)}`)}>Adaptar CV</button>
                 {/if}
                 <button class:primary={!!it.pdf_path} onclick={() => openAndApply(it)}>Abrir y postular</button>
                 <button onclick={() => markApplied(it)}>Ya me postulé</button>

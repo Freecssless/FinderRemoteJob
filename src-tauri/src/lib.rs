@@ -3,7 +3,6 @@
 mod board;
 mod envfile;
 mod jobs;
-mod letter;
 mod optimizer;
 mod queue;
 mod reminders;
@@ -70,7 +69,7 @@ fn app_info(state: State<'_, AppState>) -> AppInfo {
     let llm = state.llm();
     AppInfo {
         local_model: llm.as_ref().ok().map(|c| c.local.model.clone()),
-        writer_model: llm.as_ref().ok().map(|c| c.writer.model.clone()),
+        writer_model: llm.as_ref().ok().map(|c| settings::describe(&c.writer)),
         llm_error: llm.err(),
         ..state.info.clone()
     }
@@ -221,8 +220,6 @@ pub fn run() {
             optimizer::get_optimization,
             optimizer::run_optimizer,
             optimizer::save_optimized,
-            letter::write_cover_letter,
-            letter::save_cover_letter,
             board::list_board,
             board::set_application_status,
             board::save_application_notes,
@@ -236,7 +233,6 @@ pub fn run() {
             settings::get_llm_settings,
             settings::save_llm_settings,
             settings::delete_api_key,
-            settings::estimate_cost,
             jobs::embed_jobs,
             jobs::get_company_boards,
             jobs::save_company_boards,

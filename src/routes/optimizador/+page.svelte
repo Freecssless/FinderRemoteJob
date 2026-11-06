@@ -2,8 +2,8 @@
   import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
   import { page } from "$app/state";
   import {
-    api, costLabel, jobsApi, letterApi, optimizerApi, rememberedProfile, settingsApi, TEMPLATES,
-    type Choices, type CostView, type LetterView, type Template, type JobDetail, type OptimizerView, type Profile, type SavedCv,
+    api, jobsApi, optimizerApi, rememberedProfile, TEMPLATES,
+    type Choices, type Template, type JobDetail, type OptimizerView, type Profile, type SavedCv,
   } from "$lib/api";
 
   const jobId = $derived(page.url.searchParams.get("job"));
@@ -14,12 +14,8 @@
   let choices = $state<Choices>({ summary: false, bullets: [] });
   let saved = $state<SavedCv | null>(null);
   let template = $state<Template>("clasica");
-  let busy = $state<"" | "load" | "run" | "save" | "letter">("load");
-  let letter = $state<LetterView | null>(null);
-  let letterText = $state("");
-  let letterMsg = $state("");
+  let busy = $state<"" | "load" | "run" | "save">("load");
   let error = $state("");
-  let cost = $state<CostView | null>(null);
 
   const expLabel = $derived(new Map(view?.experiences ?? []));
   const changed = $derived(
@@ -38,11 +34,7 @@
       const saved = rememberedProfile();
       profile = profiles.find((p) => p.id === saved) ?? profiles[0] ?? null;
       detail = await jobsApi.get(jobId, profile?.id ?? null);
-      if (profile) {
-        show(await optimizerApi.get(jobId, profile.id));
-        // El estimado es informativo: si falla, no bloquea la pantalla.
-        cost = await settingsApi.estimate(jobId, profile.id).catch(() => null);
-      }
+      if (profile) show(await optimizerApi.get(jobId, profile.id));
     } catch (e) {
       error = String(e);
     } finally {
@@ -82,41 +74,6 @@
     }
   }
 
-  async function writeLetter() {
-    if (!jobId || !profile) return;
-    if (letterText.trim() && letterText !== letter?.text && !confirm("Se reemplazará la carta que editaste. ¿Seguir?")) return;
-    busy = "letter";
-    error = "";
-    letterMsg = "";
-    try {
-      letter = await letterApi.write(jobId, profile.id);
-      letterText = letter.text;
-    } catch (e) {
-      error = String(e);
-    } finally {
-      busy = "";
-    }
-  }
-
-  async function saveLetter() {
-    if (!jobId || !profile) return;
-    try {
-      await letterApi.save(jobId, profile.id, letterText);
-      letterMsg = "Carta guardada en la postulación (la ves en el Tablero).";
-    } catch (e) {
-      letterMsg = String(e);
-    }
-  }
-
-  async function copyLetter() {
-    try {
-      await navigator.clipboard.writeText(letterText);
-      letterMsg = "Copiada al portapapeles.";
-    } catch (e) {
-      letterMsg = `No se pudo copiar: ${e}`;
-    }
-  }
-
   const terms = (ts: { surface: string }[]) => ts.map((t) => t.surface).join(", ");
 
   init();
@@ -153,7 +110,6 @@
         <button class="primary" onclick={run} disabled={busy !== ""}>
           {busy === "run" ? "Analizando y redactando…" : "Generar propuesta"}
         </button>
-        {#if cost}<p class="muted small">Redactor externo: {costLabel(cost.cv)}.</p>{/if}
         {#if busy === "run"}
           <p class="muted small">Con modelos locales en CPU puede tardar varios minutos. No cierres la app.</p>
         {/if}
@@ -289,45 +245,10 @@
       {/if}
     {/if}
 
-    {#if profile && busy !== "load"}
-      <section class="card letter" aria-labelledby="letter-title">
-        <h2 id="letter-title">Carta de presentación</h2>
-        <p class="muted small">
-          Tres párrafos: por qué este puesto, 2 o 3 logros de tu CV y un cierre. El guardián revisa cada párrafo con las
-          mismas reglas que el resumen; los rechazados no entran. Puedes editarla antes de guardarla.
-        </p>
-        <div class="row">
-          <button class:primary={!letter} onclick={writeLetter} disabled={busy !== ""}>
-            {busy === "letter" ? "Redactando…" : letter ? "Generar otra" : "Generar carta"}
-          </button>
-          {#if busy === "letter"}<span class="muted small">Con modelos locales puede tardar unos minutos.</span>{/if}
-          {#if cost && busy !== "letter"}
-            <span class="muted small">{costLabel(cost.letter)}; hasta el doble si el guardián pide repetir.</span>
-          {/if}
-        </div>
-        {#each letter?.paragraphs.filter((p) => p.issues.length) ?? [] as p}
-          <div class="rejected small">
-            <p class="danger">Párrafo rechazado: {p.issues.join(" ")}</p>
-            <p class="muted">{p.text}</p>
-          </div>
-        {/each}
-        {#if letter}
-          <label>Texto <textarea rows="14" bind:value={letterText}></textarea></label>
-          <div class="row">
-            <button class="primary" onclick={saveLetter} disabled={!letterText.trim()}>Guardar carta</button>
-            <button onclick={copyLetter} disabled={!letterText.trim()}>Copiar</button>
-            {#if letterMsg}<span class="small" role="status">{letterMsg}</span>{/if}
-          </div>
-        {/if}
-      </section>
-    {/if}
   </div>
 {/if}
 
 <style>
-  .letter { display: flex; flex-direction: column; gap: 0.6rem; }
-  .letter h2 { margin: 0; }
-  .letter p { margin: 0; }
   .rejected { border-left: 3px solid var(--danger); padding-left: 0.6rem; }
   .templates { flex-basis: 100%; border: 0; padding: 0; margin: 0 0 0.5rem; display: flex; flex-direction: column; gap: 0.2rem; }
   .templates legend { font-weight: 600; margin-bottom: 0.2rem; }

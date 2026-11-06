@@ -218,3 +218,15 @@
 - Se calculan solos para las vacantes nuevas al sincronizar y al analizar una vacante (si la IA local no responde, no se interrumpe nada). Botón «Calcular similitud semántica» en Vacantes para las 500 más recientes que no la tengan.
 - La ficha de compatibilidad muestra «Similitud con tu CV» cuando existe.
 - `finder_infra::semantic` (`ensure`, `Vectors`), `Db::embeddings` y `Db::put_embedding`.
+
+### Simplificación para usuarios sin conocimientos técnicos
+- Se quitan funciones que pedían configuración técnica o aportaban poco al objetivo (encontrar vacantes, adaptar el CV y darles seguimiento):
+  - Fuentes Adzuna y Jooble (pedían registrarse como desarrollador; Jooble solo da 500 consultas por clave).
+  - Lector de alertas por correo (pedía servidor IMAP y contraseña de aplicación). Se quitan sus dependencias (`async-imap`, `mail-parser`, `tokio-rustls`…).
+  - Costo estimado (había que escribir precios por millón de tokens).
+  - Carta de presentación (Optimizador, Tablero, Postular; comandos, `letter`, `guard::validate_paragraphs`, `Db::set_cover_letter` y el campo `Application::cover_letter`). La columna sigue en la base, sin uso.
+  - Pantalla Estadísticas: su resumen (postuladas, entrevistas, ofertas y tasa de respuesta) pasa a una línea arriba del Tablero.
+- Las migraciones de las fuentes quitadas se conservan (SQLite exige que sigan existiendo las ya aplicadas).
+- Ajustes, nuevo diseño: «¿Qué IA adapta tus CV?» con tres opciones (En tu computadora, Claude, Gemini o ChatGPT). Gemini y ChatGPT traen la dirección y el modelo ya puestos (`gemini-3.8-flash`, `gpt-6.1-terra`, según su documentación de noviembre de 2026); solo se pega la clave, con el enlace para crearla. Si falta la clave, se avisa antes de guardar.
+- Ollama, modelos, esfuerzo, proveedor compatible propio y «Empresas que sigues» pasan a «Opciones avanzadas» (cerrado).
+- Textos en lenguaje simple: «En uso: Claude · …»; la barra lateral solo dice qué IA se usa, o «La IA no está lista: revisa Ajustes».

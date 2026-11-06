@@ -2,8 +2,8 @@
   import { openPath, openUrl } from "@tauri-apps/plugin-opener";
   import { goto } from "$app/navigation";
   import {
-    api, boardApi, rememberedProfile, rememberProfile, scoreClass, REMINDER_LABELS, SOURCE_LABELS, STATUSES, TEMPLATE_LABELS,
-    STATUS_LABELS, type ApplicationDetail, type BoardRow, type Profile, type Reminder, type ReminderDays,
+    api, boardApi, rememberedProfile, statsApi, rememberProfile, scoreClass, REMINDER_LABELS, SOURCE_LABELS, STATUSES, TEMPLATE_LABELS,
+    STATUS_LABELS, type ApplicationDetail, type Stats, type BoardRow, type Profile, type Reminder, type ReminderDays,
     type Status,
   } from "$lib/api";
 
@@ -24,6 +24,7 @@
   let savedMsg = $state("");
 
   let due = $state<Reminder[]>([]);
+  let stats = $state<Stats | null>(null);
   let days = $state<ReminderDays>({ follow_up: 7, no_response: 21 });
   let daysMsg = $state("");
 
@@ -80,7 +81,11 @@
   async function reload() {
     if (!profileId) return;
     try {
-      [rows, due] = await Promise.all([boardApi.list(profileId), boardApi.dueReminders(profileId)]);
+      [rows, due, stats] = await Promise.all([
+        boardApi.list(profileId),
+        boardApi.dueReminders(profileId),
+        statsApi.get(profileId),
+      ]);
       error = "";
     } catch (e) {
       error = String(e);
@@ -208,6 +213,17 @@
     </header>
 
     {#if error}<p class="danger" role="alert">{error}</p>{/if}
+
+    {#if stats && stats.funnel.applied}
+      <p class="summary small">
+        Postuladas: <strong>{stats.funnel.applied}</strong> · Entrevistas: <strong>{stats.funnel.interview}</strong> ·
+        Ofertas: <strong>{stats.funnel.offer}</strong>
+        {#if stats.response_rate !== null}
+          · Te respondieron el <strong>{Math.round(stats.response_rate)} %</strong>
+          <span class="muted">(de las postuladas hace 14 días o más)</span>
+        {/if}
+      </p>
+    {/if}
 
     {#if loading}
       <p class="muted">Cargando…</p>
@@ -405,19 +421,6 @@
         <p class="muted small">Todavía no adaptaste tu CV para esta vacante.</p>
       {/if}
 
-      <h3>Carta de presentación</h3>
-      {#if a.cover_letter}
-        <details class="small">
-          <summary>Ver carta</summary>
-          <p class="letter">{a.cover_letter}</p>
-        </details>
-        <div class="row">
-          <button onclick={() => navigator.clipboard.writeText(a.cover_letter ?? "").catch((e) => (error = String(e)))}>Copiar carta</button>
-        </div>
-      {:else}
-        <p class="muted small">Sin carta. Genérala desde «Adaptar CV».</p>
-      {/if}
-
       <h3>Seguimiento</h3>
       <label>Notas <textarea rows="4" bind:value={form.notes}></textarea></label>
       <div class="next">
@@ -456,6 +459,7 @@
 </div>
 
 <style>
+  .summary { margin: 0; }
   .page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; height: calc(100vh - 3rem); }
   .page.with-detail { grid-template-columns: minmax(0, 1fr) 340px; }
   .main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
@@ -498,7 +502,6 @@
   .dates dt { color: var(--muted); }
   .dates dd { margin: 0; }
   .next { display: grid; grid-template-columns: 1fr 9.5rem; gap: 0.5rem; }
-  .letter { white-space: pre-wrap; margin: 0.4rem 0 0; }
   .history { margin: 0; padding-left: 1.2rem; }
   .due { margin-bottom: 0.75rem; }
   .due h2 { font-size: 0.9rem; margin: 0 0 0.4rem; }

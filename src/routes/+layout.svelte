@@ -17,7 +17,6 @@
     { href: "/optimizador", label: "Optimizador", ready: true },
     { href: "/cola", label: "Postular", ready: true },
     { href: "/tablero", label: "Tablero", ready: true },
-    { href: "/estadisticas", label: "Estadísticas", ready: true },
     { href: "/ajustes", label: "Ajustes", ready: true },
   ];
 </script>
@@ -38,10 +37,11 @@
     </nav>
     {#if info}
       <footer class="muted small">
-        <div>IA local: {info.local_model ?? "—"}</div>
-        <div>Redactor: {info.writer_model ?? "—"}</div>
-        <div title={info.env_file ?? ""}>.env: {info.env_file ? "cargado" : "no encontrado"}</div>
-        {#if info.llm_error}<div class="danger">{info.llm_error}</div>{/if}
+        {#if info.llm_error}
+          <a class="danger" href="/ajustes">La IA no está lista: revisa Ajustes</a>
+        {:else}
+          <div>IA: {info.writer_model ?? "—"}</div>
+        {/if}
       </footer>
     {/if}
   </aside>

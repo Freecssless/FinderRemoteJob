@@ -114,7 +114,6 @@ mod tests {
             status: Status::Encontrada,
             match_score: None,
             cv_version_id: None,
-            cover_letter: None,
             applied_at: None,
             first_response_at: None,
             next_step: None,
