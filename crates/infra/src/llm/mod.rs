@@ -14,6 +14,7 @@
 //! Configuración por variables de entorno (ver `.env.example` y el README).
 
 pub mod anthropic;
+pub mod ollama;
 pub mod openai_compat;
 pub mod tasks;
 
@@ -62,6 +63,10 @@ pub type Result<T> = std::result::Result<T, LlmError>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Backend {
+    /// Ollama local: chat por su API nativa y embeddings por la compatible (`base_url` = `…/v1`).
+    Ollama {
+        base_url: String,
+    },
     OpenAiCompat {
         base_url: String,
         api_key: Option<String>,
@@ -106,9 +111,8 @@ impl LlmConfig {
                 .filter(|v| !v.is_empty())
         };
         let local = Endpoint {
-            backend: Backend::OpenAiCompat {
+            backend: Backend::Ollama {
                 base_url: get("FRJ_LOCAL_URL").unwrap_or_else(|| DEFAULT_LOCAL_URL.into()),
-                api_key: None,
             },
             model: get("FRJ_LOCAL_MODEL").unwrap_or_else(|| DEFAULT_LOCAL_MODEL.into()),
         };
@@ -176,6 +180,17 @@ impl LlmClient {
     /// Pide una respuesta JSON que cumpla `schema` (JSON Schema con `additionalProperties: false`).
     pub async fn complete_json(&self, system: &str, user: &str, schema: &Value) -> Result<Value> {
         match &self.endpoint.backend {
+            Backend::Ollama { base_url } => {
+                ollama::complete_json(
+                    &self.http,
+                    base_url,
+                    &self.endpoint.model,
+                    system,
+                    user,
+                    schema,
+                )
+                .await
+            }
             Backend::OpenAiCompat { base_url, api_key } => {
                 openai_compat::complete_json(
                     &self.http,
@@ -206,6 +221,9 @@ impl LlmClient {
     /// Embeddings de cada texto, con `model` (solo backends compatibles con OpenAI, como Ollama).
     pub async fn embed(&self, model: &str, texts: &[String]) -> Result<Vec<Vec<f32>>> {
         match &self.endpoint.backend {
+            Backend::Ollama { base_url } => {
+                openai_compat::embed(&self.http, base_url, None, model, texts).await
+            }
             Backend::OpenAiCompat { base_url, api_key } => {
                 openai_compat::embed(&self.http, base_url, api_key.as_deref(), model, texts).await
             }

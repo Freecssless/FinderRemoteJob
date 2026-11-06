@@ -7,11 +7,11 @@
   let info = $state<AppInfo | null>(null);
   api.appInfo().then((i) => (info = i)).catch(() => {});
 
-  // Las demás secciones llegan en las partes 10c y 10d.
+  // Las demás secciones llegan en las parte 10d.
   const nav = [
     { href: "/perfiles", label: "Perfiles", ready: true },
     { href: "/vacantes", label: "Vacantes", ready: true },
-    { href: "/optimizador", label: "Optimizador", ready: false },
+    { href: "/optimizador", label: "Optimizador", ready: true },
     { href: "/tablero", label: "Tablero", ready: false },
   ];
 </script>

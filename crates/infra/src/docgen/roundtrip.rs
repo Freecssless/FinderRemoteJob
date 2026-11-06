@@ -43,9 +43,18 @@ pub fn verify(doc: &CvDocument, file: &[u8], kind: CvFileKind) -> Result<RoundTr
         .split(|c: char| !c.is_alphanumeric())
         .filter(|w| w.len() >= 3 && seen.insert(*w))
         .collect();
+    // pdf-extract también pega líneas sin espacio ("VillegasEditor"; poppler las lee bien):
+    // una palabra pegada a otra palabra esperada no se perdió.
+    let glued = |w: &str| {
+        got.iter().any(|t| {
+            t.strip_prefix(w)
+                .or_else(|| t.strip_suffix(w))
+                .is_some_and(|rest| seen.contains(rest))
+        })
+    };
     let missing_words: Vec<String> = expected
         .iter()
-        .filter(|w| !got.contains(*w))
+        .filter(|w| !got.contains(*w) && !glued(w))
         .map(|w| w.to_string())
         .collect();
     let missing_ratio = if expected.is_empty() {

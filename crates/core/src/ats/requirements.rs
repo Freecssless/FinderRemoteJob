@@ -45,6 +45,14 @@ pub struct LlmExtraSkill {
 
 const SENIORITY: &[&str] = &["jr", "mid", "sr", "lead"];
 
+/// ¿Parece el nombre de una habilidad y no una frase del anuncio? Los modelos locales a veces
+/// copian una línea entera ("Corrección de color, edición de audio y criterio en selección
+/// musical."): ningún CV la contiene literal, así que como término solo restaría puntos.
+pub fn is_skill_like(surface: &str) -> bool {
+    let s = surface.trim().trim_end_matches('.');
+    !s.is_empty() && s.split_whitespace().count() <= 4 && !s.contains([',', ';', ':'])
+}
+
 /// `terms` son los del diccionario (`extract_terms`); `llm` lo que respondió la IA.
 pub fn merge(
     dict: &SkillDict,
@@ -79,9 +87,9 @@ pub fn merge(
 
     // 2. Habilidades extra: solo si están en el anuncio y no las cubre ya el diccionario.
     for s in llm.extra_skills {
-        let surface = s.surface.trim().to_string();
+        let surface = s.surface.trim().trim_end_matches('.').trim().to_string();
         let n = normalize(&surface);
-        if surface.is_empty()
+        if !is_skill_like(&surface)
             || !contains_word(&text_norm, &n)
             || terms
                 .iter()
@@ -231,6 +239,30 @@ mod tests {
             before + 1,
             "Premiere ya lo cubre el diccionario"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn frases_del_anuncio_no_son_habilidades() -> Result<(), DictError> {
+        let dict = SkillDict::builtin()?;
+        let jd = "Requisitos: Corrección de color, edición de audio y criterio en selección musical. \
+                  Manejo de ftrack.io y SyncSketch Pro.";
+        let extra = |s: &str| LlmExtraSkill {
+            surface: s.into(),
+            required: true,
+            kind: TermKind::Hard,
+        };
+        let llm = LlmRequirements {
+            extra_skills: vec![
+                extra("Corrección de color, edición de audio y criterio en selección musical."),
+                extra("ftrack.io"),
+                extra("SyncSketch Pro."),
+            ],
+            ..Default::default()
+        };
+        let r = merge(&dict, "Editor", jd, vec![], llm);
+        let names: Vec<&str> = r.terms.iter().map(|t| t.surface.as_str()).collect();
+        assert_eq!(names, ["ftrack.io", "SyncSketch Pro"]);
         Ok(())
     }
 

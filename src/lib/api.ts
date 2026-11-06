@@ -206,3 +206,57 @@ export function rememberProfile(id: string) {
     /* sin almacenamiento: no pasa nada */
   }
 }
+
+// ---------------------------------------------------------------------------
+// Optimizador (crates/infra/src/optimizer.rs y src-tauri/src/optimizer.rs)
+// ---------------------------------------------------------------------------
+
+export interface AtsReport {
+  total: number;
+  breakdown: { keywords: number; title: number; sections: number; legibility: number };
+  matched: string[];
+  synonym_only: { job_surface: string; cv_surface: string }[];
+  missing: Term[];
+  suggestions: string[];
+}
+export interface Checked {
+  exp_id: string | null;
+  source_ids: string[];
+  proposed: string;
+  originals: string[];
+}
+export interface Choices { summary: boolean; bullets: boolean[] }
+export interface Optimization {
+  prepared: {
+    requirements: JobRequirements;
+    notes: string[];
+    lang: "es" | "en";
+    ats_before: AtsReport;
+    gaps: { with_evidence: Term[]; without_evidence: Term[] };
+  };
+  review: { summary: Checked | null; bullets: Checked[]; invalid_skill_ids: string[] };
+  choices: Choices;
+  ats_after: AtsReport;
+  roundtrip: { missing_words: string[]; missing_ratio: number; sections_in_order: boolean };
+}
+export interface OptimizerView {
+  profile_id: string;
+  opt: Optimization;
+  summary_issues: string[];
+  bullet_issues: string[][];
+  experiences: [string, string][];
+}
+export interface SavedCv {
+  ats_before: number | null;
+  ats_after: number | null;
+  pdf_path: string | null;
+  docx_path: string | null;
+  missing: string[];
+}
+
+export const optimizerApi = {
+  get: (jobId: string, profileId: string) =>
+    invoke<OptimizerView | null>("get_optimization", { jobId, profileId }),
+  run: (jobId: string, profileId: string) => invoke<OptimizerView>("run_optimizer", { jobId, profileId }),
+  save: (jobId: string, choices: Choices) => invoke<SavedCv>("save_optimized", { jobId, choices }),
+};

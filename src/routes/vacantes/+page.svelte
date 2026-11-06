@@ -1,5 +1,6 @@
 <script lang="ts">
   import { openUrl } from "@tauri-apps/plugin-opener";
+  import { goto } from "$app/navigation";
   import {
     api, jobsApi, rememberedProfile, rememberProfile, SOURCE_LABELS,
     type JobDetail, type JobRow, type Profile, type SyncSummary,
@@ -268,6 +269,8 @@
             <p>Salario: {job.salary_min ?? "?"}–{job.salary_max ?? "?"} {job.currency ?? ""}</p>
           {/if}
           <div class="row">
+            <button class="primary" onclick={() => goto(`/optimizador?job=${job.id}`)} disabled={!s}
+              title={s ? "" : "El perfil necesita CV maestro"}>Adaptar mi CV</button>
             {#if job.url}<button onclick={() => openUrl(job.url)}>Abrir anuncio</button>{/if}
             <button onclick={analyze} disabled={busy !== ""}>
               {busy === "analyze" ? "Analizando con IA local…" : job.requirements ? "Volver a analizar con IA" : "Analizar requisitos con IA"}

@@ -131,6 +131,18 @@ mod tests {
         Ok(())
     }
 
+    /// Caso real: pdf-extract lee "VillegasEditor de Video": la palabra está, solo pegada.
+    #[test]
+    fn palabras_pegadas_al_cambiar_de_linea_no_cuentan_como_perdidas() -> R {
+        let mut d = doc(DocLang::Es)?;
+        d.name = "Gael Cabrera Villegas".into();
+        d.headline = "Editor de Video".into();
+        let rt = verify(&d, &render_pdf(&d)?, CvFileKind::Pdf)?;
+        assert!(rt.text.contains("VillegasEditor"), "{}", rt.text);
+        assert!(rt.missing_words.is_empty(), "{:?}", rt.missing_words);
+        Ok(())
+    }
+
     /// Genera ejemplos para revisarlos a ojo:
     /// `cargo test -p finder-infra muestras -- --ignored` → /tmp/finder-muestras/
     #[test]

@@ -7,9 +7,9 @@
 
 use serde::Serialize;
 
-use crate::ats::keywords::normalize;
-use crate::guard::GuardReport;
-use crate::model::CvMaster;
+use crate::ats::keywords::{SkillDict, contains_word, normalize};
+use crate::guard::{Checked, GuardReport};
+use crate::model::{CvMaster, Term};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -205,8 +205,8 @@ impl CvDocument {
     /// CV optimizado: el maestro con lo que el guardián aceptó y el usuario confirmó.
     ///
     /// - Resumen: el propuesto si se acepta; si no, ninguno.
-    /// - Logros: por experiencia, en el orden propuesto; los rechazados vuelven a su texto original.
-    ///   Si la propuesta no tocó una experiencia, se conservan sus logros originales.
+    /// - Logros: por experiencia, en el orden propuesto; los rechazados vuelven a su texto original
+    ///   y los que ninguna propuesta citó van al final. Nunca se pierde un logro del maestro.
     /// - Habilidades: primero las del orden propuesto y después las demás (se reordena, nunca se quita).
     /// - Empresa, puesto, fechas, educación e idiomas salen siempre del maestro.
     pub fn from_report(
@@ -223,28 +223,51 @@ impl CvDocument {
             .map(|s| s.proposed.clone());
 
         for (exp, out) in m.experience.iter().zip(doc.experience.iter_mut()) {
-            let mut proposed = report
+            let proposed: Vec<(bool, &Checked)> = report
                 .bullets
                 .iter()
                 .enumerate()
                 .filter(|(_, c)| c.exp_id.as_deref() == Some(exp.id.as_str()))
-                .peekable();
-            if proposed.peek().is_none() {
+                .map(|(i, c)| {
+                    (
+                        c.accepted() && choices.bullets.get(i).copied().unwrap_or(true),
+                        c,
+                    )
+                })
+                .collect();
+            if proposed.is_empty() {
                 continue;
             }
+            // Logros ya contenidos en una propuesta que se usa: un rechazo no los repite.
+            let covered: Vec<&str> = proposed
+                .iter()
+                .filter(|(used, _)| *used)
+                .flat_map(|(_, c)| c.source_ids.iter().map(String::as_str))
+                .collect();
             let mut bullets: Vec<String> = Vec::new();
-            for (i, c) in proposed {
-                let use_proposed = c.accepted() && choices.bullets.get(i).copied().unwrap_or(true);
-                let texts: Vec<&str> = if use_proposed {
+            for (used, c) in proposed {
+                let texts: Vec<&str> = if used {
                     vec![c.proposed.as_str()]
                 } else {
-                    c.originals.iter().map(String::as_str).collect()
+                    exp.bullets
+                        .iter()
+                        .filter(|b| {
+                            c.source_ids.contains(&b.id) && !covered.contains(&b.id.as_str())
+                        })
+                        .map(|b| b.text.as_str())
+                        .collect()
                 };
                 for t in texts {
                     // Un original puede repetirse si dos propuestas citaban el mismo logro.
                     if !bullets.iter().any(|b| b == t) {
                         bullets.push(t.to_string());
                     }
+                }
+            }
+            // Reescribir no es borrar: los logros que ninguna propuesta usada cubre se conservan.
+            for b in &exp.bullets {
+                if !covered.contains(&b.id.as_str()) && !bullets.contains(&b.text) {
+                    bullets.push(b.text.clone());
                 }
             }
             out.bullets = bullets;
@@ -263,6 +286,42 @@ impl CvDocument {
         }
         doc.skills = skills;
         doc
+    }
+
+    /// Escribe cada habilidad como la nombra la vacante cuando el diccionario dice que es la misma
+    /// ("Color Grading" → "Corrección de color (Color Grading)"): algunos ATS comparan literal. No agrega
+    /// habilidades: solo renombra las que ya están. Si la forma del anuncio es el puesto
+    /// ("Editor de Video"), se usa el nombre de la habilidad ("Edición de video").
+    pub fn align_skills(&mut self, dict: &SkillDict, terms: &[Term], job_title: &str) {
+        let title = normalize(job_title);
+        let mut out: Vec<String> = Vec::new();
+        for s in &self.skills {
+            let job_form = dict.lookup(s).and_then(|i| {
+                terms
+                    .iter()
+                    .find(|t| dict.lookup(&t.canonical) == Some(i))
+                    .map(|t| {
+                        if contains_word(&title, &normalize(&t.surface)) {
+                            dict.skill(i).name.as_str()
+                        } else {
+                            t.surface.as_str()
+                        }
+                    })
+            });
+            let name = match job_form {
+                Some(j)
+                    if normalize(j) != normalize(s) && !normalize(j).contains(&normalize(s)) =>
+                {
+                    format!("{j} ({s})")
+                }
+                Some(j) => j.to_string(),
+                None => s.clone(),
+            };
+            if !out.contains(&name) {
+                out.push(name);
+            }
+        }
+        self.skills = out;
     }
 
     /// Texto plano en el mismo orden que las plantillas: lo que un ATS debería poder leer.
@@ -461,6 +520,122 @@ mod tests {
             doc.experience[0].bullets[0],
             "Reduje el tiempo de entrega 30% creando plantillas de edición reutilizables"
         );
+        Ok(())
+    }
+
+    /// Caso real con qwen3:8b: una propuesta aceptada fusiona b_01 y b_02, y otra rechazada (habilidad
+    /// inventada) también cita b_01. El rechazo no debe devolver b_01: ya está dentro de la fusión.
+    #[test]
+    fn rechazo_no_duplica_un_logro_ya_usado() -> Result<(), Box<dyn std::error::Error>> {
+        use crate::guard::{Draft, DraftBullet, validate};
+        let m = master()?;
+        let dict = SkillDict::builtin()?;
+        let b = |text: &str, src: &[&str]| DraftBullet {
+            exp_id: "exp_01".into(),
+            text: text.into(),
+            source_ids: src.iter().map(|s| s.to_string()).collect(),
+        };
+        let draft = Draft {
+            summary: None,
+            bullets: vec![
+                b(
+                    "Edité 120 videos para YouTube con Premiere y After Effects y reduje 30% el tiempo de entrega",
+                    &["b_01", "b_02"],
+                ),
+                b("Edité 120 videos de TikTok con After Effects", &["b_01"]), // TikTok no está en el CV
+            ],
+            skills_order: vec![],
+        };
+        let report = validate(&dict, &m, &draft, "2026-11");
+        let all = Choices::accept_all(&report);
+        assert_eq!(all.bullets, [true, false]);
+        let doc = CvDocument::from_report(&m, &report, &all, DocLang::Es);
+        assert_eq!(
+            doc.experience[0].bullets,
+            [
+                "Edité 120 videos para YouTube con Premiere y After Effects y reduje 30% el tiempo de entrega"
+            ]
+        );
+
+        // Si el usuario rechaza la fusión, vuelven ambos originales, sin repetir b_01.
+        let none = Choices {
+            summary: false,
+            bullets: vec![false, false],
+        };
+        let doc = CvDocument::from_report(&m, &report, &none, DocLang::Es);
+        assert_eq!(doc.experience[0].bullets.len(), 2);
+        Ok(())
+    }
+
+    /// Caso real: el redactor resumió 7 logros en 4 y el CV perdió los que no citó (entre ellos el
+    /// de "700 mil a 1.2 millones" de visualizaciones). Reescribir no es borrar.
+    #[test]
+    fn un_logro_que_nadie_cito_no_se_pierde() -> Result<(), Box<dyn std::error::Error>> {
+        use crate::guard::{Draft, DraftBullet, validate};
+        let m = master()?;
+        let dict = SkillDict::builtin()?;
+        let draft = Draft {
+            summary: None,
+            bullets: vec![DraftBullet {
+                exp_id: "exp_01".into(),
+                text: "Reduje 30% el tiempo de entrega con plantillas de edición reutilizables"
+                    .into(),
+                source_ids: vec!["b_02".into()],
+            }],
+            skills_order: vec![],
+        };
+        let report = validate(&dict, &m, &draft, "2026-11");
+        let doc = CvDocument::from_report(&m, &report, &Choices::accept_all(&report), DocLang::Es);
+        assert_eq!(
+            doc.experience[0].bullets,
+            [
+                "Reduje 30% el tiempo de entrega con plantillas de edición reutilizables",
+                "Edité 120 videos para YouTube con Premiere y After Effects",
+            ]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn habilidades_con_la_forma_del_anuncio() -> Result<(), Box<dyn std::error::Error>> {
+        use crate::model::{Term, TermKind};
+        let dict = SkillDict::builtin()?;
+        let term = |s: &str| Term {
+            surface: s.into(),
+            canonical: dict
+                .lookup(s)
+                .map(|i| dict.skill(i).name.clone())
+                .unwrap_or_else(|| s.into()),
+            kind: TermKind::Tool,
+            required: true,
+            weight: 3.0,
+        };
+        let mut doc = CvDocument::from_master(&master()?, DocLang::Es);
+        doc.skills = vec![
+            "Premiere".into(),
+            "Color Grading".into(),
+            "Video Editing".into(),
+            "Excel".into(),
+        ];
+        let terms = [
+            term("Adobe Premiere Pro"),
+            term("Corrección de color"),
+            term("Editor de Video"),
+        ];
+        doc.align_skills(&dict, &terms, "Editor de Video para Anuncios");
+        assert_eq!(
+            doc.skills,
+            [
+                "Adobe Premiere Pro",
+                "Corrección de color (Color Grading)",
+                "Edición de video (Video Editing)",
+                "Excel"
+            ]
+        );
+        // Ya con la forma exacta, o contenida en ella: no se repite.
+        doc.skills = vec!["Adobe Premiere Pro".into(), "Premiere Pro".into()];
+        doc.align_skills(&dict, &[term("Adobe Premiere Pro")], "Editor");
+        assert_eq!(doc.skills, ["Adobe Premiere Pro"]);
         Ok(())
     }
 

@@ -73,7 +73,9 @@ async fn profile_and_cv(
     state: &AppState,
     profile_id: Option<&str>,
 ) -> CmdResult<Option<(Profile, CvMaster)>> {
-    let Some(id) = profile_id else { return Ok(None) };
+    let Some(id) = profile_id else {
+        return Ok(None);
+    };
     let Some(profile) = state.db.get_profile(id).await.map_err(err)? else {
         return Ok(None);
     };
@@ -85,7 +87,12 @@ async fn profile_and_cv(
         .map(|s| (profile, s.cv)))
 }
 
-fn score(state: &AppState, ctx: &(Profile, CvMaster), job: &Job, today: &str) -> MatchReport {
+pub(crate) fn score(
+    state: &AppState,
+    ctx: &(Profile, CvMaster),
+    job: &Job,
+    today: &str,
+) -> MatchReport {
     let req = requirements(&state.dict, job);
     match_score(
         &state.dict,
@@ -204,24 +211,26 @@ pub async fn sync_jobs(
     };
     let mut out = Vec::new();
     for source in Source::ALL {
-        out.push(match sources::sync(&state.db, &state.http, source, &q).await {
-            Ok(r) => SyncSummary {
-                source: r.source,
-                skipped_too_soon: r.skipped_too_soon,
-                fetched: r.fetched,
-                kept: r.kept,
-                new: r.new_jobs.len(),
-                error: None,
+        out.push(
+            match sources::sync(&state.db, &state.http, source, &q).await {
+                Ok(r) => SyncSummary {
+                    source: r.source,
+                    skipped_too_soon: r.skipped_too_soon,
+                    fetched: r.fetched,
+                    kept: r.kept,
+                    new: r.new_jobs.len(),
+                    error: None,
+                },
+                Err(e) => SyncSummary {
+                    source: source.id(),
+                    skipped_too_soon: false,
+                    fetched: 0,
+                    kept: 0,
+                    new: 0,
+                    error: Some(e.to_string()),
+                },
             },
-            Err(e) => SyncSummary {
-                source: source.id(),
-                skipped_too_soon: false,
-                fetched: 0,
-                kept: 0,
-                new: 0,
-                error: Some(e.to_string()),
-            },
-        });
+        );
     }
     Ok(out)
 }

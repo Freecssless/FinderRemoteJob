@@ -12,8 +12,8 @@
 | 6 | Fuentes de vacantes: Remote OK, Remotive, WWR, Get on Board, Jobicy + importación manual (`infra::sources`) | ✅ Terminado |
 | 7 | Cliente LLM (Ollama / OpenAI-compatible / Anthropic) + importación de CV PDF/DOCX | ✅ Terminado (prueba en vivo con Ollama pendiente) |
 | 8 | Generación de PDF (Typst) y DOCX + prueba de ida y vuelta (`infra::docgen`) | ✅ Terminado |
-| 9 | Flujo completo del optimizador de CV | ✅ Terminado (prueba en vivo con IA pendiente) |
-| 10 | App Tauri + interfaz Svelte (perfiles, vacantes, optimizador, tablero) | 🔄 En curso: 10a y 10b hechas |
+| 9 | Flujo completo del optimizador de CV | ✅ Terminado (probado en vivo con qwen3:8b) |
+| 10 | App Tauri + interfaz Svelte (perfiles, vacantes, optimizador, tablero) | 🔄 En curso: 10a, 10b y 10c hechas |
 
 ## Registro
 
@@ -110,3 +110,22 @@
 - El perfil activo se recuerda entre pantallas (`localStorage`, solo como comodidad).
 - Probado por el usuario en la app.
 - `finder_infra::sources::Client` se reexporta para que la app no dependa de `reqwest` directamente.
+
+### Módulo 10c: pantalla Optimizador
+- `src-tauri/src/optimizer.rs`: `run_optimizer` (requisitos con IA local, que se guardan en la vacante si no estaban; ATS antes; borrador del redactor; guardián; ATS después), `get_optimization` y `save_optimized`.
+- La propuesta queda en memoria por vacante: la interfaz solo envía las decisiones al guardar y se puede guardar otra versión con otras decisiones sin volver a llamar a la IA. Se pierde al cerrar la app.
+- Al guardar, la vacante entra al tablero del perfil (con su compatibilidad) y pasa a «CV adaptado». PDF y DOCX en `<datos de la app>/cvs/`.
+- Pantalla: ATS antes → después, huecos con y sin respaldo, sinónimos a cambiar por la forma del anuncio, diff por logro (tu texto / propuesta) con casillas, rechazos del guardián con su motivo, y botones para abrir el PDF/DOCX o mostrar la carpeta.
+- Permiso `opener:allow-open-path` limitado a `$APPDATA/cvs/**`.
+- Botón «Adaptar mi CV» en la ficha de la vacante.
+- Prueba en vivo del optimizador con `qwen3:8b` como redactor (7 min 16 s): el guardián rechazó 3 de 5 logros por habilidades inventadas (TikTok, Instagram, motion graphics, edición de audio, redes sociales). ATS 67 → 67.
+- Corregido en `CvDocument::from_report`: un logro rechazado ya no devuelve un original que otra propuesta aceptada ya incluye (salía repetido en el CV). Prueba `rechazo_no_duplica_un_logro_ya_usado`.
+- Optimizador más rápido y que no baja el puntaje (probado con el CV real del usuario: antes bajaba 62 → 56; ahora 74 → 76 y unos 5 min en CPU, antes más de 7):
+  - IA local por la API nativa de Ollama (`llm::ollama`): sin razonamiento (`think: false`, ~8× más rápido con qwen3) y contexto de 8192 tokens (con 4096 Ollama recortaba en silencio el prompt del redactor).
+  - Prompt del redactor compacto (sin métricas, educación ni idiomas) y como máximo 3 logros reescritos por experiencia; el resumen es obligatorio en el esquema.
+  - `from_report`: los logros que ninguna propuesta usada cubre se conservan (el redactor resumía 7 logros en 4 y se perdían).
+  - `CvDocument::align_skills`: cada habilidad se escribe como la nombra la vacante si el diccionario dice que es la misma ("Corrección de color (Color Grading)").
+  - Por defecto se desmarca una propuesta que pierde términos de la vacante que su original tenía.
+  - Requisitos: se descartan "habilidades" que son frases del anuncio (`is_skill_like`), también en vacantes ya analizadas.
+  - Guardián: el resumen se respalda con todo el CV, y las empresas cuentan como respaldo ("Canal de YouTube" → YouTube).
+  - Ida y vuelta del PDF: pdf-extract pega líneas ("VillegasEditor"); ya no cuenta como palabra perdida ni se puntúa ese texto (costaba 8 puntos de legibilidad).

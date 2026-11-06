@@ -12,6 +12,7 @@
 use std::path::{Path, PathBuf};
 
 use finder_core::ats::keywords::{SkillDict, extract_terms};
+use finder_core::ats::requirements::is_skill_like;
 use finder_core::ats::score::{AtsReport, Gaps, ats_score, classify_gaps, with_roundtrip};
 use finder_core::document::{Choices, CvDocument, DocLang};
 use finder_core::guard::{Draft, GuardReport, validate};
@@ -113,10 +114,12 @@ fn dictionary_only(dict: &SkillDict, job: &Job) -> JobRequirements {
 pub fn prepare_with(
     dict: &SkillDict,
     input: &OptimizeInput<'_>,
-    requirements: JobRequirements,
+    mut requirements: JobRequirements,
     notes: Vec<String>,
 ) -> Prepared {
     let job = input.job;
+    // Vacantes analizadas antes del filtro pueden traer frases del anuncio como "habilidades".
+    requirements.terms.retain(|t| is_skill_like(&t.surface));
     let lang = match job.language.as_deref() {
         Some("en") => DocLang::En,
         Some("es") => DocLang::Es,
@@ -162,8 +165,16 @@ pub fn apply_draft(
     draft: Draft,
 ) -> Result<Optimization> {
     let review = validate(dict, input.master, &draft, input.today);
-    let choices = Choices::accept_all(&review);
-    let document = CvDocument::from_report(input.master, &review, &choices, prepared.lang);
+    let terms = &prepared.requirements.terms;
+    let mut choices = Choices::accept_all(&review);
+    // Por defecto no se usa una propuesta que pierde términos de la vacante que su original sí tenía.
+    let keywords = |t: &str| ats_score(dict, t, "", terms).breakdown.keywords;
+    for (c, use_it) in review.bullets.iter().zip(choices.bullets.iter_mut()) {
+        if *use_it && keywords(&c.proposed) < keywords(&c.originals.join("\n")) {
+            *use_it = false;
+        }
+    }
+    let document = build_document(dict, input, &review, &choices, &prepared);
     let (ats_after, roundtrip) =
         score_rendered(dict, &document, input.job, &prepared.requirements)?;
     Ok(Optimization {
@@ -177,6 +188,19 @@ pub fn apply_draft(
     })
 }
 
+/// CV final con las decisiones, y las habilidades escritas como las nombra la vacante.
+fn build_document(
+    dict: &SkillDict,
+    input: &OptimizeInput<'_>,
+    review: &GuardReport,
+    choices: &Choices,
+    prepared: &Prepared,
+) -> CvDocument {
+    let mut doc = CvDocument::from_report(input.master, review, choices, prepared.lang);
+    doc.align_skills(dict, &prepared.requirements.terms, &input.job.title);
+    doc
+}
+
 fn score_rendered(
     dict: &SkillDict,
     doc: &CvDocument,
@@ -185,12 +209,24 @@ fn score_rendered(
 ) -> Result<(AtsReport, RoundTrip)> {
     let pdf = docgen::render_pdf(doc)?;
     let rt = docgen::verify(doc, &pdf, CvFileKind::Pdf)?;
-    let ats = with_roundtrip(
-        ats_score(dict, &rt.text, &job.title, &req.terms),
+    Ok((rendered_ats(dict, doc, &rt, &job.title, &req.terms), rt))
+}
+
+/// Puntaje del texto del documento, penalizado si el PDF no se lee completo o en orden. No se
+/// puntúa `rt.text`: pdf-extract pega líneas ("VillegasEditor de Video") y bajaría palabras clave y
+/// título que cualquier ATS sí lee.
+fn rendered_ats(
+    dict: &SkillDict,
+    doc: &CvDocument,
+    rt: &RoundTrip,
+    job_title: &str,
+    terms: &[finder_core::model::Term],
+) -> AtsReport {
+    with_roundtrip(
+        ats_score(dict, &doc.to_plain_text(), job_title, terms),
         rt.missing_ratio,
         rt.sections_in_order,
-    );
-    Ok((ats, rt))
+    )
 }
 
 /// Dónde se guarda el CV adaptado.
@@ -211,19 +247,16 @@ pub async fn save(
     choices: &Choices,
     target: &SaveTarget<'_>,
 ) -> Result<CvVersion> {
-    let doc = CvDocument::from_report(input.master, &opt.review, choices, opt.prepared.lang);
+    let doc = build_document(dict, input, &opt.review, choices, &opt.prepared);
     let pdf = docgen::render_pdf(&doc)?;
     let docx = docgen::render_docx(&doc)?;
     let rt = docgen::verify(&doc, &pdf, CvFileKind::Pdf)?;
-    let ats_after = with_roundtrip(
-        ats_score(
-            dict,
-            &rt.text,
-            &input.job.title,
-            &opt.prepared.requirements.terms,
-        ),
-        rt.missing_ratio,
-        rt.sections_in_order,
+    let ats_after = rendered_ats(
+        dict,
+        &doc,
+        &rt,
+        &input.job.title,
+        &opt.prepared.requirements.terms,
     );
 
     let id = Db::new_id();
@@ -299,8 +332,8 @@ Reglas obligatorias:
 3. Conserva cada cifra exactamente como aparece en sus fuentes.
 4. Cuando el CV respalde un término de la vacante, escríbelo con la forma exacta del anuncio (por ejemplo \"Adobe Premiere Pro\" en lugar de \"Premiere\").
 5. Empieza cada bullet con un verbo de acción en pasado y destaca el resultado.
-6. Máximo 5 bullets por experiencia, del más al menos relevante para la vacante.
-7. \"summary\": 2 o 3 frases que presenten al candidato para este puesto, citando en \"source_ids\" los ids que lo respaldan (b_xx, sk_xx o exp_xx). Si mencionas años de experiencia, usa exactamente los años indicados.
+6. Máximo 3 bullets por experiencia: reescribe solo los logros que más ganan con la vacante, del más al menos relevante. Los que no reescribas se conservan tal cual.
+7. \"summary\": 2 o 3 frases que presenten al candidato para este puesto (usa las palabras del título del puesto cuando el CV las respalde), citando en \"source_ids\" los ids que lo respaldan (b_xx, sk_xx o exp_xx). Si mencionas años de experiencia, usa exactamente los años indicados.
 8. \"skills_order\": ids sk_xx del CV maestro, del más al menos relevante para la vacante.
 9. Escribe todo en {idioma}."
     )
@@ -314,6 +347,15 @@ fn writer_request(master: &CvMaster, job: &Job, prepared: &Prepared, years: u32)
         headline: master.basics.headline.clone(),
         ..Default::default()
     };
+    // Prompt más corto = respuesta más rápida en CPU: las cifras ya están en el texto, y educación
+    // e idiomas no se reescriben.
+    cv.education.clear();
+    cv.certifications.clear();
+    cv.languages.clear();
+    cv.experience
+        .iter_mut()
+        .flat_map(|e| &mut e.bullets)
+        .for_each(|b| b.metrics.clear());
     let terms: Vec<Value> = prepared
         .requirements
         .terms
@@ -333,7 +375,7 @@ fn writer_request(master: &CvMaster, job: &Job, prepared: &Prepared, years: u32)
                 .map(|t| t.surface.as_str()),
         )
         .collect();
-    Ok(serde_json::to_string_pretty(&json!({
+    Ok(serde_json::to_string(&json!({
         "vacante": { "puesto": job.title, "empresa": job.company, "descripcion": job.description },
         "terminos_de_la_vacante": terms,
         "terminos_que_el_cv_respalda_pero_no_muestra_con_esa_forma": respaldados,
@@ -349,11 +391,10 @@ pub fn draft_schema() -> Value {
         "type": "object", "additionalProperties": false,
         "required": ["summary", "bullets", "skills_order"],
         "properties": {
-            "summary": {"anyOf": [
-                {"type": "object", "additionalProperties": false, "required": ["text", "source_ids"],
-                 "properties": {"text": {"type": "string"}, "source_ids": ids}},
-                {"type": "null"}
-            ]},
+            // Obligatorio: sin resumen el CV pierde las palabras de la cabecera (el título del puesto
+            // pesa en el ATS) y los modelos locales tienden a omitirlo si es opcional.
+            "summary": {"type": "object", "additionalProperties": false, "required": ["text", "source_ids"],
+                        "properties": {"text": {"type": "string"}, "source_ids": ids}},
             "bullets": {"type": "array", "items": {
                 "type": "object", "additionalProperties": false, "required": ["exp_id", "text", "source_ids"],
                 "properties": {"exp_id": {"type": "string"}, "text": {"type": "string"}, "source_ids": ids}
@@ -470,7 +511,10 @@ mod tests {
         );
 
         let opt = apply_draft(&dict, &input, prepared, honest_draft())?;
-        println!("ATS antes {} → después {}", opt.prepared.ats_before.total, opt.ats_after.total);
+        println!(
+            "ATS antes {} → después {}",
+            opt.prepared.ats_before.total, opt.ats_after.total
+        );
         assert!(opt.review.all_accepted(), "{:?}", opt.review);
         assert!(opt.roundtrip.ok(), "{:?}", opt.roundtrip.missing_words);
         assert!(

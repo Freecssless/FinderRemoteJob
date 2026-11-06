@@ -60,7 +60,7 @@ La app usa dos "papeles" de IA:
 
 Instalar la IA local (Arch/CachyOS):
 ```bash
-sudo pacman -S ollama            # ollama-cuda u ollama-rocm si tienes GPU
+sudo pacman -S ollama            # con GPU: ollama-cuda (NVIDIA), ollama-vulkan u ollama-rocm (AMD); en CPU el optimizador tarda minutos
 sudo systemctl enable --now ollama
 ollama pull qwen3:8b
 ollama pull bge-m3

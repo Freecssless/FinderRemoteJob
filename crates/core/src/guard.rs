@@ -169,10 +169,16 @@ fn source<'a>(master: &'a CvMaster, id: &str) -> Option<Source<'a>> {
 
 /// `today`: mes actual "AAAA-MM", para calcular los años de experiencia que puede citar el resumen.
 pub fn validate(dict: &SkillDict, master: &CvMaster, draft: &Draft, today: &str) -> GuardReport {
-    // Habilidades respaldadas por el maestro: su lista de skills + lo que dicen su titular y sus puestos
-    // (si tu puesto fue "Editor de video", puedes decir "edición de video").
+    // Habilidades respaldadas por el maestro: su lista de skills + lo que dicen su titular, sus puestos
+    // y sus empresas (si tu puesto fue "Editor de video" en "Canal de YouTube", puedes decir
+    // "edición de video" y "YouTube").
     let titles: Vec<&str> = std::iter::once(master.basics.headline.as_str())
-        .chain(master.experience.iter().map(|e| e.title.as_str()))
+        .chain(
+            master
+                .experience
+                .iter()
+                .flat_map(|e| [e.title.as_str(), e.company.as_str()]),
+        )
         .collect();
     let master_skills: HashSet<usize> = master
         .skills
@@ -227,16 +233,19 @@ pub fn validate(dict: &SkillDict, master: &CvMaster, draft: &Draft, today: &str)
 
     let summary = draft.summary.as_ref().map(|s| {
         let mut issues = Vec::new();
-        let mut source_text = String::new();
         for id in &s.source_ids {
-            match source(master, id) {
-                Some(src) => {
-                    source_text.push_str(&src.text);
-                    source_text.push('\n');
-                }
-                None => issues.push(Issue::UnknownSource(id.clone())),
+            if source(master, id).is_none() {
+                issues.push(Issue::UnknownSource(id.clone()));
             }
         }
+        // El resumen sintetiza todo el CV: lo respalda cualquier logro, no solo los que cita
+        // (con qwen3 se rechazaba "storytelling" por no citar el logro que lo menciona).
+        let source_text: String = master
+            .experience
+            .iter()
+            .flat_map(|e| &e.bullets)
+            .map(|b| format!("{}\n", b.text))
+            .collect();
         // El resumen puede decir "N años de experiencia" si N sale de las fechas del maestro.
         let years = years_of_experience(master, today).floor() as u32;
         let extra = [years.to_string()];
@@ -552,6 +561,24 @@ mod tests {
         );
         let s = mal.summary.ok_or("falta el resumen")?;
         assert_eq!(s.issues, [Issue::NewNumber("10".into())]);
+        Ok(())
+    }
+
+    #[test]
+    fn el_resumen_se_respalda_con_todo_el_cv() -> R {
+        let (dict, master) = setup()?;
+        // Cita solo exp_01, pero la corrección de color está en un logro de exp_02 y los 120 videos en b_01.
+        let draft = Draft {
+            summary: Some(DraftText {
+                text:
+                    "Editor de video con 120 videos publicados y experiencia en corrección de color"
+                        .into(),
+                source_ids: vec!["exp_01".into()],
+            }),
+            ..Default::default()
+        };
+        let r = validate(&dict, &master, &draft, TODAY);
+        assert!(r.all_accepted(), "{:?}", r.summary);
         Ok(())
     }
 

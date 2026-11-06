@@ -2,6 +2,7 @@
 
 mod envfile;
 mod jobs;
+mod optimizer;
 
 use finder_infra::core::ats::keywords::SkillDict;
 use finder_infra::core::guard::numbers;
@@ -25,6 +26,10 @@ pub(crate) struct AppState {
     llm: Result<LlmConfig, String>,
     dict: SkillDict,
     http: finder_infra::sources::Client,
+    /// Carpeta de datos de la app (base de datos y `cvs/`).
+    data_dir: std::path::PathBuf,
+    /// Propuestas del optimizador pendientes de guardar, por id de vacante.
+    sessions: std::sync::Mutex<std::collections::HashMap<String, optimizer::Session>>,
     info: AppInfo,
 }
 
@@ -169,6 +174,8 @@ pub fn run() {
                 llm,
                 dict: SkillDict::builtin()?,
                 http: finder_infra::sources::http_client()?,
+                data_dir,
+                sessions: Default::default(),
                 info,
             });
             Ok(())
@@ -189,6 +196,9 @@ pub fn run() {
             jobs::import_job_url,
             jobs::import_job_text,
             jobs::assisted_portals,
+            optimizer::get_optimization,
+            optimizer::run_optimizer,
+            optimizer::save_optimized,
         ])
         .run(tauri::generate_context!())
         .expect("no se pudo iniciar la app de Tauri");
