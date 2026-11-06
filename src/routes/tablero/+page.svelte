@@ -11,6 +11,9 @@
   let profileId = $state<string | null>(null);
   let rows = $state<BoardRow[]>([]);
   let query = $state("");
+  let view = $state<"kanban" | "lista">("kanban");
+  const NO_FILTERS = { status: "", source: "", from: "", to: "", minScore: "" };
+  let filters = $state({ ...NO_FILTERS });
   let error = $state("");
   let loading = $state(true);
 
@@ -30,11 +33,24 @@
   const today = new Date().toISOString().slice(0, 10);
   const day = (iso: string | null) => iso?.slice(0, 10) ?? "";
 
+  // Fecha de la fila: cuándo te postulaste o, si aún no, cuándo se encontró (igual que el filtro de la base).
+  const rowDate = (r: BoardRow) => day(r.application.applied_at ?? r.found_at);
+  const sources = $derived([...new Set(rows.map((r) => r.source_id))].sort());
+  const filtered = $derived(Object.values(filters).some(Boolean));
+
   const visible = $derived.by(() => {
     const q = query.trim().toLowerCase();
-    return q
-      ? rows.filter((r) => `${r.job_title} ${r.company ?? ""}`.toLowerCase().includes(q))
-      : rows;
+    const { status, source, from, to, minScore } = filters;
+    const min = Number(minScore) || 0;
+    return rows.filter(
+      (r) =>
+        (!q || `${r.job_title} ${r.company ?? ""}`.toLowerCase().includes(q)) &&
+        (view === "kanban" || !status || r.application.status === status) &&
+        (!source || r.source_id === source) &&
+        (!from || rowDate(r) >= from) &&
+        (!to || rowDate(r) <= to) &&
+        (!min || (r.application.match_score ?? 0) >= min),
+    );
   });
   const columns = $derived(
     STATUSES.map((s) => ({ ...s, items: visible.filter((r) => r.application.status === s.id) })),
@@ -184,6 +200,10 @@
           {#each profiles as p}<option value={p.id}>{p.name}</option>{/each}
         </select>
       </label>
+      <div class="views" role="group" aria-label="Vista">
+        <button class:primary={view === "kanban"} aria-pressed={view === "kanban"} onclick={() => (view = "kanban")}>Kanban</button>
+        <button class:primary={view === "lista"} aria-pressed={view === "lista"} onclick={() => (view = "lista")}>Lista</button>
+      </div>
       <input class="search" type="search" placeholder="Buscar puesto o empresa" bind:value={query} aria-label="Buscar" />
     </header>
 
@@ -219,7 +239,70 @@
           </ul>
         </section>
       {/if}
-      <p class="muted small">Arrastra una tarjeta a otra columna para cambiar su estado, o cámbialo en su ficha.</p>
+      <div class="filters row small">
+        {#if view === "lista"}
+          <label>Estado
+            <select bind:value={filters.status}>
+              <option value="">Todos</option>
+              {#each STATUSES as s}<option value={s.id}>{s.label}</option>{/each}
+            </select>
+          </label>
+        {/if}
+        <label>Portal
+          <select bind:value={filters.source}>
+            <option value="">Todos</option>
+            {#each sources as s}<option value={s}>{SOURCE_LABELS[s] ?? s}</option>{/each}
+          </select>
+        </label>
+        <label>Desde <input type="date" bind:value={filters.from} /></label>
+        <label>Hasta <input type="date" bind:value={filters.to} /></label>
+        <label>Compatibilidad mínima
+          <input type="number" min="0" max="100" step="5" bind:value={filters.minScore} placeholder="0" />
+        </label>
+        {#if filtered}<button class="link" onclick={() => (filters = { ...NO_FILTERS })}>Quitar filtros</button>{/if}
+      </div>
+      <p class="muted small">
+        {#if view === "kanban"}
+          Arrastra una tarjeta a otra columna para cambiar su estado, o cámbialo en su ficha.
+        {:else}
+          {visible.length} de {rows.length} postulaciones. Las fechas son de postulación (o de hallazgo si aún no te postulas).
+        {/if}
+      </p>
+      {#if view === "lista"}
+        <div class="list">
+          {#if visible.length}
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Puesto</th>
+                  <th scope="col">Empresa</th>
+                  <th scope="col">Portal</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col">Fecha</th>
+                  <th scope="col" class="num">Compat.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each visible as r (r.application.id)}
+                  {@const a = r.application}
+                  <tr class:active={a.id === selectedId}>
+                    <th scope="row"><button class="link" onclick={() => select(r)}>{r.job_title}</button></th>
+                    <td>{r.company ?? "—"}</td>
+                    <td>{SOURCE_LABELS[r.source_id] ?? r.source_id}</td>
+                    <td>{STATUS_LABELS[a.status]}</td>
+                    <td>{rowDate(r)}</td>
+                    <td class="num">
+                      {#if a.match_score !== null}<span class="score {scoreClass(a.match_score)}">{a.match_score}</span>{:else}—{/if}
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          {:else}
+            <p class="muted">Ninguna postulación coincide con los filtros.</p>
+          {/if}
+        </div>
+      {:else}
       <div class="board">
         {#each columns as col (col.id)}
           <section
@@ -259,6 +342,7 @@
           </section>
         {/each}
       </div>
+      {/if}
       <details class="days small">
         <summary>Plazos de los recordatorios</summary>
         <div class="row">
@@ -366,6 +450,18 @@
   header h1 { margin: 0 1rem 0 0; }
   header label.inline select { width: auto; }
   .search { max-width: 260px; margin-left: auto; }
+  .views { display: flex; gap: 0.25rem; }
+  .filters { align-items: end; margin-bottom: 0.25rem; }
+  .filters label { width: auto; }
+  .filters select, .filters input[type="number"] { width: auto; max-width: 11rem; }
+  .list { flex: 1; min-height: 0; overflow: auto; }
+  .list table { width: 100%; border-collapse: collapse; }
+  .list th, .list td { padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--border); text-align: left; }
+  .list thead th { font-size: 0.8rem; color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--bg); }
+  .list tbody th { font-weight: 500; }
+  .list tbody th button { text-align: left; }
+  .list tr.active { background: var(--accent-soft); }
+  .list .num { text-align: right; }
   .board { display: flex; gap: 0.75rem; overflow-x: auto; flex: 1; min-height: 0; padding-bottom: 0.5rem; }
   .col {
     flex: 0 0 220px; display: flex; flex-direction: column; gap: 0.5rem;

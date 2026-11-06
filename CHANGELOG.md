@@ -148,3 +148,7 @@
 - `core::stats::compute`: solo cuentan las postulaciones con ≥ 14 días; tasa de respuesta global y por portal, perfil, plantilla de CV y rango de ATS (<60, 60–79, ≥80); días medianos hasta la primera respuesta; embudo Postulada → Entrevista → Oferta (según el historial, no el estado actual); compatibilidad promedio de las que respondieron y de las que no. Cada grupo con su n; con menos de 10, «pocos datos» y al final.
 - `Db::stat_inputs` y comando `get_stats`.
 - Pantalla Estadísticas: tarjetas de cifras, embudo y tablas con barra de tasa por grupo; filtro por perfil o todos. Color de barra validado con el script de dataviz (claro y oscuro: token `--chart-bar`).
+
+### Vista de lista y filtros del Tablero (plan §5.4)
+- Tablero: botón Kanban / Lista. La lista es una tabla (puesto, empresa, portal, estado, fecha, compatibilidad); al pulsar el puesto se abre la misma ficha.
+- Filtros por portal, rango de fechas (de postulación, o de hallazgo si aún no te postulas) y compatibilidad mínima, en las dos vistas; el filtro por estado solo en la lista (en el Kanban ya son las columnas). «Quitar filtros» los limpia.
