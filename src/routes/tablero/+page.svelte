@@ -2,8 +2,9 @@
   import { openPath, openUrl } from "@tauri-apps/plugin-opener";
   import { goto } from "$app/navigation";
   import {
-    api, boardApi, rememberedProfile, rememberProfile, scoreClass, SOURCE_LABELS, STATUSES, STATUS_LABELS,
-    type ApplicationDetail, type BoardRow, type Profile, type Status,
+    api, boardApi, rememberedProfile, rememberProfile, scoreClass, REMINDER_LABELS, SOURCE_LABELS, STATUSES,
+    STATUS_LABELS, type ApplicationDetail, type BoardRow, type Profile, type Reminder, type ReminderDays,
+    type Status,
   } from "$lib/api";
 
   let profiles = $state<Profile[]>([]);
@@ -18,6 +19,10 @@
   let form = $state({ notes: "", next_step: "", next_step_at: "" });
   let saving = $state(false);
   let savedMsg = $state("");
+
+  let due = $state<Reminder[]>([]);
+  let days = $state<ReminderDays>({ follow_up: 7, no_response: 21 });
+  let daysMsg = $state("");
 
   let dragging = $state<string | null>(null);
   let dropTarget = $state<Status | null>(null);
@@ -47,6 +52,7 @@
       profiles = await api.listProfiles();
       const saved = rememberedProfile();
       profileId = profiles.find((p) => p.id === saved)?.id ?? profiles[0]?.id ?? null;
+      days = await boardApi.reminderDays();
       await reload();
     } catch (e) {
       error = String(e);
@@ -58,7 +64,7 @@
   async function reload() {
     if (!profileId) return;
     try {
-      rows = await boardApi.list(profileId);
+      [rows, due] = await Promise.all([boardApi.list(profileId), boardApi.dueReminders(profileId)]);
       error = "";
     } catch (e) {
       error = String(e);
@@ -98,6 +104,7 @@
     if (!row || row.application.status === status) return;
     try {
       row.application = await boardApi.setStatus(id, status);
+      due = await boardApi.dueReminders(row.application.profile_id);
       if (id === selectedId) detail = await boardApi.detail(id);
     } catch (e) {
       error = String(e);
@@ -120,10 +127,39 @@
         next_step_at: selected.application.next_step_at ?? "",
       };
       savedMsg = "Guardado.";
+      [due, detail] = await Promise.all([
+        boardApi.dueReminders(selected.application.profile_id),
+        boardApi.detail(selected.application.id),
+      ]);
     } catch (e) {
       error = String(e);
     } finally {
       saving = false;
+    }
+  }
+
+  async function done(r: Reminder) {
+    try {
+      await boardApi.completeReminder(r.id);
+      due = due.filter((d) => d.id !== r.id);
+      if (detail) detail.reminders = detail.reminders.filter((d) => d.id !== r.id);
+    } catch (e) {
+      error = String(e);
+    }
+  }
+
+  function openFor(r: Reminder) {
+    const row = rows.find((x) => x.application.id === r.application_id);
+    if (row) select(row);
+  }
+
+  async function saveDays() {
+    daysMsg = "";
+    try {
+      await boardApi.setReminderDays($state.snapshot(days));
+      daysMsg = "Guardado. Aplica a las que pases a «Postulada» desde ahora.";
+    } catch (e) {
+      daysMsg = String(e);
     }
   }
 
@@ -163,6 +199,26 @@
         o «Adaptar mi CV» (al guardar el CV entra aquí como «CV adaptado»).
       </p>
     {:else}
+      {#if due.length}
+        <section class="due notice" aria-label="Recordatorios vencidos">
+          <h2>Recordatorios ({due.length})</h2>
+          <ul>
+            {#each due as r (r.id)}
+              <li class="row">
+                <span class="grow">
+                  <strong>{REMINDER_LABELS[r.kind]}</strong> · {r.job_title}{r.company ? ` — ${r.company}` : ""}
+                  <span class="muted small">({day(r.due_at)})</span>
+                </span>
+                <button class="link" onclick={() => openFor(r)}>Abrir</button>
+                {#if r.kind === "SinRespuesta"}
+                  <button onclick={() => move(r.application_id, "SinRespuesta")}>Marcar sin respuesta</button>
+                {/if}
+                <button onclick={() => done(r)}>Hecho</button>
+              </li>
+            {/each}
+          </ul>
+        </section>
+      {/if}
       <p class="muted small">Arrastra una tarjeta a otra columna para cambiar su estado, o cámbialo en su ficha.</p>
       <div class="board">
         {#each columns as col (col.id)}
@@ -203,6 +259,19 @@
           </section>
         {/each}
       </div>
+      <details class="days small">
+        <summary>Plazos de los recordatorios</summary>
+        <div class="row">
+          <label>Seguimiento (días después de postularte)
+            <input type="number" min="1" max="365" bind:value={days.follow_up} />
+          </label>
+          <label>«Sin respuesta» (días)
+            <input type="number" min="1" max="365" bind:value={days.no_response} />
+          </label>
+          <button onclick={saveDays}>Guardar plazos</button>
+        </div>
+        {#if daysMsg}<p class="muted" role="status">{daysMsg}</p>{/if}
+      </details>
     {/if}
   </div>
 
@@ -265,6 +334,18 @@
         {#if savedMsg && !dirty}<span class="ok small" role="status">{savedMsg}</span>{/if}
       </div>
 
+      {#if detail?.reminders.length}
+        <h3>Recordatorios</h3>
+        <ul class="history small">
+          {#each detail.reminders as r (r.id)}
+            <li>
+              {day(r.due_at)}: {REMINDER_LABELS[r.kind]}
+              {#if day(r.due_at) <= today}<button class="link" onclick={() => done(r)}>Hecho</button>{/if}
+            </li>
+          {/each}
+        </ul>
+      {/if}
+
       {#if detail?.history.length}
         <h3>Historial</h3>
         <ol class="history small">
@@ -309,4 +390,11 @@
   .dates dd { margin: 0; }
   .next { display: grid; grid-template-columns: 1fr 9.5rem; gap: 0.5rem; }
   .history { margin: 0; padding-left: 1.2rem; }
+  .due { margin-bottom: 0.75rem; }
+  .due h2 { font-size: 0.9rem; margin: 0 0 0.4rem; }
+  .due ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+  .due .grow { flex: 1; min-width: 12rem; }
+  .days { margin-top: 0.5rem; }
+  .days .row { align-items: end; }
+  .days label { max-width: 16rem; }
 </style>

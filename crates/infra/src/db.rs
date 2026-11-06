@@ -10,7 +10,7 @@ use finder_core::model::{
     Application, CvMaster, CvVersion, Id, Job, JobRequirements, Profile, RemotePref, Status,
     StatusChange,
 };
-use finder_core::pipeline;
+use finder_core::pipeline::{self, ReminderDays, ReminderKind};
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteRow};
 use sqlx::{Row, SqlitePool};
 
@@ -47,6 +47,30 @@ pub struct StoredCv {
 pub struct JobInsert {
     pub id: Id,
     pub created: bool,
+}
+
+/// Consulta base de los recordatorios pendientes (macro para usarla en `concat!`: sqlx solo
+/// acepta SQL fijo).
+macro_rules! reminder_select {
+    () => {
+        "SELECT r.id, r.application_id, a.profile_id, r.kind, r.due_at,
+                j.title AS job_title, j.company AS job_company
+         FROM reminders r JOIN applications a ON a.id = r.application_id JOIN jobs j ON j.id = a.job_id
+         WHERE r.done = 0"
+    };
+}
+
+/// Recordatorio pendiente, con los datos de su vacante para mostrarlo o notificarlo.
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+pub struct Reminder {
+    pub id: i64,
+    pub application_id: Id,
+    pub profile_id: Id,
+    pub kind: ReminderKind,
+    /// ISO-8601 (fecha y hora, o solo fecha para el próximo paso).
+    pub due_at: String,
+    pub job_title: String,
+    pub company: Option<String>,
 }
 
 /// Filtros del tablero. `None` = sin filtrar.
@@ -419,8 +443,11 @@ impl Db {
     }
 
     /// Cambia el estado (reglas en `finder_core::pipeline`) y lo anota en el historial.
+    /// Al cambiar, se cierran los recordatorios pendientes del estado anterior (salvo el del próximo
+    /// paso) y se crean los del nuevo (`pipeline::reminders_on`).
     pub async fn set_status(&self, application_id: &str, to: Status) -> Result<Application> {
         let now = self.now().await?;
+        let days = self.reminder_days().await?;
         let mut tx = self.pool.begin().await?;
         let row = sqlx::query("SELECT * FROM applications WHERE id = ?")
             .bind(application_id)
@@ -450,11 +477,31 @@ impl Db {
             .bind(&now)
             .execute(&mut *tx)
             .await?;
+        sqlx::query(
+            "UPDATE reminders SET done = 1 WHERE application_id = ? AND done = 0 AND kind != ?",
+        )
+        .bind(&app.id)
+        .bind(ReminderKind::ProximoPaso.as_str())
+        .execute(&mut *tx)
+        .await?;
+        for (kind, hours) in pipeline::reminders_on(to, days) {
+            sqlx::query(
+                "INSERT INTO reminders (application_id, due_at, kind)
+                 VALUES (?, strftime('%Y-%m-%dT%H:%M:%SZ', ?, printf('+%d hours', ?)), ?)",
+            )
+            .bind(&app.id)
+            .bind(&now)
+            .bind(hours)
+            .bind(kind.as_str())
+            .execute(&mut *tx)
+            .await?;
+        }
         tx.commit().await?;
         Ok(app)
     }
 
     /// Notas y próximo paso, tal como los escribe el usuario (`None` = vaciar el campo).
+    /// La fecha del próximo paso queda como recordatorio (reemplaza al pendiente anterior).
     pub async fn update_application_notes(
         &self,
         application_id: &str,
@@ -462,18 +509,104 @@ impl Db {
         next_step: Option<&str>,
         next_step_at: Option<&str>,
     ) -> Result<()> {
+        let now = self.now().await?;
+        let mut tx = self.pool.begin().await?;
         let r = sqlx::query(
             "UPDATE applications SET notes = ?, next_step = ?, next_step_at = ?, updated_at = ? WHERE id = ?",
         )
         .bind(notes)
         .bind(next_step)
         .bind(next_step_at)
-        .bind(self.now().await?)
+        .bind(now)
         .bind(application_id)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
         if r.rows_affected() == 0 {
             return Err(DbError::NotFound(format!("postulación {application_id}")));
+        }
+        let kind = ReminderKind::ProximoPaso.as_str();
+        sqlx::query("DELETE FROM reminders WHERE application_id = ? AND kind = ? AND done = 0")
+            .bind(application_id)
+            .bind(kind)
+            .execute(&mut *tx)
+            .await?;
+        if let Some(at) = next_step_at {
+            sqlx::query("INSERT INTO reminders (application_id, due_at, kind) VALUES (?, ?, ?)")
+                .bind(application_id)
+                .bind(at)
+                .bind(kind)
+                .execute(&mut *tx)
+                .await?;
+        }
+        tx.commit().await?;
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------------
+    // Recordatorios (plan §5.3)
+    // -----------------------------------------------------------------------
+
+    /// Pendientes que ya vencieron (todos los perfiles si `profile_id` es `None`), más antiguos primero.
+    pub async fn list_due_reminders(&self, profile_id: Option<&str>) -> Result<Vec<Reminder>> {
+        let rows = sqlx::query(concat!(
+            reminder_select!(),
+            " AND r.due_at <= ?1 AND (?2 IS NULL OR a.profile_id = ?2) ORDER BY r.due_at, r.id"
+        ))
+        .bind(self.now().await?)
+        .bind(profile_id)
+        .fetch_all(&self.pool)
+        .await?;
+        rows.iter().map(reminder_from_row).collect()
+    }
+
+    /// Pendientes de una postulación (vencidos o no), en orden de fecha.
+    pub async fn pending_reminders(&self, application_id: &str) -> Result<Vec<Reminder>> {
+        let rows = sqlx::query(concat!(
+            reminder_select!(),
+            " AND r.application_id = ? ORDER BY r.due_at, r.id"
+        ))
+        .bind(application_id)
+        .fetch_all(&self.pool)
+        .await?;
+        rows.iter().map(reminder_from_row).collect()
+    }
+
+    pub async fn complete_reminder(&self, id: i64) -> Result<()> {
+        sqlx::query("UPDATE reminders SET done = 1 WHERE id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    /// Plazos de los recordatorios (tabla `settings`; por defecto 7 y 21 días).
+    pub async fn reminder_days(&self) -> Result<ReminderDays> {
+        let get = |key: &'static str| {
+            sqlx::query_scalar::<_, String>("SELECT value FROM settings WHERE key = ?")
+                .bind(key)
+                .fetch_optional(&self.pool)
+        };
+        let d = ReminderDays::default();
+        let parse = |v: Option<String>, def: u32| v.and_then(|v| v.parse().ok()).unwrap_or(def);
+        Ok(ReminderDays {
+            follow_up: parse(get("reminder_follow_up_days").await?, d.follow_up),
+            no_response: parse(get("reminder_no_response_days").await?, d.no_response),
+        })
+    }
+
+    pub async fn set_reminder_days(&self, days: ReminderDays) -> Result<()> {
+        for (key, value) in [
+            ("reminder_follow_up_days", days.follow_up),
+            ("reminder_no_response_days", days.no_response),
+        ] {
+            sqlx::query(
+                "INSERT INTO settings (key, value) VALUES (?1, ?2)
+                 ON CONFLICT(key) DO UPDATE SET value = ?2",
+            )
+            .bind(key)
+            .bind(value.to_string())
+            .execute(&self.pool)
+            .await?;
         }
         Ok(())
     }
@@ -615,6 +748,22 @@ impl Db {
 // ---------------------------------------------------------------------------
 // Conversión de filas
 // ---------------------------------------------------------------------------
+
+fn reminder_from_row(r: &SqliteRow) -> Result<Reminder> {
+    let kind: String = r.try_get("kind")?;
+    Ok(Reminder {
+        id: r.try_get("id")?,
+        application_id: r.try_get("application_id")?,
+        profile_id: r.try_get("profile_id")?,
+        kind: ReminderKind::parse(&kind).ok_or_else(|| DbError::InvalidValue {
+            column: "kind",
+            value: kind.clone(),
+        })?,
+        due_at: r.try_get("due_at")?,
+        job_title: r.try_get("job_title")?,
+        company: r.try_get("job_company")?,
+    })
+}
 
 fn parse_status(column: &'static str, value: &str) -> Result<Status> {
     Status::parse(value).ok_or_else(|| DbError::InvalidValue {
@@ -874,6 +1023,70 @@ mod tests {
             db.search_jobs("   ", 10).await?.len(),
             2,
             "vacío = recientes"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn recordatorios_por_estado_y_proximo_paso() -> R {
+        let (db, p, job_id) = setup().await?;
+        let app_id = db.upsert_found(&job_id, &p.id, 70).await?;
+        db.set_reminder_days(ReminderDays {
+            follow_up: 5,
+            no_response: 30,
+        })
+        .await?;
+        assert_eq!(db.reminder_days().await?.follow_up, 5);
+
+        let app = db.set_status(&app_id, Status::Postulada).await?;
+        let applied = app.applied_at.clone().unwrap_or_default();
+        let r = db.pending_reminders(&app_id).await?;
+        let kinds: Vec<_> = r.iter().map(|r| r.kind).collect();
+        assert_eq!(
+            kinds,
+            [ReminderKind::Seguimiento, ReminderKind::SinRespuesta]
+        );
+        assert!(r[0].due_at > applied && r[0].due_at < r[1].due_at);
+        assert!(
+            db.list_due_reminders(None).await?.is_empty(),
+            "aún no vencen"
+        );
+
+        // Al entrar a Entrevista, los de la postulación ya no aplican.
+        db.set_status(&app_id, Status::Entrevista).await?;
+        let kinds: Vec<_> = db
+            .pending_reminders(&app_id)
+            .await?
+            .iter()
+            .map(|r| r.kind)
+            .collect();
+        assert_eq!(kinds, [ReminderKind::Agradecimiento]);
+
+        // El próximo paso con fecha es un recordatorio; cambiar la fecha lo reemplaza.
+        db.update_application_notes(&app_id, None, Some("Llamar"), Some("2026-12-01"))
+            .await?;
+        db.update_application_notes(&app_id, None, Some("Llamar"), Some("2000-01-01"))
+            .await?;
+        let due = db.list_due_reminders(Some(&p.id)).await?;
+        assert_eq!(due.len(), 1);
+        assert_eq!(
+            (due[0].kind, due[0].job_title.as_str()),
+            (ReminderKind::ProximoPaso, "Editor de Video")
+        );
+        assert_eq!(db.list_due_reminders(Some("otro")).await?.len(), 0);
+
+        db.complete_reminder(due[0].id).await?;
+        assert!(db.list_due_reminders(None).await?.is_empty());
+        // Sin fecha: no queda recordatorio de próximo paso.
+        db.update_application_notes(&app_id, None, Some("Llamar"), Some("2027-01-01"))
+            .await?;
+        db.update_application_notes(&app_id, None, None, None)
+            .await?;
+        assert!(
+            db.pending_reminders(&app_id)
+                .await?
+                .iter()
+                .all(|r| r.kind != ReminderKind::ProximoPaso)
         );
         Ok(())
     }

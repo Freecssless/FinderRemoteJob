@@ -1,7 +1,7 @@
 //! Comandos del Tablero: postulaciones por estado, cambios de estado, notas y ficha.
 
 use finder_infra::core::model::{Application, CvVersion, Status, StatusChange};
-use finder_infra::db::{BoardFilter, BoardRow};
+use finder_infra::db::{BoardFilter, BoardRow, Reminder};
 use serde::Serialize;
 use tauri::State;
 
@@ -12,6 +12,8 @@ use crate::{AppState, CmdResult, err, jobs};
 pub struct ApplicationDetail {
     history: Vec<StatusChange>,
     cv: Option<CvVersion>,
+    /// Recordatorios pendientes (vencidos o no).
+    reminders: Vec<Reminder>,
 }
 
 /// Postulaciones del perfil (mayor compatibilidad primero). La interfaz las agrupa por estado.
@@ -83,6 +85,7 @@ pub async fn application_detail(
     };
     Ok(ApplicationDetail {
         history: state.db.status_history(&app.id).await.map_err(err)?,
+        reminders: state.db.pending_reminders(&app.id).await.map_err(err)?,
         cv,
     })
 }

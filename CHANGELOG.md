@@ -13,7 +13,7 @@
 | 7 | Cliente LLM (Ollama / OpenAI-compatible / Anthropic) + importación de CV PDF/DOCX | ✅ Terminado (probado en vivo con Ollama) |
 | 8 | Generación de PDF (Typst) y DOCX + prueba de ida y vuelta (`infra::docgen`) | ✅ Terminado |
 | 9 | Flujo completo del optimizador de CV | ✅ Terminado (probado en vivo con qwen3:8b) |
-| 10 | App Tauri + interfaz Svelte (perfiles, vacantes, optimizador, tablero) | ✅ Terminado (10a–10d; recordatorios y notificaciones pendientes) |
+| 10 | App Tauri + interfaz Svelte (perfiles, vacantes, optimizador, tablero) | ✅ Terminado (10a–10d + recordatorios) |
 
 ## Registro
 
@@ -136,4 +136,10 @@
 - Ficha: anuncio, compatibilidad, fechas, CV enviado (ATS antes → después, abrir PDF/DOCX), notas, próximo paso con fecha (en rojo si ya venció) e historial.
 - Vacantes: botón «Agregar al tablero» (entra como «Encontrada» con su compatibilidad).
 - `tauri.conf.json`: `dragDropEnabled: false` (la app no recibe archivos arrastrados; así funciona el arrastre del Kanban en todas las plataformas).
-- Pendiente (plan §5.3): recordatorios automáticos a los 7 y 21 días y notificaciones del sistema.
+
+### Recordatorios (plan §5.3)
+- `core::pipeline::reminders_on`: al pasar a «Postulada», seguimiento a los 7 días y «¿Sin respuesta?» a los 21; al pasar a «Entrevista», agradecimiento a las 24 h. Plazos configurables (`ReminderDays`, tabla `settings`).
+- `Db::set_status` cierra los recordatorios pendientes del estado anterior y crea los del nuevo; la fecha del próximo paso de la ficha también es un recordatorio (se reemplaza al cambiarla). `list_due_reminders`, `pending_reminders`, `complete_reminder`, `reminder_days`.
+- La app revisa los vencidos al arrancar y cada hora, y los avisa con `tauri-plugin-notification` (uno por sesión; varios se agrupan en una notificación).
+- Tablero: lista de vencidos con «Abrir», «Hecho» y «Marcar sin respuesta»; recordatorios pendientes en la ficha; plazos editables.
+- Las postulaciones que ya estaban en «Postulada» antes de este cambio no tienen recordatorios (se crean al cambiar de estado).

@@ -320,7 +320,24 @@ export interface CvVersion {
   created_at: string;
 }
 export interface StatusChange { from: Status | null; to: Status; at: string }
-export interface ApplicationDetail { history: StatusChange[]; cv: CvVersion | null }
+export type ReminderKind = "Seguimiento" | "SinRespuesta" | "Agradecimiento" | "ProximoPaso";
+export const REMINDER_LABELS: Record<ReminderKind, string> = {
+  Seguimiento: "Dar seguimiento",
+  SinRespuesta: "Sin noticias: ¿marcar «Sin respuesta»?",
+  Agradecimiento: "Enviar agradecimiento por la entrevista",
+  ProximoPaso: "Próximo paso",
+};
+export interface Reminder {
+  id: number;
+  application_id: string;
+  profile_id: string;
+  kind: ReminderKind;
+  due_at: string;
+  job_title: string;
+  company: string | null;
+}
+export interface ReminderDays { follow_up: number; no_response: number }
+export interface ApplicationDetail { history: StatusChange[]; cv: CvVersion | null; reminders: Reminder[] }
 
 export const boardApi = {
   list: (profileId: string) => invoke<BoardRow[]>("list_board", { profileId }),
@@ -330,4 +347,8 @@ export const boardApi = {
     invoke<void>("save_application_notes", { applicationId, notes, nextStep, nextStepAt }),
   detail: (applicationId: string) => invoke<ApplicationDetail>("application_detail", { applicationId }),
   add: (jobId: string, profileId: string) => invoke<string>("add_to_board", { jobId, profileId }),
+  dueReminders: (profileId: string) => invoke<Reminder[]>("list_due_reminders", { profileId }),
+  completeReminder: (id: number) => invoke<void>("complete_reminder", { id }),
+  reminderDays: () => invoke<ReminderDays>("get_reminder_days"),
+  setReminderDays: (days: ReminderDays) => invoke<void>("set_reminder_days", { days }),
 };

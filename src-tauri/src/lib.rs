@@ -4,6 +4,7 @@ mod board;
 mod envfile;
 mod jobs;
 mod optimizer;
+mod reminders;
 
 use finder_infra::core::ats::keywords::SkillDict;
 use finder_infra::core::guard::numbers;
@@ -146,6 +147,7 @@ async fn import_cv(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data_dir)?;
@@ -179,6 +181,7 @@ pub fn run() {
                 sessions: Default::default(),
                 info,
             });
+            reminders::spawn_checker(app.handle().clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -205,6 +208,10 @@ pub fn run() {
             board::save_application_notes,
             board::application_detail,
             board::add_to_board,
+            reminders::list_due_reminders,
+            reminders::complete_reminder,
+            reminders::get_reminder_days,
+            reminders::set_reminder_days,
         ])
         .run(tauri::generate_context!())
         .expect("no se pudo iniciar la app de Tauri");
