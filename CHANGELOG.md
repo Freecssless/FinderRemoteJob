@@ -184,3 +184,9 @@
 - «Abrir y postular» abre el anuncio en el navegador, copia la carta al portapapeles y muestra el PDF en su carpeta para arrastrarlo. «Ya me postulé» la agrega al tablero si hace falta y la pasa a Postulada (fecha y recordatorio de seguimiento como en el Tablero).
 - Respuestas frecuentes por perfil: las calculadas del CV maestro (años de experiencia, años por habilidad, idiomas) y las tuyas (salario, disponibilidad, visa, horario…), editables y con botón de copiar. Se guardan en `settings` (`faq.<perfil>`) y se borran con el perfil.
 - La app no llena formularios ni entra a tus cuentas: tú envías la solicitud.
+
+### Fuente Himalayas (Fase 2)
+- Nueva fuente automática `himalayas` (API pública, sin clave): busca por cada puesto objetivo del perfil (máx. 3, 20 resultados cada uno), como Get on Board. Migración `0002_himalayas.sql`.
+- La URL guardada es su `applicationLink` y la fuente se muestra en cada vacante, como piden sus condiciones.
+- Salario mensual convertido a anual (×12); otros periodos (por hora…) se omiten.
+- `sources::search` reúne la búsqueda por palabra clave que usaban Get on Board y ahora Himalayas.

@@ -1,0 +1,89 @@
+{
+ "comments": "Search results come 20 to a page. Pass ?page=2, ?page=3 and so on for more; there is no cursor on search. Cursor pagination (nextCursor) is only on /jobs/api, the browse feed. 13/03/2026: The API has been updated to include the companySlug field in the response.",
+ "updatedAt": 1793907108,
+ "offset": 0,
+ "limit": 20,
+ "totalCount": 533,
+ "jobs": [
+  {
+   "title": "Digital Video Editor",
+   "excerpt": "Role: Video Editor Function: Videography | Production | UGC Content | Performance Marketing Responsibility: Edit high-production performance ads for D2C brands Reports to: Senior Video Editor Location: Remote Employment: B2B Contract – UK working hours (with flexibility) Salary: $2,000 USD/month We are seeking an experienced and creative Digital Video Editor to join our growing team at Launch With Us.",
+   "companyName": "Soar With Us",
+   "companySlug": "soar-with-us",
+   "companyLogo": "https://cdn-images.himalayas.app/448ckwznby19hc0yal5jg6pdlx2x",
+   "employmentType": "Contractor",
+   "minSalary": 2000,
+   "maxSalary": 2000,
+   "salaryPeriod": "monthly",
+   "seniority": [
+    "Mid-level"
+   ],
+   "currency": "USD",
+   "locationRestrictions": [
+    "South Africa"
+   ],
+   "timezoneRestrictions": [
+    2
+   ],
+   "categories": [
+    "Video-Editor",
+    "Digital-Video-Editor",
+    "Performance-Marketing-Video-Editor",
+    "UGC-Video-Editor",
+    "Digital-Video-Editing",
+    "Digital-Media-Editor",
+    "Digital-Editor"
+   ],
+   "parentCategories": [
+    "Content Creator"
+   ],
+   "description": "<p><strong>Role:</strong> Video Editor </p><p><strong>Function:</strong> Videography | Production | UGC Content | Performance Marketing </p><p><strong>Responsibility:</strong> Edit high-production performance ads for D2C brands </p><p><strong>Reports to:</strong> Senior Video Editor </p><p><strong>Location:</strong> Remote </p><p><strong>Employment:</strong> B2B Contract – UK working hours (with flexibility) </p><p><strong>Salary:</strong> $2,000 USD/month</p><p>We are seeking an experienced and creative Digital Video Editor to join our growing team at Launch With Us. You will be responsible f",
+   "pubDate": 1793237917,
+   "expiryDate": 1798421916,
+   "applicationLink": "https://himalayas.app/companies/soar-with-us/jobs/digital-video-editor-8652241204?utm_source=api",
+   "guid": "https://himalayas.app/companies/soar-with-us/jobs/digital-video-editor-8652241204"
+  },
+  {
+   "title": "Video Editor for a Creative Agency (SG-based/Remote)",
+   "excerpt": "Paired is a global staffing and recruiting agency that pairs remote work with top-tier talent.",
+   "companyName": "Paired",
+   "companySlug": "paired-so",
+   "companyLogo": "https://cdn-images.himalayas.app/1fxfh3e5wgbqa5idmme30rmo8kkk",
+   "employmentType": "Contractor",
+   "minSalary": null,
+   "maxSalary": null,
+   "salaryPeriod": "annual",
+   "seniority": [
+    "Mid-level"
+   ],
+   "currency": null,
+   "locationRestrictions": [
+    "Indonesia"
+   ],
+   "timezoneRestrictions": [
+    7,
+    8,
+    9
+   ],
+   "categories": [
+    "Video-Editor",
+    "Photo-Editor",
+    "Video-Producer",
+    "Content-Creator",
+    "Social-Media-Editor",
+    "Ad-Creative-Video-Editor",
+    "Video-Editor-+-Designer",
+    "Remote-Video-Editor",
+    "Video-Content-Editor"
+   ],
+   "parentCategories": [
+    "Content Creator"
+   ],
+   "description": "<p><a href=\"https://himalayas.app/companies/paired-so\">Paired</a> is a global staffing and recruiting agency that pairs remote work with top-tier talent. We help individuals from around the world connect with great companies that are looking for their specific skill set. Our mission is to provide great jobs to talented people, no matter where they are located.</p><p>Our client is looking for a versatile <strong>Video &amp; Photo Editor</strong> to join their content team, producing high-quality images and short-form video reels for social media. You'll work across a range of industry-standard ",
+   "pubDate": 1791577480,
+   "expiryDate": 1796761480,
+   "applicationLink": "https://himalayas.app/companies/paired-so/jobs/video-editor-for-a-creative-agency-sg-based-remote?utm_source=api",
+   "guid": "https://himalayas.app/companies/paired-so/jobs/video-editor-for-a-creative-agency-sg-based-remote"
+  }
+ ]
+}

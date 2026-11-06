@@ -174,6 +174,7 @@ export const SOURCE_LABELS: Record<string, string> = {
   wwr: "We Work Remotely",
   getonboard: "Get on Board",
   jobicy: "Jobicy",
+  himalayas: "Himalayas",
   manual: "Importada",
 };
 

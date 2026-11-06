@@ -5,8 +5,8 @@ mod envfile;
 mod jobs;
 mod letter;
 mod optimizer;
-mod reminders;
 mod queue;
+mod reminders;
 mod settings;
 
 use finder_infra::core::ats::keywords::SkillDict;

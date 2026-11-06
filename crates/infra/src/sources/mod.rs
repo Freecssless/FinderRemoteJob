@@ -9,6 +9,7 @@
 //!   de búsqueda para abrirlo en el navegador. Aquí no hay scraping ni postulación automática.
 
 pub mod getonboard;
+pub mod himalayas;
 pub mod jobicy;
 pub mod manual;
 pub mod remoteok;
@@ -114,15 +115,17 @@ pub enum Source {
     Wwr,
     GetOnBoard,
     Jobicy,
+    Himalayas,
 }
 
 impl Source {
-    pub const ALL: [Source; 5] = [
+    pub const ALL: [Source; 6] = [
         Source::RemoteOk,
         Source::Remotive,
         Source::Wwr,
         Source::GetOnBoard,
         Source::Jobicy,
+        Source::Himalayas,
     ];
 
     /// Igual que `sources.id` en la base de datos.
@@ -133,6 +136,7 @@ impl Source {
             Source::Wwr => "wwr",
             Source::GetOnBoard => "getonboard",
             Source::Jobicy => "jobicy",
+            Source::Himalayas => "himalayas",
         }
     }
 
@@ -152,22 +156,28 @@ impl Source {
             Source::Remotive => remotive::parse(&get_text(client, remotive::URL).await?),
             Source::Wwr => wwr::parse(&get_text(client, wwr::URL).await?),
             Source::Jobicy => jobicy::parse(&get_text(client, jobicy::URL).await?),
-            Source::GetOnBoard => {
-                // Su API busca por texto: una consulta por palabra clave (máx. 3).
-                let mut all: Vec<RawJob> = Vec::new();
-                for kw in q.keywords.iter().take(3) {
-                    for job in
-                        getonboard::parse(&get_text(client, getonboard::url(kw)?.as_str()).await?)?
-                    {
-                        if !all.iter().any(|j| j.external_id == job.external_id) {
-                            all.push(job);
-                        }
-                    }
-                }
-                Ok(all)
+            Source::GetOnBoard => search(client, q, getonboard::url, getonboard::parse).await,
+            Source::Himalayas => search(client, q, himalayas::url, himalayas::parse).await,
+        }
+    }
+}
+
+/// Fuentes que buscan por texto: una consulta por palabra clave (máx. 3), sin repetidas.
+async fn search(
+    client: &Client,
+    q: &Query,
+    url: fn(&str) -> Result<Url>,
+    parse: fn(&str) -> Result<Vec<RawJob>>,
+) -> Result<Vec<RawJob>> {
+    let mut all: Vec<RawJob> = Vec::new();
+    for kw in q.keywords.iter().take(3) {
+        for job in parse(&get_text(client, url(kw)?.as_str()).await?)? {
+            if !all.iter().any(|j| j.external_id == job.external_id) {
+                all.push(job);
             }
         }
     }
+    Ok(all)
 }
 
 /// Resultado de sincronizar una fuente.
@@ -577,7 +587,10 @@ mod tests {
 
     #[test]
     fn ids_de_fuentes_coinciden_con_la_migracion() {
-        let sql = include_str!("../../migrations/0001_init.sql");
+        let sql = concat!(
+            include_str!("../../migrations/0001_init.sql"),
+            include_str!("../../migrations/0002_himalayas.sql")
+        );
         for s in Source::ALL {
             assert!(
                 sql.contains(&format!("('{}',", s.id())),
