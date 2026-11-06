@@ -159,3 +159,10 @@
 - Una sola plantilla Typst (`templates/cv.typ`, antes `clasica.typ`) con el orden que le pasa Rust.
 - Optimizador: eliges la plantilla al guardar; se guarda como `variant` (sale en la ficha del Tablero y en Estadísticas «Por plantilla de CV»).
 - Pruebas de ida y vuelta para las tres plantillas en PDF y DOCX, español e inglés.
+
+### Carta de presentación (plan §4.6)
+- `core::guard::validate_paragraphs`: cada párrafo de la carta pasa por las mismas reglas que el resumen (fuentes citadas, sin cifras ni habilidades que no estén en el CV).
+- `infra::letter`: el redactor escribe 3 párrafos (por qué el puesto, 2 o 3 logros, cierre) sin recibir tu nombre ni tus datos de contacto; el saludo («Estimado equipo de …») y la firma se agregan localmente. Si el guardián rechaza algún párrafo, hay una segunda vuelta con la lista de términos prohibidos y se usa el párrafo nuevo solo si pasa.
+- `Db::set_cover_letter`; comandos `write_cover_letter` y `save_cover_letter` (este último agrega la vacante al tablero si no estaba).
+- Optimizador: tarjeta «Carta de presentación» para generar, ver los párrafos rechazados con su motivo, editar, guardar y copiar. Tablero: la ficha muestra la carta guardada con «Copiar carta».
+- Probado en vivo con qwen3:8b (CPU): unos 40–70 s; 2 de 3 párrafos aprobados tras la segunda vuelta.

@@ -97,22 +97,29 @@ pub async fn add_to_board(
     job_id: String,
     profile_id: String,
 ) -> CmdResult<String> {
+    ensure_application(&state, &job_id, &profile_id).await
+}
+
+/// Id de la postulación de la vacante en el tablero del perfil (la crea si no existe).
+pub(crate) async fn ensure_application(
+    state: &AppState,
+    job_id: &str,
+    profile_id: &str,
+) -> CmdResult<String> {
     let job = state
         .db
-        .get_job(&job_id)
+        .get_job(job_id)
         .await
         .map_err(err)?
         .ok_or("La vacante ya no existe.")?;
-    let ctx = jobs::profile_and_cv(&state, Some(&profile_id))
-        .await?
-        .ok_or(
-            "Este perfil no tiene CV maestro: créalo en Perfiles para calcular la compatibilidad.",
-        )?;
-    let today = jobs::this_month(&state).await?;
-    let score = jobs::score(&state, &ctx, &job, &today);
+    let ctx = jobs::profile_and_cv(state, Some(profile_id)).await?.ok_or(
+        "Este perfil no tiene CV maestro: créalo en Perfiles para calcular la compatibilidad.",
+    )?;
+    let today = jobs::this_month(state).await?;
+    let score = jobs::score(state, &ctx, &job, &today);
     state
         .db
-        .upsert_found(&job.id, &profile_id, score.total)
+        .upsert_found(&job.id, profile_id, score.total)
         .await
         .map_err(err)
 }

@@ -103,6 +103,15 @@ pub async fn prepare(
     prepare_with(dict, input, requirements, notes)
 }
 
+/// Idioma en que se escribe para esta vacante.
+pub(crate) fn job_lang(job: &Job) -> DocLang {
+    match job.language.as_deref() {
+        Some("en") => DocLang::En,
+        Some("es") => DocLang::Es,
+        _ => DocLang::detect(&job.description),
+    }
+}
+
 fn dictionary_only(dict: &SkillDict, job: &Job) -> JobRequirements {
     JobRequirements {
         terms: extract_terms(dict, &job.title, &job.description),
@@ -120,11 +129,7 @@ pub fn prepare_with(
     let job = input.job;
     // Vacantes analizadas antes del filtro pueden traer frases del anuncio como "habilidades".
     requirements.terms.retain(|t| is_skill_like(&t.surface));
-    let lang = match job.language.as_deref() {
-        Some("en") => DocLang::En,
-        Some("es") => DocLang::Es,
-        _ => DocLang::detect(&job.description),
-    };
+    let lang = job_lang(job);
     // "Antes" = tu CV real si lo importaste; si no, el maestro con la plantilla base.
     let before_text = input
         .original_text
@@ -341,9 +346,8 @@ Reglas obligatorias:
     )
 }
 
-/// Lo que ve el redactor. Sin nombre, correo, teléfono, ubicación ni enlaces: no los necesita,
-/// y así no salen del equipo aunque el redactor sea una API externa.
-fn writer_request(master: &CvMaster, job: &Job, prepared: &Prepared, years: u32) -> Result<String> {
+/// El maestro tal como lo ve el redactor: sin datos personales ni lo que no se reescribe.
+pub(crate) fn for_writer(master: &CvMaster) -> CvMaster {
     let mut cv = master.clone();
     cv.basics = Basics {
         headline: master.basics.headline.clone(),
@@ -358,6 +362,13 @@ fn writer_request(master: &CvMaster, job: &Job, prepared: &Prepared, years: u32)
         .iter_mut()
         .flat_map(|e| &mut e.bullets)
         .for_each(|b| b.metrics.clear());
+    cv
+}
+
+/// Lo que ve el redactor. Sin nombre, correo, teléfono, ubicación ni enlaces: no los necesita,
+/// y así no salen del equipo aunque el redactor sea una API externa.
+fn writer_request(master: &CvMaster, job: &Job, prepared: &Prepared, years: u32) -> Result<String> {
+    let cv = for_writer(master);
     let terms: Vec<Value> = prepared
         .requirements
         .terms

@@ -257,6 +257,18 @@ export interface SavedCv {
   missing: string[];
 }
 
+/** Carta de presentación: párrafos propuestos con su revisión y el texto ya armado. */
+export interface LetterView {
+  paragraphs: { text: string; issues: string[] }[];
+  text: string;
+}
+
+export const letterApi = {
+  write: (jobId: string, profileId: string) => invoke<LetterView>("write_cover_letter", { jobId, profileId }),
+  save: (jobId: string, profileId: string, text: string) =>
+    invoke<void>("save_cover_letter", { jobId, profileId, text }),
+};
+
 /** Plantillas del CV (plan §4.6); se guardan como `variant`. */
 export type Template = "clasica" | "compacta" | "tecnica";
 export const TEMPLATES: { id: Template; label: string; hint: string }[] = [

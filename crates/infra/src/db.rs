@@ -648,6 +648,22 @@ impl Db {
     }
 
     /// Vincula la versión de CV (y la carta) enviada a esta postulación.
+    /// Carta de presentación de la postulación (`None` la borra).
+    pub async fn set_cover_letter(&self, application_id: &str, text: Option<&str>) -> Result<()> {
+        let now = self.now().await?;
+        let r =
+            sqlx::query("UPDATE applications SET cover_letter = ?, updated_at = ? WHERE id = ?")
+                .bind(text)
+                .bind(now)
+                .bind(application_id)
+                .execute(&self.pool)
+                .await?;
+        if r.rows_affected() == 0 {
+            return Err(DbError::NotFound(format!("postulación {application_id}")));
+        }
+        Ok(())
+    }
+
     pub async fn attach_cv_version(
         &self,
         application_id: &str,
@@ -1237,6 +1253,9 @@ mod tests {
         let app = db.get_application(&app_id).await?.ok_or("falta")?;
         assert_eq!(app.cv_version_id, Some(v.id));
         assert_eq!(app.cover_letter.as_deref(), Some("Carta"));
+        db.set_cover_letter(&app.id, Some("Otra carta")).await?;
+        let app = db.get_application(&app.id).await?.ok_or("falta")?;
+        assert_eq!(app.cover_letter.as_deref(), Some("Otra carta"));
 
         // Borrar el perfil borra sus versiones y postulaciones, pero no la vacante.
         db.delete_profile(&p.id).await?;

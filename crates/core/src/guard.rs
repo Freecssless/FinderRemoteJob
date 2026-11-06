@@ -286,6 +286,27 @@ pub fn validate(dict: &SkillDict, master: &CvMaster, draft: &Draft, today: &str)
     }
 }
 
+/// Párrafos de la carta de presentación (plan §4.6): cada uno con las mismas reglas que el resumen
+/// (fuentes citadas, sin cifras ni habilidades que no estén en tu CV).
+pub fn validate_paragraphs(
+    dict: &SkillDict,
+    master: &CvMaster,
+    paragraphs: &[DraftText],
+    today: &str,
+) -> Vec<Checked> {
+    paragraphs
+        .iter()
+        .filter_map(|p| {
+            let draft = Draft {
+                summary: Some(p.clone()),
+                bullets: Vec::new(),
+                skills_order: Vec::new(),
+            };
+            validate(dict, master, &draft, today).summary
+        })
+        .collect()
+}
+
 /// Reglas comunes a bullets y resumen: texto no vacío, fuentes presentes, sin cifras ni habilidades nuevas.
 fn check_text(
     dict: &SkillDict,
@@ -407,6 +428,37 @@ mod tests {
         };
         let mut r = validate(&dict, &master, &draft, TODAY);
         Ok(r.bullets.remove(0))
+    }
+
+    #[test]
+    fn parrafos_de_la_carta_con_las_reglas_del_resumen() -> R {
+        let (dict, master) = setup()?;
+        let p = |text: &str, src: &[&str]| DraftText {
+            text: text.into(),
+            source_ids: src.iter().map(|s| s.to_string()).collect(),
+        };
+        let checked = validate_paragraphs(
+            &dict,
+            &master,
+            &[
+                p(
+                    "Me entusiasma editar videos para su canal con Premiere y After Effects.",
+                    &["b_01"],
+                ),
+                p("Edité 500 videos con Final Cut Pro.", &["b_01"]),
+                p("Gracias por su tiempo.", &[]),
+            ],
+            "2026-11",
+        );
+        assert!(checked[0].accepted(), "{:?}", checked[0].issues);
+        assert!(checked[1].issues.contains(&Issue::NewNumber("500".into())));
+        assert!(
+            checked[1]
+                .issues
+                .contains(&Issue::NewSkill("Final Cut Pro".into()))
+        );
+        assert_eq!(checked[2].issues, [Issue::NoSources]);
+        Ok(())
     }
 
     #[test]

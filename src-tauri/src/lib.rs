@@ -3,6 +3,7 @@
 mod board;
 mod envfile;
 mod jobs;
+mod letter;
 mod optimizer;
 mod reminders;
 
@@ -203,6 +204,8 @@ pub fn run() {
             optimizer::get_optimization,
             optimizer::run_optimizer,
             optimizer::save_optimized,
+            letter::write_cover_letter,
+            letter::save_cover_letter,
             board::list_board,
             board::set_application_status,
             board::save_application_notes,

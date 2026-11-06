@@ -405,6 +405,19 @@
         <p class="muted small">Todavía no adaptaste tu CV para esta vacante.</p>
       {/if}
 
+      <h3>Carta de presentación</h3>
+      {#if a.cover_letter}
+        <details class="small">
+          <summary>Ver carta</summary>
+          <p class="letter">{a.cover_letter}</p>
+        </details>
+        <div class="row">
+          <button onclick={() => navigator.clipboard.writeText(a.cover_letter ?? "").catch((e) => (error = String(e)))}>Copiar carta</button>
+        </div>
+      {:else}
+        <p class="muted small">Sin carta. Genérala desde «Adaptar CV».</p>
+      {/if}
+
       <h3>Seguimiento</h3>
       <label>Notas <textarea rows="4" bind:value={form.notes}></textarea></label>
       <div class="next">
@@ -485,6 +498,7 @@
   .dates dt { color: var(--muted); }
   .dates dd { margin: 0; }
   .next { display: grid; grid-template-columns: 1fr 9.5rem; gap: 0.5rem; }
+  .letter { white-space: pre-wrap; margin: 0.4rem 0 0; }
   .history { margin: 0; padding-left: 1.2rem; }
   .due { margin-bottom: 0.75rem; }
   .due h2 { font-size: 0.9rem; margin: 0 0 0.4rem; }
