@@ -32,6 +32,8 @@ pub enum DbError {
 
 pub type Result<T> = std::result::Result<T, DbError>;
 
+/// Barato de clonar: comparte el mismo grupo de conexiones.
+#[derive(Clone)]
 pub struct Db {
     pool: SqlitePool,
 }

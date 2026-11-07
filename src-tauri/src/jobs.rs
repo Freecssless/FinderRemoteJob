@@ -267,32 +267,44 @@ pub async fn sync_jobs(
         keywords: profile.target_titles,
         boards: company_boards(&state).await?,
     };
+    // Todas las fuentes a la vez: casi todo el tiempo es esperar la red, no la base de datos.
+    let tasks: Vec<_> = Source::ALL
+        .into_iter()
+        .filter(|s| s.applies(&q))
+        .map(|source| {
+            let (db, http, q) = (state.db.clone(), state.http.clone(), q.clone());
+            let task =
+                tauri::async_runtime::spawn(
+                    async move { sources::sync(&db, &http, source, &q).await },
+                );
+            (source, task)
+        })
+        .collect();
     let mut out = Vec::new();
     let mut new_ids = Vec::new();
-    for source in Source::ALL.into_iter().filter(|s| s.applies(&q)) {
-        out.push(
-            match sources::sync(&state.db, &state.http, source, &q).await {
-                Ok(r) => {
-                    new_ids.extend(r.new_jobs.iter().cloned());
-                    SyncSummary {
-                        source: r.source,
-                        skipped_too_soon: r.skipped_too_soon,
-                        fetched: r.fetched,
-                        kept: r.kept,
-                        new: r.new_jobs.len(),
-                        error: None,
-                    }
+    for (source, task) in tasks {
+        let result = task.await.map_err(err).and_then(|r| r.map_err(err));
+        out.push(match result {
+            Ok(r) => {
+                new_ids.extend(r.new_jobs.iter().cloned());
+                SyncSummary {
+                    source: r.source,
+                    skipped_too_soon: r.skipped_too_soon,
+                    fetched: r.fetched,
+                    kept: r.kept,
+                    new: r.new_jobs.len(),
+                    error: None,
                 }
-                Err(e) => SyncSummary {
-                    source: source.id(),
-                    skipped_too_soon: false,
-                    fetched: 0,
-                    kept: 0,
-                    new: 0,
-                    error: Some(e.to_string()),
-                },
+            }
+            Err(e) => SyncSummary {
+                source: source.id(),
+                skipped_too_soon: false,
+                fetched: 0,
+                kept: 0,
+                new: 0,
+                error: Some(e),
             },
-        );
+        });
     }
     // Similitud semántica de las nuevas; si la IA local no está, se calcula después con el botón.
     let mut new_jobs = Vec::new();

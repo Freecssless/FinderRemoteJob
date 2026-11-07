@@ -219,6 +219,21 @@
 - La ficha de compatibilidad muestra «Similitud con tu CV» cuando existe.
 - `finder_infra::semantic` (`ensure`, `Vectors`), `Db::embeddings` y `Db::put_embedding`.
 
+### Lectura del CV más rápida y precisa, y procesos más ágiles
+- **Importar el CV: de 79 s a 30 s** con qwen3:8b en CPU (CV realista de 3 empleos, medido con `banco_importacion`).
+  - La IA ya no copia cada logro: devuelve los datos cortos y **qué líneas** son la descripción de cada empleo; el texto se copia del CV, literal (`core::cvparse`). Los logros se separan por viñetas (o por frases), se unen los renglones que cortó el PDF y se quitan las viñetas; si la IA corta el bloque una línea antes, se completa.
+  - El contacto (correo, teléfono, enlaces), las habilidades y los idiomas se leen **sin IA** cuando el CV tiene esas secciones, y a la IA solo le llega lo que necesita, con número de línea.
+  - Las respuestas de la IA local van en JSON compacto (sin sangría ni saltos de línea): ~35 % menos que generar en cada tarea (importar, analizar vacantes, adaptar con el modelo local).
+  - El modelo se queda cargado 30 minutos entre tareas (`keep_alive`).
+- **Mejor captura**:
+  - Fechas con nombre de mes («Mar 2022», «marzo de 2022», «March 2022», «03/2022») pasan a «2022-03»; «A la fecha», «Actualmente», «En curso» = trabajo actual. Antes cada una daba un aviso falso.
+  - Nombres en mayúsculas pasan a «María Fernanda López Ruiz».
+  - Habilidades: además de las listadas, las del diccionario que el CV menciona en sus logros o certificaciones (por ejemplo WordPress o Scrum), sin repetir sinónimos y sin contar enlaces ni idiomas.
+  - Idiomas con su nivel en cualquier forma («Inglés: avanzado (C1)», «Inglés (B2)», «Inglés C1»).
+  - Una fecha que no está en el CV (la IA la inventó) se deja vacía con un aviso, en vez de conservarla.
+- **Sin IA local** (Ollama cerrado o sin modelo), importar ya no falla: se cargan contacto, habilidades e idiomas, con un aviso para completar experiencia y educación.
+- **Buscar vacantes**: las 9 fuentes se consultan a la vez en lugar de una tras otra.
+
 ### Composición y animaciones
 - **El medidor cobra vida**: la cifra cuenta hasta el puntaje al mismo ritmo que crece la barra, y si el puntaje cambia avanza del valor anterior al nuevo. Un puntaje alto (≥ 70) late una vez en cempasúchil al llegar.
 - **Kanban**: al cambiar de estado, la tarjeta vuela de su columna a la nueva (crossfade) y las demás se acomodan (FLIP). Cada columna tiene un punto de color con su etapa: preparar (gris), enviada (azul), buena noticia (verde) y cerrada (anillo gris).

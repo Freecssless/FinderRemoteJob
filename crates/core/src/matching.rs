@@ -707,6 +707,39 @@ mod tests {
         ))
     }
 
+    /// Cuánto tarda puntuar 500 vacantes (lo que hacen la lista y la cola de Postular). A mano:
+    /// `cargo test -p finder-core --release banco_puntaje -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn banco_puntaje() -> R {
+        let dict = SkillDict::builtin()?;
+        let (p, m) = (profile(), master()?);
+        let j = job(
+            "Editor de Video (Remoto - LATAM)",
+            include_str!("../tests/fixtures/jd_editor_video_es.txt"),
+        );
+        let t = std::time::Instant::now();
+        for _ in 0..500 {
+            let req = JobRequirements {
+                terms: extract_terms(&dict, &j.title, &j.description),
+                ..Default::default()
+            };
+            let _ = match_score(
+                &dict,
+                &MatchInput {
+                    profile: &p,
+                    master: &m,
+                    job: &j,
+                    requirements: &req,
+                    semantic: None,
+                    today: TODAY,
+                },
+            );
+        }
+        println!("500 puntajes: {:.1?}", t.elapsed());
+        Ok(())
+    }
+
     #[test]
     fn editor_vs_vacante_de_editor_es_alta() -> R {
         let j = job(

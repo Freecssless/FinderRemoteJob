@@ -13,9 +13,9 @@ mod weights;
 use finder_infra::core::ats::keywords::SkillDict;
 use finder_infra::core::guard::numbers;
 use finder_infra::core::model::{CvMaster, Profile, RemotePref};
-use finder_infra::cvfile::CvFileKind;
+use finder_infra::cvfile::{CvFileKind, extract_text};
 use finder_infra::db::Db;
-use finder_infra::llm::tasks::import_cv as llm_import_cv;
+use finder_infra::llm::tasks::{self as ai_tasks, TaskError};
 use finder_infra::llm::{LlmClient, LlmConfig};
 use serde::Serialize;
 use tauri::{Manager, State};
@@ -224,7 +224,13 @@ async fn import_cv(
         .ok_or("Solo se pueden importar archivos .pdf o .docx.")?;
     let config = state.llm()?;
     let client = LlmClient::new(config.local.clone()).map_err(err)?;
-    let imported = llm_import_cv(&client, &bytes, kind).await.map_err(err)?;
+    let text = extract_text(&bytes, kind).map_err(err)?;
+    // Si la IA local no responde, se importa lo que se puede leer sin ella (con un aviso).
+    let imported = match ai_tasks::import_text(&client, &state.dict, text.clone()).await {
+        Ok(i) => i,
+        Err(TaskError::Llm(_)) => ai_tasks::import_without_ai(&state.dict, text),
+        Err(e) => return Err(err(e)),
+    };
     Ok(ImportPreview {
         cv: imported.result.cv,
         warnings: imported.result.warnings,

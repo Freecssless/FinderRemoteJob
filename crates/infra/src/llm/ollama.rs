@@ -50,16 +50,24 @@ pub fn has_model(installed: &[String], model: &str) -> bool {
     installed.iter().any(|m| full(m) == full(model))
 }
 
+/// Sin esto, el modelo sangra el JSON: los espacios y saltos de línea son ~35 % de lo que genera
+/// (y en CPU, generar es lo lento).
+const COMPACT: &str =
+    "\n- Responde con JSON compacto en una sola línea, sin saltos de línea ni sangría.";
+
 pub(crate) fn chat_body(model: &str, system: &str, user: &str, schema: &Value) -> Value {
     json!({
         "model": model,
         "messages": [
-            { "role": "system", "content": system },
+            { "role": "system", "content": format!("{system}{COMPACT}") },
             { "role": "user", "content": user }
         ],
         "format": schema,
         "stream": false,
         "think": false,
+        // El modelo se queda cargado entre tareas (importar, analizar vacantes, adaptar): cargarlo
+        // de nuevo en CPU cuesta varios segundos cada vez.
+        "keep_alive": "30m",
         "options": { "temperature": 0.1, "num_ctx": NUM_CTX }
     })
 }
@@ -119,6 +127,12 @@ mod tests {
         assert_eq!(chat_url("http://pc:11434"), "http://pc:11434/api/chat");
         let b = chat_body("qwen3:8b", "s", "u", &json!({"type": "object"}));
         assert_eq!(b["think"], false);
+        assert_eq!(b["keep_alive"], "30m");
+        assert!(
+            b["messages"][0]["content"]
+                .as_str()
+                .is_some_and(|c| c.ends_with("sin saltos de línea ni sangría."))
+        );
         assert_eq!(b["options"]["num_ctx"], NUM_CTX);
         assert_eq!(b["format"]["type"], "object");
     }

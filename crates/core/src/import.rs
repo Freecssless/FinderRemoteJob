@@ -94,16 +94,25 @@ pub fn finalize(raw: RawCv, source_text: &str) -> ImportResult {
     {
         warnings.extend(source.warn("La empresa", &e.company));
         warnings.extend(source.warn("El puesto", &e.title));
-        let start = normalize_date(&e.start);
-        let end = e.end.as_deref().and_then(normalize_end);
-        for d in std::iter::once(&start).chain(&end) {
-            if !source.has_year_of(d) {
+        // Una fecha que no está en el CV la inventó la IA: se deja vacía para que la completes.
+        let mut start = normalize_date(&e.start);
+        if !start.is_empty() && !source.has_year_of(&start) {
+            warnings.push(format!(
+                "No encontramos en tu CV la fecha de inicio de «{}»; complétala.",
+                e.title
+            ));
+            start.clear();
+        }
+        let end = match e.end.as_deref().and_then(normalize_end) {
+            Some(d) if !source.has_year_of(&d) => {
                 warnings.push(format!(
-                    "La fecha «{d}» de «{}» no aparece en tu CV original; revísala.",
+                    "No encontramos en tu CV la fecha de fin de «{}»; complétala.",
                     e.title
                 ));
+                Some(String::new())
             }
-        }
+            end => end,
+        };
         let bullets = e
             .bullets
             .into_iter()
@@ -159,8 +168,17 @@ pub fn finalize(raw: RawCv, source_text: &str) -> ImportResult {
                 id: format!("edu_{:02}", i + 1),
                 institution: e.institution.trim().to_string(),
                 degree: e.degree.trim().to_string(),
-                start: e.start.as_deref().map(normalize_date),
-                end: e.end.as_deref().and_then(normalize_end),
+                // Fechas de estudios que no están en el CV: se quitan (sin aviso: son opcionales).
+                start: e
+                    .start
+                    .as_deref()
+                    .map(normalize_date)
+                    .filter(|d| source.has_year_of(d)),
+                end: e
+                    .end
+                    .as_deref()
+                    .and_then(normalize_end)
+                    .filter(|d| source.has_year_of(d)),
             }
         })
         .collect();
@@ -193,15 +211,53 @@ pub fn finalize(raw: RawCv, source_text: &str) -> ImportResult {
     }
 }
 
-/// "2022-1" → "2022-01"; "2022" se queda; otros formatos se conservan para que el usuario los corrija.
-fn normalize_date(s: &str) -> String {
+/// Fechas a "AAAA-MM" o "AAAA": "2022-1", "03/2022", "Mar 2022", "marzo de 2022", "March 2022".
+/// Lo que no se entiende se conserva para que el usuario lo corrija.
+pub(crate) fn normalize_date(s: &str) -> String {
     let s = s.trim();
-    match s.split_once(['-', '/']) {
-        Some((y, m)) if y.len() == 4 && m.parse::<u8>().is_ok_and(|m| (1..=12).contains(&m)) => {
-            format!("{y}-{:02}", m.parse::<u8>().unwrap_or(1))
+    let n = normalize(s);
+    let parts: Vec<&str> = n
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|p| !p.is_empty() && *p != "de" && *p != "of")
+        .collect();
+    let year = parts
+        .iter()
+        .find(|p| p.len() == 4 && p.chars().all(|c| c.is_ascii_digit()));
+    let month = parts.iter().find_map(|p| {
+        if p.chars().all(|c| c.is_ascii_digit()) {
+            p.parse::<u8>()
+                .ok()
+                .filter(|m| p.len() <= 2 && (1..=12).contains(m))
+        } else {
+            month_number(p)
         }
+    });
+    match (year, month, parts.len()) {
+        (Some(y), Some(m), 2) => format!("{y}-{m:02}"),
+        (Some(y), None, 1) => y.to_string(),
         _ => s.to_string(),
     }
+}
+
+fn month_number(word: &str) -> Option<u8> {
+    const MONTHS: [&[&str]; 12] = [
+        &["ene", "enero", "jan", "january"],
+        &["feb", "febrero", "february"],
+        &["mar", "marzo", "march"],
+        &["abr", "abril", "apr", "april"],
+        &["may", "mayo"],
+        &["jun", "junio", "june"],
+        &["jul", "julio", "july"],
+        &["ago", "agosto", "aug", "august"],
+        &["sep", "sept", "septiembre", "setiembre", "september"],
+        &["oct", "octubre", "october"],
+        &["nov", "noviembre", "november"],
+        &["dic", "diciembre", "dec", "december"],
+    ];
+    MONTHS
+        .iter()
+        .position(|m| m.contains(&word))
+        .map(|i| i as u8 + 1)
 }
 
 /// Fin de un periodo: "actual", "presente", "present"… = trabajo actual (`None`).
@@ -215,6 +271,11 @@ fn normalize_end(s: &str) -> Option<String> {
         "current",
         "now",
         "hoy",
+        "la fecha",
+        "a la fecha",
+        "actualmente",
+        "en curso",
+        "today",
     ];
     let n = normalize(s.trim());
     (!CURRENT.contains(&n.as_str())).then(|| normalize_date(s))
@@ -306,6 +367,25 @@ mod tests {
     }
 
     #[test]
+    fn entiende_fechas_con_nombre_de_mes() {
+        for (input, want) in [
+            ("Mar 2022", "2022-03"),
+            ("marzo de 2022", "2022-03"),
+            ("March 2022", "2022-03"),
+            ("03/2022", "2022-03"),
+            ("2022/3", "2022-03"),
+            ("2022-1", "2022-01"),
+            ("Dic. 2018", "2018-12"),
+            ("2019", "2019"),
+            ("verano 2019", "verano 2019"),
+        ] {
+            assert_eq!(normalize_date(input), want, "{input}");
+        }
+        assert_eq!(normalize_end("A la fecha"), None);
+        assert_eq!(normalize_end("Presente"), None);
+    }
+
+    #[test]
     fn asigna_ids_cifras_y_fechas() {
         let r = finalize(raw(), SOURCE);
         assert!(r.warnings.is_empty(), "{:?}", r.warnings);
@@ -341,7 +421,13 @@ mod tests {
         r.experience[2].start = "2015-03".into();
         let out = finalize(r, SOURCE);
         assert_eq!(out.warnings.len(), 3, "{:?}", out.warnings);
-        assert!(out.warnings.iter().any(|w| w.contains("2015-03")));
+        assert!(
+            out.warnings
+                .iter()
+                .any(|w| w.contains("fecha de inicio de «Asistente de postproducción»"))
+        );
+        // La fecha inventada se quita (los textos se conservan con su aviso).
+        assert_eq!(out.cv.experience[1].start, "");
         assert!(out.warnings.iter().any(|w| w.contains("Netflix")));
         assert!(out.warnings.iter().any(|w| w.contains("Final Cut Pro")));
         // Se conserva para que el usuario decida: el aviso no borra nada.
