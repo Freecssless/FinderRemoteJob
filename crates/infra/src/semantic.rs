@@ -119,6 +119,36 @@ mod tests {
         assert_eq!(v.similarity("otra"), None);
     }
 
+    /// Con el Ollama local y su modelo de embeddings (`ollama pull bge-m3`). Correr a mano:
+    /// `cargo test -p finder-infra semantic -- --ignored --nocapture`
+    #[tokio::test]
+    #[ignore]
+    async fn en_vivo_la_vacante_parecida_puntua_mas() -> Result<(), Box<dyn std::error::Error>> {
+        let cfg = crate::llm::LlmConfig::from_env()?;
+        let client = LlmClient::new(cfg.local.clone())?;
+        let db = Db::open_in_memory().await?;
+        let model = cfg.embed_model.as_str();
+        let items = vec![
+            (cv_owner("p1"), "Editora de video con 4 años. Premiere Pro, After Effects, motion graphics y corrección de color para cursos y redes sociales.".to_string()),
+            (job_owner("video"), "Buscamos editor de video senior para cursos en línea: Premiere Pro, After Effects y animación.".to_string()),
+            (job_owner("conta"), "Contador público para conciliaciones bancarias, declaraciones fiscales y cierre contable mensual.".to_string()),
+        ];
+        assert_eq!(ensure(&db, &client, model, items.clone()).await?, 3);
+        // Los mismos textos ya están guardados: no se recalculan.
+        assert_eq!(ensure(&db, &client, model, items).await?, 0);
+        let v = Vectors::load(&db, model, "p1").await?;
+        let (video, conta) = (
+            v.similarity("video").ok_or("sin video")?,
+            v.similarity("conta").ok_or("sin conta")?,
+        );
+        println!("{model}: video {video:.3} · contabilidad {conta:.3}");
+        assert!(
+            video > conta + 0.05,
+            "la vacante de video debería parecerse más al CV"
+        );
+        Ok(())
+    }
+
     #[test]
     fn el_hash_cambia_con_el_texto() {
         assert_ne!(text_hash("a"), text_hash("b"));
