@@ -12,10 +12,36 @@ use super::{LlmError, Result, api_error, parse_json_text};
 const NUM_CTX: u32 = 8192;
 
 /// `FRJ_LOCAL_URL` apunta a la API compatible (`…/v1`); la nativa está en la raíz.
-fn chat_url(base_url: &str) -> String {
+fn root(base_url: &str) -> &str {
     let root = base_url.trim_end_matches('/');
-    let root = root.strip_suffix("/v1").unwrap_or(root);
-    format!("{root}/api/chat")
+    root.strip_suffix("/v1").unwrap_or(root)
+}
+
+fn chat_url(base_url: &str) -> String {
+    format!("{}/api/chat", root(base_url))
+}
+
+/// Modelos descargados en Ollama (`/api/tags`). Falla si Ollama no está abierto.
+pub async fn installed_models(http: &Client, base_url: &str) -> Result<Vec<String>> {
+    let v: Value = http
+        .get(format!("{}/api/tags", root(base_url)))
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    Ok(v["models"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|m| m["name"].as_str().map(str::to_string))
+        .collect())
+}
+
+/// Ollama nombra `qwen3` como `qwen3:latest`.
+pub fn has_model(installed: &[String], model: &str) -> bool {
+    let full = |m: &str| if m.contains(':') { m.to_string() } else { format!("{m}:latest") };
+    installed.iter().any(|m| full(m) == full(model))
 }
 
 pub(crate) fn chat_body(model: &str, system: &str, user: &str, schema: &Value) -> Value {
@@ -68,6 +94,15 @@ pub(crate) fn parse_chat(v: &Value) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn modelo_instalado_con_o_sin_etiqueta() {
+        let m = vec!["qwen3:8b".to_string(), "bge-m3:latest".to_string()];
+        assert!(has_model(&m, "qwen3:8b"));
+        assert!(has_model(&m, "bge-m3"));
+        assert!(!has_model(&m, "qwen3"));
+        assert!(!has_model(&m, "qwen3:14b"));
+    }
 
     #[test]
     fn url_y_cuerpo() {

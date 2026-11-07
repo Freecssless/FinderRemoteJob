@@ -212,6 +212,7 @@
       {/each}
     </ul>
     <button onclick={() => requestSwitch("new")} disabled={creating}>+ Nuevo perfil</button>
+    <p class="small"><a href="/bienvenida">Crear un perfil paso a paso</a></p>
   </section>
 
   <section class="detail">

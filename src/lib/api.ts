@@ -76,6 +76,7 @@ export const emptyCv = (): CvMaster => ({
 
 export const api = {
   appInfo: () => invoke<AppInfo>("app_info"),
+  ollamaStatus: () => invoke<{ running: boolean; model: string; installed: boolean }>("ollama_status"),
   listProfiles: () => invoke<Profile[]>("list_profiles"),
   createProfile: (p: Omit<Profile, "id" | "created_at">) =>
     invoke<Profile>("create_profile", {

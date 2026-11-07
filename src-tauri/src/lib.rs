@@ -75,6 +75,33 @@ fn app_info(state: State<'_, AppState>) -> AppInfo {
     }
 }
 
+/// Estado de Ollama para la bienvenida: importar el CV siempre usa la IA local.
+#[derive(Debug, Serialize)]
+struct OllamaStatus {
+    /// Ollama responde en la URL configurada.
+    running: bool,
+    /// Modelo local configurado (el que hay que descargar).
+    model: String,
+    /// El modelo ya está descargado.
+    installed: bool,
+}
+
+#[tauri::command]
+async fn ollama_status(state: State<'_, AppState>) -> CmdResult<OllamaStatus> {
+    use finder_infra::llm::{Backend, ollama};
+    let local = state.llm()?.local;
+    let Backend::Ollama { base_url } = &local.backend else {
+        // La IA local apunta a otro servidor: no hay nada de Ollama que comprobar.
+        return Ok(OllamaStatus { running: true, model: local.model, installed: true });
+    };
+    let models = ollama::installed_models(&state.http, base_url).await;
+    Ok(OllamaStatus {
+        running: models.is_ok(),
+        installed: models.is_ok_and(|m| ollama::has_model(&m, &local.model)),
+        model: local.model,
+    })
+}
+
 #[tauri::command]
 async fn list_profiles(state: State<'_, AppState>) -> CmdResult<Vec<Profile>> {
     state.db.list_profiles().await.map_err(err)
@@ -203,6 +230,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             app_info,
+            ollama_status,
             list_profiles,
             create_profile,
             update_profile,

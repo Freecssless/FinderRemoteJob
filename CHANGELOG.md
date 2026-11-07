@@ -219,6 +219,10 @@
 - La ficha de compatibilidad muestra «Similitud con tu CV» cuando existe.
 - `finder_infra::semantic` (`ensure`, `Vectors`), `Db::embeddings` y `Db::put_embedding`.
 
+### Asistente de bienvenida
+- Primer uso (sin perfiles): la app abre `/bienvenida` con cuatro pasos: crear el perfil, importar el CV, escribir los puestos buscados y buscar vacantes. También se abre desde Perfiles → «Crear un perfil paso a paso».
+- Antes de importar el CV comprueba si Ollama está abierto y si el modelo local está descargado (comando `ollama_status`, vía `/api/tags`), y explica cómo instalarlo.
+
 ### Simplificación para usuarios sin conocimientos técnicos
 - Se quitan funciones que pedían configuración técnica o aportaban poco al objetivo (encontrar vacantes, adaptar el CV y darles seguimiento):
   - Fuentes Adzuna y Jooble (pedían registrarse como desarrollador; Jooble solo da 500 consultas por clave).

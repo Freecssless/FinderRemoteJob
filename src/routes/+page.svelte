@@ -1,1 +1,1 @@
-<!-- La raíz redirige a /perfiles (ver +page.ts). -->
+<!-- La raíz redirige a /perfiles o /bienvenida (ver +page.ts). -->
