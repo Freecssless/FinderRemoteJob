@@ -26,12 +26,12 @@
   .pagehead { display: flex; align-items: center; gap: 0.9rem 1rem; flex-wrap: wrap; margin-bottom: 0.25rem; }
   .tile {
     display: grid; place-items: center; flex: none; width: 52px; height: 52px; border-radius: var(--radius-l);
-    animation: tile-in 420ms var(--ease-decel) both;
+    animation: tile-in 260ms var(--ease-decel) both;
   }
   .tile.primary { background: var(--md-primary-container); color: var(--md-on-primary-container); }
   .tile.tertiary { background: var(--md-tertiary-container); color: var(--md-on-tertiary-container); }
   .tile.secondary { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
-  @keyframes tile-in { from { opacity: 0; transform: scale(0.7) rotate(-8deg); } }
+  @keyframes tile-in { from { opacity: 0; transform: scale(0.92); } }
   .titles { min-width: 0; margin-right: auto; }
   h1 { margin: 0; }
   p { margin: 0.1rem 0 0; color: var(--md-on-surface-variant); }

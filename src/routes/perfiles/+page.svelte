@@ -323,10 +323,13 @@
   .detail > .card .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   @container main (max-width: 640px) { .detail > .card .grid { grid-template-columns: 1fr; } }
   /* Barra del CV fija arriba al desplazarse: «Guardar CV» siempre a mano. */
+  /* Misma barra flotante que «Corregir el CV» del Optimizador: tonal, redondeada, sobre el contenido. */
   .cvbar {
-    position: sticky; top: 0; z-index: 5; margin: 0.5rem calc(-1 * clamp(1rem, 3vw, 2.5rem)) 0;
-    padding: 0.75rem clamp(1rem, 3vw, 2.5rem); background: color-mix(in srgb, var(--md-surface) 92%, transparent);
-    backdrop-filter: blur(8px); border-bottom: 1px solid var(--md-outline-variant);
+    position: sticky; top: 0.5rem; z-index: 5; margin-top: 0.75rem;
+    padding: 0.7rem 0.8rem 0.7rem 1.5rem; border-radius: var(--radius-l);
+    background: color-mix(in srgb, var(--md-surface-container-high) 90%, transparent);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 6px 12px -10px rgb(var(--md-shadow) / 0.5);
   }
   .cvbar h2 { margin: 0 auto 0 0; }
 </style>

@@ -361,8 +361,13 @@ td { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--md-outline-variant)
 /* Transición entre pantallas (View Transitions): «fade through» de M3 en el contenido;
    la barra lateral queda quieta y solo su píldora se desliza al nuevo destino. */
 ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
-::view-transition-old(page) { animation: 100ms var(--ease-accel) both vt-out; }
-::view-transition-new(page) { animation: 260ms var(--ease-decel) 70ms both vt-in; }
-::view-transition-group(nav-pill) { animation-duration: 340ms; animation-timing-function: var(--ease-decel); }
+/* Cambio de pantalla: fundido cruzado continuo, sin hueco entre la vieja y la nueva. El grupo no se
+   anima (si no, se desliza desde donde estaba la pantalla anterior y da un tirón) y sin blur ni escala,
+   que en el webview cuestan cuadros. */
+::view-transition-group(page) { animation: none; }
+::view-transition-old(page), ::view-transition-new(page) { height: auto; object-fit: none; object-position: top; }
+::view-transition-old(page) { animation: 180ms var(--ease) both vt-out; }
+::view-transition-new(page) { animation: 240ms var(--ease-decel) both vt-in; }
+::view-transition-group(nav-pill) { animation-duration: 280ms; animation-timing-function: var(--ease-decel); }
 @keyframes vt-out { to { opacity: 0; } }
-@keyframes vt-in { from { opacity: 0; transform: translateY(12px); } }
+@keyframes vt-in { from { opacity: 0; transform: translateY(6px); } }

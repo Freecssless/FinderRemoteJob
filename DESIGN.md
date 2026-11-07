@@ -272,7 +272,7 @@ Lo que se rechaza, confirmado en la dirección: el M3 de fábrica (morado de ref
 - Cempasúchil reservado para la compatibilidad alta y la etiqueta «Nueva».
 - Formas de píldora en botones, navegación y medidor; contorno de 4px en campos.
 - Profundidad por tono de superficie; dos sombras suaves solo para estado y para tarjetas que se arrastran.
-- Movimiento con significado: al cambiar de pantalla el contenido se funde (fade through de M3) y la píldora de la navegación se desliza al nuevo destino. La barra del medidor crece desde cero. Los paneles y avisos entran subiendo unos píxeles.
+- Movimiento con significado: al cambiar de pantalla el contenido se funde (fade through de M3) y la píldora de la navegación se desliza al nuevo destino. La barra del medidor crece desde cero y su cifra cuenta a la par (700ms, desaceleración); un puntaje alto late una vez en cempasúchil al llegar. Las tarjetas del Kanban vuelan a su nueva columna (crossfade + FLIP) y las fichas entran y salen creciendo. Al cambiar de pantalla, fundido cruzado continuo (180/240 ms) con el contenedor quieto. Los paneles y avisos entran subiendo unos píxeles.
 - Iconos Material Symbols Rounded 400 en SVG en línea, con variante rellena para el destino activo.
 
 ## Colors

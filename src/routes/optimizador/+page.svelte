@@ -4,6 +4,7 @@
   import Icon from "$lib/components/Icon.svelte";
   import Meter from "$lib/components/Meter.svelte";
   import CvPaper from "$lib/components/CvPaper.svelte";
+  import { rise, stagger } from "$lib/motion";
   import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
   import { page } from "$app/state";
   import { profileStore } from "$lib/profile.svelte";
@@ -308,9 +309,9 @@
     {:else}
     <div class="library">
       <ul class="cvlist" aria-label="CVs adaptados">
-        {#each library as e (e.version.id)}
+        {#each library as e, i (e.version.id)}
           {@const d = docs.get(e.version.id)}
-          <li>
+          <li in:rise={{ delay: stagger(i) }}>
             <button class="cvitem" aria-current={e.version.id === v.id ? "true" : undefined}
               onclick={() => { selectedId = e.version.id; draft = null; draftMsg = ""; }}>
               <span class="thumb" aria-hidden="true">{#if d}<CvPaper doc={d} />{/if}</span>
@@ -332,7 +333,8 @@
         {/each}
       </ul>
 
-      <section class="viewer" aria-label="CV elegido">
+      {#key v.id}
+      <section class="viewer" aria-label="CV elegido" in:rise={{ y: 8 }}>
         <div class="card viewhead">
           <div>
             <h2>{selected.job_title ?? "Vacante eliminada"}</h2>
@@ -364,6 +366,7 @@
           <div class="sheet"><CvPaper doc={sdoc} label="CV para {selected.job_title ?? 'la vacante'}" /></div>
         {/if}
       </section>
+      {/key}
     </div>
     {/if}
   {/if}
@@ -559,7 +562,7 @@
   /* Corregir un CV: barra fija con las acciones; formulario en tarjetas y la hoja fija al lado. */
   .editor { display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem; animation: rise-in 220ms var(--ease-decel) both; }
   .edbar {
-    position: sticky; top: 0; z-index: 2;
+    position: sticky; top: 0.5rem; z-index: 2;
     display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem 1.5rem;
     padding: 0.85rem 1rem 0.85rem 1.5rem; border-radius: var(--radius-l);
     background: var(--md-secondary-container); color: var(--md-on-secondary-container);

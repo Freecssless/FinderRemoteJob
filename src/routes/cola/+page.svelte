@@ -56,10 +56,16 @@
     }
   }
 
-  async function copy(text: string) {
+  // El botón que copió muestra una palomita un momento: confirma sin mover nada de sitio.
+  let copied = $state<string | null>(null);
+  let copiedTimer: ReturnType<typeof setTimeout> | undefined;
+  async function copy(text: string, key = text) {
     try {
       await navigator.clipboard.writeText(text);
-      faqMsg = "Copiado.";
+      faqMsg = "";
+      copied = key;
+      clearTimeout(copiedTimer);
+      copiedTimer = setTimeout(() => (copied = null), 1400);
     } catch (e) {
       faqMsg = `No se pudo copiar: ${e}`;
     }
@@ -166,6 +172,7 @@
           <h2 id="faq-title">Respuestas frecuentes</h2>
           <p class="muted small">Para pegar en los formularios de los portales.</p>
           {#if faqMsg}<p class="small" role="status">{faqMsg}</p>{/if}
+          <span class="sr-only" aria-live="polite">{copied ? "Copiado" : ""}</span>
 
           {#if faq.from_cv.length}
             <div class="segmented tabs" role="tablist" aria-label="Respuestas">
@@ -180,7 +187,7 @@
               {#each faq.from_cv as f}
                 <li class="qa">
                   <span class="qtext"><span class="q">{f.question}</span><span class="a" title={f.answer}>{f.answer}</span></span>
-                  <button class="icon-btn" onclick={() => copy(f.answer)} aria-label="Copiar respuesta: {f.question}" title="Copiar"><Icon name="content_copy" size={20} /></button>
+                  <button class="icon-btn copybtn" class:done={copied === "cv:"+f.question} onclick={() => copy(f.answer, "cv:"+f.question)} aria-label="Copiar respuesta: {f.question}" title={copied === "cv:"+f.question ? "Copiado" : "Copiar"}><Icon name={copied === "cv:"+f.question ? "check" : "content_copy"} size={20} /></button>
                 </li>
               {/each}
             </ul>
@@ -199,7 +206,7 @@
               {:else}
                 <li class="qa">
                   <span class="qtext"><span class="q">{f.question || "Sin pregunta"}</span><span class="a" title={f.answer}>{f.answer || "—"}</span></span>
-                  <button class="icon-btn" onclick={() => copy(f.answer)} disabled={!f.answer.trim()} aria-label="Copiar respuesta: {f.question}" title="Copiar"><Icon name="content_copy" size={20} /></button>
+                  <button class="icon-btn copybtn" class:done={copied === "own:"+i} onclick={() => copy(f.answer, "own:"+i)} disabled={!f.answer.trim()} aria-label="Copiar respuesta: {f.question}" title={copied === "own:"+i ? "Copiado" : "Copiar"}><Icon name={copied === "own:"+i ? "check" : "content_copy"} size={20} /></button>
                   <button class="icon-btn" onclick={() => (editingFaq = i)} aria-label="Editar: {f.question}" title="Editar"><Icon name="edit" size={20} /></button>
                 </li>
               {/if}
@@ -237,6 +244,10 @@
   .tabs button { flex: 1; padding: 0 0.6rem; justify-content: center; }
   .n { font-variant-numeric: tabular-nums; opacity: 0.8; }
   .qascroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin: 0 -0.5rem; padding: 0 0.5rem; scrollbar-width: thin; }
+  .copybtn { transition: background-color 150ms var(--ease), color 150ms var(--ease); }
+  .copybtn.done { background: var(--md-success-container); color: var(--md-on-success-container); }
+  .copybtn.done :global(.icon) { animation: pop-in 260ms var(--ease-decel); }
+  @keyframes pop-in { from { transform: scale(0.4) rotate(-20deg); opacity: 0; } }
   .faqactions { margin-top: auto; padding-top: 0.25rem; }
   .qalist { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
   .qa { display: flex; align-items: center; gap: 0.25rem; padding: 0.5rem 0; border-bottom: 1px solid var(--md-outline-variant); }

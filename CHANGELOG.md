@@ -219,6 +219,17 @@
 - La ficha de compatibilidad muestra «Similitud con tu CV» cuando existe.
 - `finder_infra::semantic` (`ensure`, `Vectors`), `Db::embeddings` y `Db::put_embedding`.
 
+### Composición y animaciones
+- **El medidor cobra vida**: la cifra cuenta hasta el puntaje al mismo ritmo que crece la barra, y si el puntaje cambia avanza del valor anterior al nuevo. Un puntaje alto (≥ 70) late una vez en cempasúchil al llegar.
+- **Kanban**: al cambiar de estado, la tarjeta vuela de su columna a la nueva (crossfade) y las demás se acomodan (FLIP). Cada columna tiene un punto de color con su etapa: preparar (gris), enviada (azul), buena noticia (verde) y cerrada (anillo gris).
+- **Fichas del CV** (habilidades, educación, certificaciones, idiomas): entran y salen creciendo, y las demás se recolocan con suavidad.
+- **Cambio de pantalla**: fundido cruzado continuo (180 ms la vieja, 240 ms la nueva subiendo 6 px), sin hueco entre ambas. El contenedor no se anima (antes se deslizaba desde la posición anterior y daba un tirón), sin blur ni escala, y la pantalla nueva empieza arriba sin desplazamiento animado. El icono de la cabecera entra más suave.
+- **Mis CVs**: la lista aparece escalonada y el CV elegido entra con suavidad al cambiar.
+- **Postular**: al copiar una respuesta, su botón muestra una palomita verde un momento (y se anuncia «Copiado» a lectores de pantalla).
+- **Vacantes sin vacante elegida**: un estado centrado con qué hacer y el camino que sigue (mira cuánto encaja → adapta tu CV → postúlate).
+- **Perfiles**: la barra «CV maestro» pasa a ser flotante y redondeada, como la de «Corregir el CV».
+- Con movimiento reducido: sin conteo, sin vuelos ni latidos; quedan los cambios de color y opacidad.
+
 ### «Corregir texto» ordenado y monitores ultrawide
 - **Optimizador → Corregir texto**: la vista ocupa todo el ancho con una barra fija arriba (qué CV corriges, Cancelar y Guardar cambios siempre a mano). El formulario va en tarjetas (Encabezado, Resumen, Experiencia, Educación, Habilidades, Certificaciones e idiomas) con etiquetas alineadas, y la hoja queda fija al lado. En ventanas medianas la hoja pasa arriba; en tarjetas angostas, las fechas van debajo de puesto y empresa.
 - **Monitores grandes y ultrawide**: el contenido crece hasta 1760px (pantallas de 1920px) y 2320px (2560px o más). Con 1600px o más de contenido: «Mis CVs» pone la ficha del CV junto a su hoja, la revisión de propuestas agranda la hoja, el formulario de corrección se reparte en dos columnas, el CV maestro de Perfiles usa tres columnas y la cola de Postular se muestra en cuadrícula.

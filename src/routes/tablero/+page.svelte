@@ -5,7 +5,8 @@
   import Select from "$lib/components/Select.svelte";
   import Icon from "$lib/components/Icon.svelte";
   import Meter from "$lib/components/Meter.svelte";
-  import { rise, sheet } from "$lib/motion";
+  import { receive, rise, send, sheet } from "$lib/motion";
+  import { flip } from "svelte/animate";
   import { openPath, openUrl } from "@tauri-apps/plugin-opener";
   import { goto } from "$app/navigation";
   import {
@@ -37,6 +38,13 @@
 
   let dragging = $state<string | null>(null);
   let dropTarget = $state<Status | null>(null);
+  // Etapa de cada estado, para el punto de color de su columna: preparar, enviada, buena noticia o cerrada.
+  const stage = (s: Status) =>
+    ["Encontrada", "Evaluada", "CvAdaptado"].includes(s) ? "prep"
+    : ["Postulada", "EnProceso"].includes(s) ? "sent"
+    : ["Entrevista", "Oferta"].includes(s) ? "good"
+    : "closed";
+
   const today = new Date().toISOString().slice(0, 10);
   const day = (iso: string | null) => iso?.slice(0, 10) ?? "";
 
@@ -335,13 +343,15 @@
             ondragleave={() => { if (dropTarget === col.id) dropTarget = null; }}
             ondrop={(e) => onDrop(e, col.id)}
           >
-            <h2>{col.label} <span class="count">{col.items.length}</span></h2>
+            <h2><span class="dot {stage(col.id)}" aria-hidden="true"></span>{col.label} <span class="count">{col.items.length}</span></h2>
             {#if !col.items.length}<div class="drop" aria-hidden="true">Suelta aquí</div>{/if}
             <div class="colcards">
             {#each col.items as r (r.application.id)}
               {@const a = r.application}
               <button
-                in:rise={{ y: 6 }}
+                in:receive={{ key: a.id }}
+                out:send={{ key: a.id }}
+                animate:flip={{ duration: 260 }}
                 class="cardbtn"
                 class:active={a.id === selectedId}
                 class:dragging={dragging === a.id}
@@ -512,7 +522,13 @@
   /* Una columna con muchas tarjetas se desplaza dentro y no estira su fila. */
   .colcards { display: flex; flex-direction: column; gap: 0.5rem; max-height: 26rem; overflow-y: auto; padding: 2px; margin: -2px; scrollbar-width: thin; }
   .colcards:empty { display: none; }
-  .col h2 { font-size: 0.9375rem; margin: 0.25rem 0.35rem 0.1rem; display: flex; align-items: center; justify-content: space-between; color: var(--md-on-surface-variant); }
+  .col h2 { font-size: 0.9375rem; margin: 0.25rem 0.35rem 0.1rem; display: flex; align-items: center; justify-content: flex-start; color: var(--md-on-surface); }
+  .col h2 .count { margin-left: auto; }
+  .dot { flex: none; width: 10px; height: 10px; margin-right: 0.5rem; border-radius: 50%; }
+  .dot.prep { background: var(--md-outline); }
+  .dot.sent { background: var(--md-primary); }
+  .dot.good { background: var(--md-success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--md-success) 22%, transparent); }
+  .dot.closed { background: transparent; border: 2px solid var(--md-outline); }
   .count {
     min-width: 1.75rem; padding: 0 0.45rem; border-radius: var(--radius-full); text-align: center;
     background: var(--md-surface-container-highest); color: var(--md-on-surface-variant); font-size: 0.875rem; font-weight: 700;

@@ -53,6 +53,8 @@
       document.startViewTransition(async () => {
         resolve();
         await nav.complete;
+        // La pantalla nueva empieza arriba, sin desplazamiento animado que se cruce con el fundido.
+        document.querySelector("main")?.scrollTo({ top: 0, behavior: "instant" });
       });
     });
   });

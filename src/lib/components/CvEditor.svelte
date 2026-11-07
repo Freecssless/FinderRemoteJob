@@ -1,5 +1,7 @@
 <script lang="ts">
   import Icon from "$lib/components/Icon.svelte";
+  import { pop } from "$lib/motion";
+  import { flip } from "svelte/animate";
   import type { CvMaster } from "$lib/api";
 
   let { cv = $bindable() }: { cv: CvMaster } = $props();
@@ -137,7 +139,7 @@
   {#if cv.skills.length}
     <ul class="chips" aria-label="Habilidades">
       {#each cv.skills as s, i (s.id)}
-        <li class="chip" class:sel={editingSkill === s.id}>
+        <li class="chip" class:sel={editingSkill === s.id} in:pop out:pop={{ duration: 120 }} animate:flip={{ duration: 220 }}>
           <button class="chipname" aria-expanded={editingSkill === s.id}
             onclick={() => (editingSkill = editingSkill === s.id ? null : s.id)}
             title="Editar nivel y años">
@@ -175,7 +177,7 @@
     <ul class="chips tall" aria-label="Educación">
       {#each cv.education as ed, i (ed.id)}
         {@const years = [ed.start, ed.end].filter(Boolean).join(" – ")}
-        <li class="chip" class:sel={editingEdu === ed.id}>
+        <li class="chip" class:sel={editingEdu === ed.id} in:pop out:pop={{ duration: 120 }} animate:flip={{ duration: 220 }}>
           <button class="chipname" aria-expanded={editingEdu === ed.id}
             onclick={() => (editingEdu = editingEdu === ed.id ? null : ed.id)} title="Editar institución y fechas">
             <span class="eduname">{ed.degree || "Sin título"}</span>
@@ -216,7 +218,7 @@
   {#if cv.certifications.length}
     <ul class="chips" aria-label="Certificaciones">
       {#each cv.certifications as c, i (c.id)}
-        <li class="chip" class:sel={editingCert === c.id}>
+        <li class="chip" class:sel={editingCert === c.id} in:pop out:pop={{ duration: 120 }} animate:flip={{ duration: 220 }}>
           <button class="chipname" aria-expanded={editingCert === c.id}
             onclick={() => (editingCert = editingCert === c.id ? null : c.id)} title="Editar emisor y fecha">
             {c.name || "Sin nombre"}{#if c.issuer || c.date}<span class="yrs">{[c.issuer, c.date].filter(Boolean).join(" · ")}</span>{/if}
@@ -250,7 +252,7 @@
   {#if cv.languages.length}
     <ul class="chips" aria-label="Idiomas">
       {#each cv.languages as l, i}
-        <li class="chip" class:sel={editingLang === i}>
+        <li class="chip" class:sel={editingLang === i} in:pop>
           <button class="chipname" aria-expanded={editingLang === i}
             onclick={() => (editingLang = editingLang === i ? null : i)} title="Editar nivel">
             {l.name || "Sin nombre"}{#if l.level}<span class="yrs">{l.level}</span>{/if}

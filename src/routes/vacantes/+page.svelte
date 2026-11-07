@@ -398,8 +398,16 @@
         {/key}
       {:else}
         <div class="pick">
-          <Icon name="work" size={32} />
-          <p class="muted">Elige una vacante de la lista para ver si encaja contigo.</p>
+          <span class="pickicon" aria-hidden="true"><Icon name="work" size={32} /></span>
+          <h2>Elige una vacante</h2>
+          <p class="muted">Toca una de la lista para ver por qué encaja contigo y qué te falta.</p>
+          <ol class="flow" aria-label="Lo que sigue">
+            <li><span class="fi"><Icon name="work" size={20} /></span>Mira cuánto encaja</li>
+            <li class="sep" aria-hidden="true"><Icon name="chevron_right" size={18} /></li>
+            <li><span class="fi"><Icon name="edit_document" size={20} /></span>Adapta tu CV</li>
+            <li class="sep" aria-hidden="true"><Icon name="chevron_right" size={18} /></li>
+            <li><span class="fi"><Icon name="send" size={20} /></span>Postúlate</li>
+          </ol>
         </div>
       {/if}
     </section>
@@ -421,8 +429,31 @@
   .detail.panel { padding: 1.25rem 1.5rem; }
   .block { padding: 1.25rem 0 0.25rem; border-top: 1px solid var(--md-outline-variant); }
   .block h3 { margin-top: 0; }
-  .pick { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 3rem 1rem; text-align: center; color: var(--md-on-surface-variant); }
-  .pick p { margin: 0; }
+  /* Sin vacante elegida: qué hacer ahora y el camino que sigue, centrado en el panel. */
+  .pick {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.6rem;
+    min-height: min(26rem, 60vh); padding: 2.5rem 1.5rem; text-align: center;
+    animation: rise-in 320ms var(--ease-decel) both;
+  }
+  .pickicon {
+    display: grid; place-items: center; width: 72px; height: 72px; margin-bottom: 0.4rem; border-radius: var(--radius-l);
+    background: var(--md-primary-container); color: var(--md-on-primary-container);
+    rotate: -4deg;
+  }
+  .pick h2 { margin: 0; }
+  .pick p { margin: 0; max-width: 30ch; }
+  .flow { list-style: none; margin: 1.25rem 0 0; padding: 0; display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; gap: 0.3rem; }
+  @container main (max-width: 1180px) {
+    .flow { flex-direction: column; gap: 0.25rem; }
+    .flow li.sep { rotate: 90deg; }
+  }
+  .flow li {
+    display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.35rem 0.85rem 0.35rem 0.4rem; white-space: nowrap;
+    border-radius: var(--radius-full); background: var(--md-surface-container-lowest);
+    font-size: 0.9375rem; font-weight: 600; color: var(--md-on-surface);
+  }
+  .flow li.sep { padding: 0; background: none; color: var(--md-outline); }
+  .fi { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
   /* Ancho: lista y detalle llenan la ventana y se desplazan cada uno por su cuenta. */
   @container main (min-width: 821px) {
     .page { height: calc(100vh - 5rem); }
