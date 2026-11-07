@@ -209,7 +209,7 @@
 <style>
   .wizard { max-width: 640px; margin: 0 auto; }
   .steps { display: flex; gap: 0.5rem; padding: 0; list-style: none; counter-reset: s; margin: 1rem 0; }
-  .steps li { flex: 1; counter-increment: s; font-size: 0.85rem; color: var(--muted); border-top: 3px solid var(--border); padding-top: 0.4rem; }
+  .steps li { flex: 1; counter-increment: s; font-size: 0.9375rem; color: var(--muted); border-top: 3px solid var(--border); padding-top: 0.4rem; }
   .steps li::before { content: counter(s) ". "; }
   .steps li.done { border-color: var(--accent); }
   .steps li.current { border-color: var(--accent); color: var(--text); font-weight: 600; }

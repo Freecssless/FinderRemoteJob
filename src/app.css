@@ -33,6 +33,7 @@
   --md-inverse-surface: #2f3036;
   --md-inverse-on-surface: #f0f0f8;
   --md-shadow: 26 27 33;
+  --md-scrim: #000000;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -93,11 +94,19 @@
   --elev-1: 0 1px 2px rgb(var(--md-shadow) / 0.3), 0 1px 3px 1px rgb(var(--md-shadow) / 0.15);
   --elev-2: 0 1px 2px rgb(var(--md-shadow) / 0.3), 0 2px 6px 2px rgb(var(--md-shadow) / 0.15);
   --ease: cubic-bezier(0.2, 0, 0, 1);
+  --ease-decel: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --ease-accel: cubic-bezier(0.3, 0, 0.8, 0.15);
   --font: "Atkinson Hyperlegible Next Variable", system-ui, sans-serif;
 }
 
 * { box-sizing: border-box; }
 html { scrollbar-color: var(--md-outline-variant) transparent; }
+/* WebKitGTK (Linux) no entiende scrollbar-color. */
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-button { display: none; }
+::-webkit-scrollbar-thumb { background: var(--md-outline-variant); border-radius: 999px; border: 3px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background-color: var(--md-outline); }
 body {
   margin: 0;
   font: 400 16px/1.5 var(--font);
@@ -124,6 +133,8 @@ button.list-item {
 }
 button.list-item:hover:not(:disabled) { background: color-mix(in srgb, var(--md-on-surface) 8%, transparent); }
 button.list-item.active { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+button.list-item.active .muted { color: var(--md-on-secondary-container); }
+button.list-item:active:not(:disabled) { transform: scale(0.99); }
 button.list-item.active:hover:not(:disabled) { background: color-mix(in srgb, var(--md-on-secondary-container) 8%, var(--md-secondary-container)); }
 a { color: var(--md-primary); text-underline-offset: 0.18em; }
 code { font-family: ui-monospace, "Cascadia Mono", "DejaVu Sans Mono", monospace; font-size: 0.92em; }
@@ -161,7 +172,8 @@ select option { background: var(--md-surface-container-high); color: var(--md-on
 textarea { resize: vertical; min-height: 5rem; line-height: 1.5; }
 input[type="checkbox"], input[type="radio"] { width: 18px; height: 18px; margin: 0; accent-color: var(--md-primary); cursor: pointer; }
 
-label { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.9375rem; font-weight: 500; color: var(--md-on-surface-variant); }
+label:focus-within:not(.inline, .filebtn) { color: var(--md-primary); }
+label { transition: color 150ms var(--ease); display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.9375rem; font-weight: 500; color: var(--md-on-surface-variant); }
 label.inline { flex-direction: row; align-items: center; gap: 0.6rem; font-weight: 500; color: var(--md-on-surface); min-height: 40px; cursor: pointer; }
 label.inline input { width: auto; }
 
@@ -176,16 +188,21 @@ button {
   color: var(--md-primary);
   font-size: 0.9375rem; font-weight: 650; letter-spacing: 0.01em;
   cursor: pointer;
-  transition: background-color 150ms var(--ease), box-shadow 150ms var(--ease), border-color 150ms var(--ease);
+  transition: background-color 150ms var(--ease), box-shadow 150ms var(--ease), border-color 150ms var(--ease), transform 120ms var(--ease);
 }
 button:hover:not(:disabled) { background: color-mix(in srgb, var(--md-primary) 8%, transparent); }
 button:active:not(:disabled) { background: color-mix(in srgb, var(--md-primary) 12%, transparent); }
-button:disabled { color: color-mix(in srgb, var(--md-on-surface) 38%, transparent); border-color: color-mix(in srgb, var(--md-on-surface) 12%, transparent); cursor: not-allowed; }
+/* Deshabilitado más legible que el 38 % de M3: el usuario debe poder leer qué acción falta. */
+button:disabled { color: color-mix(in srgb, var(--md-on-surface) 58%, var(--md-surface)); border-color: color-mix(in srgb, var(--md-on-surface) 16%, transparent); cursor: not-allowed; }
+button:active:not(:disabled) { transform: scale(0.97); }
 
 button.primary { background: var(--md-primary); border-color: var(--md-primary); color: var(--md-on-primary); }
 button.primary:hover:not(:disabled) { background: color-mix(in srgb, var(--md-on-primary) 8%, var(--md-primary)); box-shadow: var(--elev-1); }
 button.primary:active:not(:disabled) { background: color-mix(in srgb, var(--md-on-primary) 12%, var(--md-primary)); box-shadow: none; }
-button.primary:disabled, button.tonal:disabled { background: color-mix(in srgb, var(--md-on-surface) 12%, transparent); border-color: transparent; }
+button.primary:disabled, button.tonal:disabled {
+  background: color-mix(in srgb, var(--md-on-surface) 10%, var(--md-surface)); border-color: transparent;
+  color: color-mix(in srgb, var(--md-on-surface) 62%, var(--md-surface));
+}
 
 button.tonal { background: var(--md-secondary-container); border-color: transparent; color: var(--md-on-secondary-container); }
 button.tonal:hover:not(:disabled) { background: color-mix(in srgb, var(--md-on-secondary-container) 8%, var(--md-secondary-container)); box-shadow: var(--elev-1); }
@@ -272,6 +289,22 @@ p.ok[role="status"] {
 .notice ul { margin: 0.4rem 0 0; padding-left: 1.2rem; }
 
 details > summary { cursor: pointer; font-weight: 650; padding: 0.5rem 0; }
+/* Abrir y cerrar con suavidad donde el motor lo permita (mejora progresiva). */
+:root { interpolate-size: allow-keywords; }
+details::details-content { height: 0; overflow: clip; transition: height 280ms var(--ease), content-visibility 280ms allow-discrete; }
+details[open]::details-content { height: auto; }
+
+/* Silueta de carga: ocupa el lugar del contenido mientras llega. */
+.skeleton {
+  border-radius: var(--radius-m);
+  background: linear-gradient(90deg, var(--md-surface-container) 0%, var(--md-surface-container-high) 50%, var(--md-surface-container) 100%) 0 0 / 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* Entrada breve de avisos y mensajes. */
+@keyframes rise-in { from { opacity: 0; transform: translateY(6px); } }
+p[role="status"], p[role="alert"], .notice[role="status"], div[role="status"].card { animation: rise-in 240ms var(--ease-decel) both; }
 details > summary::marker { color: var(--md-primary); }
 
 table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
@@ -281,6 +314,19 @@ td { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--md-outline-variant)
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
+/* Movimiento reducido: sin desplazamientos ni escalas; los cambios de color y opacidad se quedan, más cortos. */
 @media (prefers-reduced-motion: reduce) {
-  * { transition-duration: 0ms !important; animation-duration: 0ms !important; }
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 80ms !important; }
+  button:active:not(:disabled) { transform: none; }
+  .skeleton { animation: none; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
+
+/* Transición entre pantallas (View Transitions): «fade through» de M3 en el contenido;
+   la barra lateral queda quieta y solo su píldora se desliza al nuevo destino. */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+::view-transition-old(page) { animation: 100ms var(--ease-accel) both vt-out; }
+::view-transition-new(page) { animation: 260ms var(--ease-decel) 70ms both vt-in; }
+::view-transition-group(nav-pill) { animation-duration: 340ms; animation-timing-function: var(--ease-decel); }
+@keyframes vt-out { to { opacity: 0; } }
+@keyframes vt-in { from { opacity: 0; transform: translateY(12px); } }

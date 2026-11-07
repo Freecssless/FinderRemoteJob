@@ -271,6 +271,10 @@
   .exp { margin: 0.75rem 0 0; }
   .change.rejected { border-color: var(--danger); }
   .diff { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.5rem; }
+  @container main (max-width: 700px) {
+    .diff { grid-template-columns: 1fr; }
+    .ats { grid-template-columns: 1fr; gap: 0.25rem; }
+  }
   .diff p, .proposed { margin: 0.2rem 0; }
   .original { color: var(--muted); }
   .save { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }

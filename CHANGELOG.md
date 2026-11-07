@@ -219,6 +219,24 @@
 - La ficha de compatibilidad muestra «Similitud con tu CV» cuando existe.
 - `finder_infra::semantic` (`ensure`, `Vectors`), `Db::embeddings` y `Db::put_embedding`.
 
+### Interfaz más fluida, adaptable y legible
+- **Contraste:** los botones deshabilitados («Guardar perfil», «Guardar CV», «Siguiente») eran casi invisibles, con un contraste de 1,04 a 1,4. Ahora se leen, con 3:1 o más. El texto secundario de la vacante seleccionada sube a 4,5:1 o más. Una medición automática de contraste pasa en todas las pantallas, en claro y oscuro.
+- **Tamaños de ventana:** cajón lateral desde 1100px y riel de navegación entre 720 y 1099px. La ventana mínima baja de 900 a 720px.
+  - **Vacantes:** muestra lista o detalle, con «Volver a la lista».
+  - **Tablero:** su ficha es una hoja lateral (se cierra con Esc).
+  - **Perfiles, Postular y Optimizador:** se apilan cuando falta espacio.
+  - **Pantallas muy anchas:** el contenido no pasa de 1440px.
+- **Animaciones:**
+  - Al cambiar de pantalla, el contenido se funde y la píldora de la navegación se desliza al nuevo destino (View Transitions).
+  - El detalle de vacante, las tarjetas, la cola y los avisos entran con un movimiento breve, y los botones responden al presionarlos.
+  - Al cargar vacantes aparecen siluetas en lugar de «Cargando…».
+  - Todo respeta «reducir movimiento» del sistema.
+- **Detalles:**
+  - Barras de desplazamiento con el estilo de la app en Linux.
+  - La etiqueta del campo con foco se pinta en azul.
+  - Vacantes vacía muestra un estado que guía al siguiente paso.
+  - Los pasos de la Bienvenida y los recordatorios ya no bajan de 15px.
+
 ### Interfaz con Material Design 3
 - Rediseño de toda la interfaz con Material Design 3 y una identidad propia: principal **azul talavera** (#1F50A0) y acento **cempasúchil**, reservado para la compatibilidad alta y las vacantes nuevas. Los tonos para claro y oscuro salen de `@material/material-color-utilities`, y el tema sigue al del sistema.
 - Tipografía Atkinson Hyperlegible Next, incluida en la app y pensada para leerse bien con baja visión: 16px de base y 15px para el texto secundario. Los controles miden 40–44px.

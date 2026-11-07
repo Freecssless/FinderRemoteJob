@@ -2,6 +2,7 @@
 name: FinderRemoteJob
 description: Material Design 3 con identidad propia, azul talavera y cempasúchil, para buscar trabajo remoto sin estrés.
 colors:
+  scrim: "#000000"
   talavera: "#1f50a0"
   on-talavera: "#ffffff"
   talavera-container: "#d8e2ff"
@@ -267,7 +268,7 @@ Lo que se rechaza, confirmado en la dirección: el M3 de fábrica (morado de ref
 - Cempasúchil reservado para la compatibilidad alta y la etiqueta «Nueva».
 - Formas de píldora en botones, navegación y medidor; contorno de 4px en campos.
 - Profundidad por tono de superficie; dos sombras suaves solo para estado y para tarjetas que se arrastran.
-- Un solo momento de movimiento: la barra del medidor crece desde cero.
+- Movimiento con significado: al cambiar de pantalla el contenido se funde (fade through de M3) y la píldora de la navegación se desliza al nuevo destino. La barra del medidor crece desde cero. Los paneles y avisos entran subiendo unos píxeles.
 - Iconos Material Symbols Rounded 400 en SVG en línea, con variante rellena para el destino activo.
 
 ## Colors
@@ -294,6 +295,7 @@ Una paleta M3 generada con `@material/material-color-utilities`: un azul con ofi
 - **Escalera de contenedores** (`surface-container-lowest` → `-highest`): cajón y tarjetas en `-low`; columnas del Kanban y fichas de resumen en `surface-container`; tarjetas del Kanban en `-lowest`; pista del medidor y medidor bajo en `-highest`.
 - **Tinta** (`on-surface`) y **tinta secundaria** (`on-surface-variant`): texto principal y secundario (etiquetas, metadatos, encabezados de tabla).
 - **Contorno** (`outline`) para campos y botones delineados; **contorno suave** (`outline-variant`) para divisores de tabla y tarjetas delineadas.
+- **Velo** (`scrim`, negro al 32 %): detrás de la hoja lateral modal del Tablero en ventanas angostas.
 
 ### Named Rules
 **The Cempasúchil Rule.** El terciario existe para decir «esto encaja mucho» o «esto es nuevo». Nunca se usa en botones, navegación, encabezados ni decoración.
@@ -327,7 +329,17 @@ Una paleta M3 generada con `@material/material-color-utilities`: un azul con ofi
 
 ## Layout
 
-Un shell de dos columnas a pantalla completa: cajón de navegación fijo de 248px a la izquierda y contenido con desplazamiento propio (relleno 32px arriba, 40px a los lados, 48px abajo). El orden de destinos es fijo: Perfiles, Vacantes, Optimizador, Postular, Tablero, Ajustes.
+Un shell de dos columnas a pantalla completa: navegación a la izquierda y contenido con desplazamiento propio. El contenido tiene relleno de 32px arriba, `clamp(16px, 3vw, 40px)` a los lados y 48px abajo, y un ancho máximo de 1440px centrado. El orden de destinos es fijo: Perfiles, Vacantes, Optimizador, Postular, Tablero, Ajustes.
+
+**Tamaños de ventana (clases de M3).** La ventana mínima es de 720px.
+- **≥ 1100px:** cajón de 256px.
+- **720–1099px:** riel de 96px, con el icono en una píldora de 56×32 y la etiqueta debajo, a 15px.
+- **Adaptación de pantallas:** `<main>` es un contenedor (`container: main / inline-size`) y cada pantalla se adapta con `@container main`, no con el ancho de la ventana.
+  - Vacantes pasa a lista **o** detalle (con «Volver a la lista») por debajo de 820px.
+  - Perfiles apila la lista arriba, en fila, por debajo de 760px.
+  - Postular apila sus dos columnas por debajo de 820px.
+  - La ficha del Tablero se vuelve hoja lateral modal con fondo atenuado (se cierra con Esc o tocando fuera) por debajo de 900px.
+  - El Optimizador pasa a una columna por debajo de 700px.
 
 Cada pantalla abre con una cabecera en fila: título headline a la izquierda, selector de perfil a su lado y la acción principal (botón relleno) a la derecha, con `flex-wrap` para ventanas angostas. Las pantallas de lista y detalle (Vacantes) usan una rejilla `minmax(280px, 2fr) 3fr` con el detalle fijo (`sticky`). El Tablero muestra 4 columnas que caben enteras (2 bajo 780px de contenedor) con `scroll-snap`, y abre una ficha lateral de 340px. Las pantallas de lectura larga (Optimizador) se limitan a 960px.
 
@@ -359,7 +371,8 @@ Píldoras firmes y amables, de 44px de alto.
 - **Texto (`.link`):** sin borde, 40px de alto, relleno 0.75rem.
 - **Peligro (`.danger`):** delineado con texto y borde en error; relleno en error para la confirmación final.
 - **Hover / Active:** capa de estado M3 por `color-mix` (8% en hover, 12% al presionar) con transición de 150ms en `cubic-bezier(0.2, 0, 0, 1)`; rellenos y tonales suben a Nivel 1 en hover.
-- **Disabled:** texto al 38% y borde o fondo al 12% de `on-surface`.
+- **Disabled:** más legible que el 38 % de M3. El texto es `on-surface` mezclado al 58 % (62 % en rellenos) con la superficie, y el fondo al 10 %. El contraste queda en ≥ 3:1, porque el usuario debe poder leer qué acción falta.
+- **Pressed:** escala 0.97 (0.99 en elementos de lista) durante 120ms.
 - **Enlace con aspecto de botón:** los mismos estilos sobre `<a>` cuando la acción navega a otra pantalla.
 
 ### Segmented Button
@@ -389,10 +402,11 @@ Grupo de botones delineados unidos, con extremos en píldora. El segmento elegid
 - **Tabla:** cifras tabulares, encabezados en label small `on-surface-variant`, divisores de 1px en `outline-variant`.
 
 ### Navigation
-- **Cajón:** 248px sobre `surface-container-low`; marca arriba (cuadro talavera de 36px con 12px de radio y el icono `travel_explore`, nombre a 750); seis destinos; estado de la IA al pie.
+- **Cajón:** 256px sobre `surface-container-low`; marca arriba (cuadro talavera de 36px con 12px de radio y el icono `travel_explore`, nombre a 750); seis destinos; estado de la IA al pie.
 - **Destino:** 52px de alto, píldora, icono de 24px y etiqueta a 16px / 600 en `on-surface-variant`.
 - **Hover:** capa del 8% de `on-surface`, texto `on-surface`.
-- **Activo:** píldora `secondary-container`, texto a 750 e icono en su variante rellena.
+- **Activo:** píldora `secondary-container`, texto a 750 e icono en su variante rellena. La píldora es un elemento propio con `view-transition-name: nav-pill`, así que se desliza al nuevo destino en 340ms.
+- **Riel (720–1099px):** el destino es una columna de 64px, con la píldora de 56×32 alrededor del icono y la etiqueta a 15px debajo. La marca y el estado de la IA quedan solo como icono, con su texto en `title` y para lectores de pantalla.
 - **Foco:** anillo talavera de 3px dentro de la píldora (offset -3px).
 
 ### Icons
@@ -403,7 +417,19 @@ El mismo componente en Vacantes, Optimizador (antes → después), Postular y Ta
 - **Chip (listas):** columna de 3.25rem: píldora de 32px con el puntaje (16px / 750, cifras tabulares) y, debajo, una pista de 4px.
 - **Fila (desgloses):** pista de 6px a todo lo ancho con el valor a la derecha («39 / 45», el máximo en peso 400 y tinta secundaria).
 - **Tramos:** alto (≥ 70 %) en cempasúchil; medio (≥ 45 %) en talavera; bajo en `surface-container-highest` con barra `outline`.
-- **Movimiento:** la barra crece desde 0 al montarse (500ms, `cubic-bezier(0.05, 0.7, 0.1, 1)`). Es el único movimiento de entrada de la app.
+- **Movimiento:** la barra crece desde 0 al montarse (500ms, `cubic-bezier(0.05, 0.7, 0.1, 1)`).
+
+### Movimiento
+- **Curvas:** `--ease` (estándar, `0.2, 0, 0, 1`), `--ease-decel` (enfatizada al llegar, `0.05, 0.7, 0.1, 1`) y `--ease-accel` (al salir, `0.3, 0, 0.8, 0.15`).
+- **Cambio de pantalla:** View Transitions. El contenido sale en 100ms y entra en 260ms subiendo 12px. La barra lateral queda quieta y solo su píldora viaja. Sin soporte del motor, el cambio es instantáneo.
+- **Entradas (`$lib/motion.ts`):**
+  - `rise`: sube 10px y se funde en 260ms. Lo usan el detalle de la vacante (al cambiar de vacante), las tarjetas del kanban y la cola.
+  - `stagger`: escalona las listas 28ms por elemento, con tope en el 8.º.
+  - `sheet`: la ficha lateral entra desde la derecha.
+  - Los avisos con `role=status/alert` entran con `rise-in` (240ms).
+- **Carga:** siluetas `.skeleton` con un brillo lineal de 1,4s en lugar de «Cargando…».
+- **Desplegables:** `<details>` se abre animando la altura donde el motor soporta `::details-content` e `interpolate-size`.
+- **Movimiento reducido:** sin desplazamientos, escalas ni View Transitions. Quedan solo fundidos cortos (≤ 120ms) y cambios de color.
 - **Accesibilidad:** `role="meter"` con `aria-valuenow`, `aria-valuemin`, `aria-valuemax` y una etiqueta.
 
 ## Do's and Don'ts
@@ -413,7 +439,8 @@ El mismo componente en Vacantes, Optimizador (antes → después), Postular y Ta
 - **Do** mostrar cualquier puntaje de compatibilidad con el medidor (chip en listas, fila en desgloses), nunca como número suelto.
 - **Do** marcar lo seleccionado con `secondary-container` y lo accionable principal con el botón relleno talavera, uno por bloque.
 - **Do** mantener los controles en 40px de alto o más (botones 44px, campos 48px, destinos 52px) y el foco visible (3px talavera, offset 2px).
-- **Do** limitar las transiciones a 150ms con `cubic-bezier(0.2, 0, 0, 1)` sobre color, borde y sombra, y respetar `prefers-reduced-motion`.
+- **Do** usar 150ms con `--ease` para cambios de estado (color, borde, sombra), 240–340ms con `--ease-decel` para entradas y desplazamientos, y respetar `prefers-reduced-motion`.
+- **Do** adaptar cada pantalla con `@container main`, nunca con el ancho de la ventana, para que el riel y las hojas laterales no rompan la cuenta.
 - **Do** incluir fuentes e iconos dentro de la app: los iconos nuevos se añaden a `icons.ts` desde `@material-symbols/svg-400`.
 - **Do** acompañar cada estado vacío del botón del siguiente paso.
 

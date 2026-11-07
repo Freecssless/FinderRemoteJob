@@ -7,6 +7,7 @@
   } from "$lib/api";
   import Icon from "$lib/components/Icon.svelte";
   import Meter from "$lib/components/Meter.svelte";
+  import { rise, stagger } from "$lib/motion";
 
   let profiles = $state<Profile[]>([]);
   let profileId = $state<string | null>(null);
@@ -258,7 +259,7 @@
     <label class="inline small"><input type="checkbox" bind:checked={hideWeak} /> Ocultar poco relevantes y bloqueadas</label>
   </div>
 
-  <div class="split">
+  <div class="split" class:showing={selectedId}>
     <section class="list" aria-label="Lista de vacantes">
       <div class="listhead">
         <p class="muted small">
@@ -269,12 +270,20 @@
           {busy === "embed" ? "Comparando…" : "Comparar mejor con IA"}
         </button>
       </div>
-      {#if !rows.length && busy === ""}
-        <p class="muted">Aún no hay vacantes. Pulsa «Buscar vacantes nuevas» o importa una.</p>
+      {#if busy === "list" && !rows.length}
+        <ul class="plain" aria-hidden="true">
+          {#each [0, 1, 2, 3, 4] as i}<li class="skeleton skelrow" style:opacity={1 - i * 0.15}></li>{/each}
+        </ul>
+      {:else if !rows.length && busy === ""}
+        <div class="empty">
+          <span class="empty-icon"><Icon name="travel_explore" size={32} /></span>
+          <h2>Todavía no hay vacantes</h2>
+          <p class="muted">Pulsa «Buscar vacantes nuevas» para traer las de varios portales, o importa una que hayas visto.</p>
+        </div>
       {/if}
       <ul class="plain">
-        {#each visible as r (r.id)}
-          <li>
+        {#each visible as r, i (r.id)}
+          <li in:rise={{ delay: stagger(i) }}>
             <button class="list-item job" class:active={r.id === selectedId} onclick={() => select(r.id)}>
               {#if r.score}
                 <Meter value={r.score.total} label="Compatibilidad" />
@@ -298,6 +307,11 @@
       {#if detail}
         {@const job = detail.job}
         {@const s = detail.score}
+        {#key job.id}
+        <div class="detailbody" in:rise>
+        <button class="link backlist" onclick={() => ((selectedId = null), (detail = null))}>
+          <Icon name="arrow_back" size={20} /> Volver a la lista
+        </button>
         <div class="jobhead">
           <h2 style="margin-top:0">{job.title}</h2>
           <p class="muted">
@@ -373,6 +387,8 @@
           <h3>Anuncio</h3>
           <div class="description">{job.description}</div>
         </div>
+      </div>
+        {/key}
       {:else}
         <p class="muted">Elige una vacante para ver su detalle.</p>
       {/if}
@@ -388,7 +404,17 @@
   .filters select { width: auto; }
   .portals { margin: 0; }
   .plain { list-style: none; margin: 0; padding: 0; }
-  .split { display: grid; grid-template-columns: minmax(280px, 2fr) 3fr; gap: 1rem; align-items: start; }
+  .split { display: grid; grid-template-columns: minmax(280px, 2fr) 3fr; gap: 1.25rem; align-items: start; }
+  .detailbody { display: flex; flex-direction: column; gap: 0.75rem; }
+  .skelrow { height: 76px; margin-bottom: 0.4rem; }
+  .backlist { display: none; align-self: flex-start; }
+  /* Angosto: lista o detalle, uno a la vez (patrón lista-detalle de M3). */
+  @container main (max-width: 820px) {
+    .split { grid-template-columns: 1fr; }
+    .split.showing .list, .split:not(.showing) .detail { display: none; }
+    .backlist { display: inline-flex; }
+    .detail { position: static; max-height: none; }
+  }
   .list { min-width: 0; }
   .list .plain { display: flex; flex-direction: column; gap: 0.25rem; }
   .job { gap: 0.85rem; }

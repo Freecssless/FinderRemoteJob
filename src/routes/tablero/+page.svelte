@@ -1,6 +1,7 @@
 <script lang="ts">
   import Icon from "$lib/components/Icon.svelte";
   import Meter from "$lib/components/Meter.svelte";
+  import { rise, sheet } from "$lib/motion";
   import { openPath, openUrl } from "@tauri-apps/plugin-opener";
   import { goto } from "$app/navigation";
   import {
@@ -197,6 +198,8 @@
   init();
 </script>
 
+<svelte:window onkeydown={(e) => e.key === "Escape" && selected && close()} />
+
 <div class="page" class:with-detail={selected}>
   <div class="main">
     <header class="row">
@@ -338,6 +341,7 @@
             {#each col.items as r (r.application.id)}
               {@const a = r.application}
               <button
+                in:rise={{ y: 6 }}
                 class="cardbtn"
                 class:active={a.id === selectedId}
                 class:dragging={dragging === a.id}
@@ -382,7 +386,8 @@
 
   {#if selected}
     {@const a = selected.application}
-    <aside class="detail card" aria-label="Ficha de la postulación">
+    <button class="scrim" aria-label="Cerrar ficha" tabindex="-1" onclick={close}></button>
+    <aside class="detail card" aria-label="Ficha de la postulación" in:sheet>
       <div class="row head">
         <h2>{selected.job_title}</h2>
         <button class="link" onclick={close} aria-label="Cerrar ficha"><Icon name="close" size={24} /></button>
@@ -472,7 +477,7 @@
   .summary strong { color: var(--md-on-surface); font-size: 1.0625rem; }
   .filterbox { margin-bottom: 0.5rem; }
   .filterbox .filters { margin-top: 0.5rem; }
-  .detailscore { display: inline-flex; align-items: center; gap: 0.5rem; }
+  .detailscore { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.5rem; }
   .page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; min-height: calc(100vh - 5rem); }
   .page.with-detail { grid-template-columns: minmax(0, 1fr) 340px; }
   .main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
@@ -515,7 +520,23 @@
   .cardbtn.active { outline: 2px solid var(--md-primary); outline-offset: 0; }
   .cardbtn.dragging { opacity: 0.5; }
   .top { display: flex; justify-content: space-between; gap: 0.4rem; align-items: start; }
-  .detail { display: flex; flex-direction: column; gap: 0.6rem; overflow-y: auto; min-height: 0; }
+  .detail { display: flex; flex-direction: column; gap: 0.6rem; overflow-y: auto; min-height: 0; max-height: calc(100vh - 5rem); position: sticky; top: 0; }
+  .scrim { display: none; }
+  /* Angosto: la ficha pasa a hoja lateral modal (M3) sobre el tablero. */
+  @container main (max-width: 900px) {
+    .page.with-detail { grid-template-columns: minmax(0, 1fr); }
+    .detail {
+      position: fixed; inset: 0.75rem 0.75rem 0.75rem auto; z-index: 20;
+      width: min(400px, calc(100vw - 1.5rem)); max-height: none;
+      background: var(--md-surface-container-low); box-shadow: var(--elev-2);
+    }
+    .scrim {
+      display: block; position: fixed; inset: 0; z-index: 19; min-height: 0; padding: 0; border: 0; border-radius: 0;
+      background: color-mix(in srgb, var(--md-scrim) 32%, transparent); animation: fade-in 200ms var(--ease) both;
+    }
+    .scrim:hover:not(:disabled) { background: color-mix(in srgb, var(--md-scrim) 32%, transparent); }
+  }
+  @keyframes fade-in { from { opacity: 0; } }
   .detail .head { justify-content: space-between; flex-wrap: nowrap; align-items: start; }
   .detail h2 { margin: 0; }
   .detail h3 { margin: 0.5rem 0 0; }
@@ -526,7 +547,7 @@
   .next { display: grid; grid-template-columns: 1fr; gap: 0.5rem; }
   .history { margin: 0; padding-left: 1.2rem; }
   .due { margin-bottom: 0.75rem; }
-  .due h2 { font-size: 0.9rem; margin: 0 0 0.4rem; }
+  .due h2 { font-size: 1rem; margin: 0 0 0.4rem; }
   .due ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.3rem; }
   .due .grow { flex: 1; min-width: 12rem; }
   .days { margin-top: 0.5rem; }

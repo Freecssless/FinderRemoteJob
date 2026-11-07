@@ -1,5 +1,6 @@
 <script lang="ts">
   import Meter from "$lib/components/Meter.svelte";
+  import { rise, stagger } from "$lib/motion";
   import { openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
   import { goto } from "$app/navigation";
   import {
@@ -130,8 +131,8 @@
           </p>
         {/if}
         <ul class="queue">
-          {#each items as it (it.job_id)}
-            <li class="card">
+          {#each items as it, i (it.job_id)}
+            <li class="card" in:rise={{ delay: stagger(i) }}>
               <div class="row head">
                 <Meter value={it.score} label="Compatibilidad" />
                 <strong>{it.title}</strong>
@@ -195,7 +196,7 @@
 <style>
   .page { display: flex; flex-direction: column; gap: 0.75rem; }
   .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 360px); gap: 1rem; align-items: start; }
-  @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+  @container main (max-width: 820px) { .cols { grid-template-columns: 1fr; } }
   section h2, section p { margin: 0 0 0.5rem; }
   .queue { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.6rem; }
   .queue p { margin: 0.3rem 0 0.5rem; }

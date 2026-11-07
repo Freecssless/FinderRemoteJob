@@ -303,4 +303,10 @@
   .detail { min-width: 0; max-width: 960px; }
   .cvbar { margin: 1.5rem 0 0.75rem; }
   .cvbar h2 { margin: 0 auto 0 0; }
+  /* Angosto: la lista de perfiles pasa arriba, en fila. */
+  @container main (max-width: 760px) {
+    .layout { grid-template-columns: 1fr; }
+    .list ul { flex-direction: row; flex-wrap: wrap; }
+    .list li { flex: 1 1 12rem; }
+  }
 </style>
