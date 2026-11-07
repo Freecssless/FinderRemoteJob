@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Select from "$lib/components/Select.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { goto } from "$app/navigation";
   import {
@@ -183,9 +184,8 @@
     <h1>Vacantes</h1>
     <label class="inline">
       Perfil
-      <select bind:value={profileId} onchange={changeProfile} disabled={!profiles.length}>
-        {#each profiles as p}<option value={p.id}>{p.name}</option>{/each}
-      </select>
+      <Select bind:value={profileId} label="Perfil" onchange={changeProfile} disabled={!profiles.length}
+        options={profiles.map((p) => ({ value: p.id, label: p.name }))} />
     </label>
     <button class="primary" onclick={sync} disabled={!profileId || busy !== ""}>
       {busy === "sync" ? "Buscando en las fuentes…" : "Buscar vacantes nuevas"}
@@ -197,21 +197,27 @@
   {#if !profiles.length}
     <p class="notice">Primero crea un perfil en <a href="/perfiles">Perfiles</a>: sus puestos buscados filtran las vacantes.</p>
   {:else if profile && !profile.target_titles.length}
-    <p class="notice">El perfil «{profile.name}» no tiene puestos buscados: se guardarán todas las vacantes de las fuentes. Agrégalos en <a href="/perfiles">Perfiles</a>.</p>
+    <p class="notice">Agrega en <a href="/perfiles">Perfiles</a> los puestos que buscas para filtrar mejor.</p>
   {/if}
   {#if rows.length && !hasScores && profileId}
-    <p class="notice">Este perfil aún no tiene CV maestro: las vacantes salen por fecha, sin compatibilidad.</p>
+    <p class="notice">Agrega tu CV en <a href="/perfiles">Perfiles</a> para ver qué tanto encaja cada vacante.</p>
   {/if}
   {#if error}<p class="danger" role="alert">{error}</p>{/if}
 
   {#if syncReport.length}
-    <div class="card small" role="status">
-      <ul class="plain">
+    {@const nuevas = syncReport.reduce((n, s) => n + s.new, 0)}
+    {@const fallos = syncReport.filter((s) => s.error).length}
+    <details class="card syncsum" role="status">
+      <summary>
+        <Icon name="check_circle" size={20} />
+        {nuevas === 1 ? "1 vacante nueva" : `${nuevas} vacantes nuevas`}{fallos ? ` · ${fallos} ${fallos === 1 ? "portal falló" : "portales fallaron"}` : ""}
+      </summary>
+      <ul class="plain small">
         {#each syncReport as s}
           <li><strong>{SOURCE_LABELS[s.source] ?? s.source}:</strong> <span class:danger={s.error}>{syncLine(s)}</span></li>
         {/each}
       </ul>
-    </div>
+    </details>
   {/if}
 
   {#if showImport}
@@ -221,7 +227,7 @@
         <button role="tab" aria-selected={importMode === "text"} onclick={() => (importMode = "text")}>Pegar el texto</button>
       </div>
       {#if importMode === "url"}
-        <p class="muted small">Se hace una sola petición, como tu navegador. LinkedIn y otros portales suelen bloquearla: en ese caso pega el texto.</p>
+        <p class="muted small">Si el portal no lo permite (LinkedIn suele bloquearlo), usa «Pegar el texto».</p>
         <label>Enlace del anuncio<input type="url" bind:value={imp.url} placeholder="https://…" /></label>
       {:else}
         <div class="grid">
@@ -240,11 +246,10 @@
 
   {#if portals.length}
     <p class="small muted portals">
-      Buscar{profile?.target_titles[0] ? ` «${profile.target_titles[0]}»` : ""} en:
+      Buscar también en:
       {#each portals as p, i}
         <button class="link" onclick={() => openUrl(p.url)}>{p.name}</button>{i < portals.length - 1 ? " · " : ""}
       {/each}
-      <span>(luego importa aquí las que te interesen)</span>
     </p>
   {/if}
 
@@ -252,11 +257,9 @@
     <input type="search" placeholder="Buscar en título, empresa o descripción" bind:value={query}
       onkeydown={(e) => e.key === "Enter" && reload()} aria-label="Buscar vacantes" />
     <button onclick={reload} disabled={busy !== ""}>Buscar</button>
-    <select bind:value={source} aria-label="Fuente">
-      <option value="">Todas las fuentes</option>
-      {#each Object.entries(SOURCE_LABELS) as [id, label]}<option value={id}>{label}</option>{/each}
-    </select>
-    <label class="inline small"><input type="checkbox" bind:checked={hideWeak} /> Ocultar poco relevantes y bloqueadas</label>
+    <div class="sourcesel"><Select bind:value={source} label="Fuente"
+      options={[{ value: "", label: "Todas las fuentes" }, ...Object.entries(SOURCE_LABELS).map(([id, label]) => ({ value: id, label }))]} /></div>
+    <label class="inline small"><input type="checkbox" bind:checked={hideWeak} /> Ocultar las que no encajan</label>
   </div>
 
   <div class="split" class:showing={selectedId}>
@@ -289,8 +292,10 @@
                 <Meter value={r.score.total} label="Compatibilidad" />
               {/if}
               <span class="jobtext">
-                <strong>{r.title}</strong>
-                {#if isNew(r.found_at)}<span class="new">Nueva</span>{/if}
+                <span class="titlerow">
+                  <strong>{r.title}</strong>
+                  {#if isNew(r.found_at)}<span class="new">Nueva</span>{/if}
+                </span>
                 <span class="muted small">
                   {[r.company, r.location, SOURCE_LABELS[r.source_id] ?? r.source_id].filter(Boolean).join(" · ")}
                 </span>
@@ -328,15 +333,12 @@
             <button onclick={addToBoard} disabled={!s || busy !== ""}>
               {#if added === job.id}<Icon name="check_circle" /> En el tablero{:else}<Icon name="add" /> Agregar al tablero{/if}
             </button>
-            {#if job.url}<button onclick={() => openUrl(job.url)}>Abrir anuncio</button>{/if}
-            <button onclick={analyze} disabled={busy !== ""}>
-              {busy === "analyze" ? "Analizando con IA local…" : job.requirements ? "Volver a analizar con IA" : "Analizar requisitos con IA"}
+            {#if job.url}<button onclick={() => openUrl(job.url)}><Icon name="open_in_new" size={18} /> Anuncio</button>{/if}
+            <button class="link" onclick={analyze} disabled={busy !== ""}
+              title="La IA lee el anuncio para separar requisitos obligatorios y deseables">
+              {busy === "analyze" ? "Analizando… (puede tardar)" : job.requirements ? "Volver a analizar" : "Analizar con IA"}
             </button>
           </div>
-          {#if busy === "analyze"}<p class="muted small">Con un modelo local en CPU puede tardar unos minutos.</p>{/if}
-          {#if !job.requirements}
-            <p class="muted small">Requisitos detectados solo con el diccionario. Analízalos con IA para separar requeridos y deseables, años y bloqueos.</p>
-          {/if}
         </div>
 
         {#if s}
@@ -355,9 +357,7 @@
               <dt>Años ({s.years_experience.toFixed(1)})</dt><dd><Meter layout="row" value={s.breakdown.years} max={10} label="Años de experiencia" /></dd>
               <dt>Remoto, región e idiomas</dt><dd><Meter layout="row" value={s.breakdown.logistics} max={15} label="Remoto, región e idiomas" /></dd>
             </dl>
-            {#if s.breakdown.semantic === null}
-              <p class="muted small">Sin la comparación con IA, sus 15 puntos se reparten entre las demás partes.</p>
-            {/if}
+
             {#if s.blockers.length}
               <p class="danger"><strong>Bloqueos:</strong> {s.blockers.join("; ")}</p>
             {/if}
@@ -399,9 +399,9 @@
 <style>
   .page { display: flex; flex-direction: column; gap: 0.75rem; }
   header h1 { margin: 0 auto 0 0; }
-  header select { width: auto; min-width: 12rem; }
+  header label.inline :global(.select) { width: auto; min-width: 12rem; }
+  .sourcesel { min-width: 13rem; }
   .filters input[type="search"] { flex: 1 1 18rem; width: auto; }
-  .filters select { width: auto; }
   .portals { margin: 0; }
   .plain { list-style: none; margin: 0; padding: 0; }
   .split { display: grid; grid-template-columns: minmax(280px, 2fr) 3fr; gap: 1.25rem; align-items: start; }
@@ -422,8 +422,13 @@
   .detail { display: flex; flex-direction: column; gap: 0.75rem; min-width: 0; position: sticky; top: 0; max-height: calc(100vh - 3rem); overflow: auto; }
   .listhead { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
   .listhead p { margin: 0; }
+  .syncsum { padding-block: 0.25rem; }
+  .syncsum > summary { font-weight: 600; }
+  .syncsum > summary :global(.icon) { color: var(--md-success); }
+  .syncsum ul { padding-bottom: 0.75rem; }
+  .titlerow { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.5rem; }
   .new {
-    align-self: flex-start; padding: 0.1rem 0.55rem; border-radius: var(--radius-s);
+    align-self: center; padding: 0.1rem 0.55rem; border-radius: var(--radius-s);
     background: var(--md-tertiary-container); color: var(--md-on-tertiary-container);
     font-size: 0.875rem; font-weight: 700;
   }

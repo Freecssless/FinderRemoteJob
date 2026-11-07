@@ -397,6 +397,29 @@ Grupo de botones delineados unidos, con extremos en píldora. El segmento elegid
 - **Disabled:** opacidad 0.6. Casillas de 18px con `accent-color` talavera.
 - **Etiqueta:** encima del campo, 15px a 500 en `on-surface-variant`. Las etiquetas en línea (casillas) miden 40px de alto.
 
+### Menú desplegable (`Select.svelte`)
+Reemplaza a `<select>`, que en WebKitGTK abre una lista con el estilo de GTK.
+- **Campo:** contorno de 4px de radio y 48px de alto, como los demás campos. Una flecha `expand_more` gira 180° al abrir. El borde se vuelve talavera al abrirse o con el foco.
+- **Menú:** usa la API `popover`. Está en la capa superior, así que ningún panel lo recorta, y se cierra al hacer clic fuera, al desplazar la página o al cambiar el tamaño de la ventana.
+  - Fondo `surface-container`, Nivel 2 y radio de 8px.
+  - Opciones de 48px; la elegida en `secondary-container` con una marca `check`.
+  - Entra en 200ms con `--ease-decel`, escalando desde 85 % de alto.
+  - Se abre hacia arriba si no cabe abajo.
+- **Teclado:** patrón de combobox de solo selección. Flechas, Inicio y Fin recorren; Enter o Espacio eligen; Esc cierra; una letra salta a la opción que empieza con ella.
+- **Sin valor:** equivale a la opción vacía («Todos», «Por defecto»).
+
+### Panel expandible (`<details>`)
+Fila de 48px con radio de 12px y título a 650. La flecha `expand_more` va a la derecha y gira al abrir, pintada en talavera. Al pasar el ratón, capa de estado del 6 %; el foco va por dentro. El contenido entra con `rise-in`. Se usa para «Filtros», «Plazos de los recordatorios», el informe de la búsqueda y «Opciones avanzadas».
+
+### Botón de icono
+`.icon-btn`: círculo de 40px sin borde, con el icono en `on-surface-variant`. Deshabilitado al 38 %. Lo usan las flechas del Kanban.
+
+### Kanban
+- **Columnas:** 248px de ancho y alto según su contenido, con el título y un contador en píldora. Las vacías muestran un hueco punteado «Suelta aquí».
+- **Navegación:** la rueda del ratón desplaza el tablero de lado, y al llegar al borde la deja pasar a la página. Las flechas ‹ › avanzan 260px.
+- **Bordes:** el lado con más columnas se desvanece con `mask-image`.
+- **Tarjetas:** cursor de agarrar.
+
 ### Lists and Tables
 - **Elemento de lista seleccionable:** fila a lo ancho, 12px de radio, sin borde; hover con capa del 8%; activo en `secondary-container`.
 - **Tabla:** cifras tabulares, encabezados en label small `on-surface-variant`, divisores de 1px en `outline-variant`.

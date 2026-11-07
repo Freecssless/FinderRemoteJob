@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Icon from "$lib/components/Icon.svelte";
+  import Select from "$lib/components/Select.svelte";
   import Meter from "$lib/components/Meter.svelte";
   import { rise, stagger } from "$lib/motion";
   import { openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
@@ -104,9 +106,8 @@
     <h1>Postular</h1>
     <label class="inline">
       Perfil
-      <select bind:value={profileId} onchange={changeProfile} disabled={!profiles.length}>
-        {#each profiles as p}<option value={p.id}>{p.name}</option>{/each}
-      </select>
+      <Select bind:value={profileId} label="Perfil" onchange={changeProfile} disabled={!profiles.length}
+        options={profiles.map((p) => ({ value: p.id, label: p.name }))} />
     </label>
   </header>
 
@@ -121,13 +122,12 @@
       <section aria-labelledby="queue-title">
         <h2 id="queue-title">Cola de hoy</h2>
         <p class="muted small">
-          Vacantes con compatibilidad de 70 o más que aún no enviaste. Adapta tu CV, pulsa «Abrir y postular»
-          (abre el anuncio y te muestra el PDF), envía la solicitud tú y marca «Ya me postulé».
+          Las que más encajan contigo (70 o más) y aún no envías.
         </p>
         {#if msg}<p class="ok small" role="status">{msg}</p>{/if}
         {#if !items.length}
           <p class="notice">
-            No hay vacantes pendientes con compatibilidad de 70 o más. Busca más en <a href="/vacantes">Vacantes</a>.
+            No hay vacantes pendientes que encajen. Busca más en <a href="/vacantes">Vacantes</a>.
           </p>
         {/if}
         <ul class="queue">
@@ -138,9 +138,9 @@
                 <strong>{it.title}</strong>
                 {#if it.company}<span class="muted">— {it.company}</span>{/if}
               </div>
-              <p class="small muted">
-                {it.status ? STATUS_LABELS[it.status] : "Aún no está en el tablero"} ·
-                CV adaptado: {it.pdf_path ? "sí" : "no"}
+              <p class="chips">
+                {#if it.pdf_path}<span class="chip ok"><Icon name="check" size={16} /> CV adaptado</span>{/if}
+                {#if it.status}<span class="chip">{STATUS_LABELS[it.status]}</span>{/if}
               </p>
               <div class="row">
                 {#if !it.pdf_path}
@@ -205,4 +205,11 @@
   .plain { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.3rem; }
   .plain .row { justify-content: space-between; }
   .qa { display: flex; flex-direction: column; gap: 0.3rem; border-top: 1px solid var(--border); padding-top: 0.5rem; }
+  .chips { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 0.4rem 0 0.6rem; }
+  .chips:empty { display: none; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.15rem 0.6rem; border-radius: var(--radius-s);
+    background: var(--md-surface-container-highest); color: var(--md-on-surface-variant); font-size: 0.875rem; font-weight: 650;
+  }
+  .chip.ok { background: var(--md-success-container); color: var(--md-on-success-container); }
 </style>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Select from "$lib/components/Select.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { goto } from "$app/navigation";
   import { api, jobsApi, rememberProfile, REMOTE_LABELS, type CvMaster, type Profile, type RemotePref } from "$lib/api";
@@ -106,14 +107,12 @@
     {#if step === 0}
       <h2>Tu perfil</h2>
       <p class="muted small">
-        Un perfil guarda tu CV y las vacantes que te interesan. Puedes crear más después,
-        por ejemplo uno por tipo de trabajo.
+        Guarda tu CV y tus búsquedas. Puedes crear más después.
       </p>
       <label>¿Cómo quieres llamarlo?<input bind:value={name} placeholder="Mi búsqueda" /></label>
       <label>¿Qué tipo de trabajo buscas?
-        <select bind:value={remote}>
-          {#each Object.entries(REMOTE_LABELS) as [value, label]}<option {value}>{label}</option>{/each}
-        </select>
+        <Select bind:value={remote} label="Tipo de trabajo"
+          options={Object.entries(REMOTE_LABELS).map(([value, label]) => ({ value: value as RemotePref, label }))} />
       </label>
       <div class="row">
         <button class="primary" onclick={createProfile} disabled={busy || !name.trim()}>Siguiente</button>
@@ -147,7 +146,7 @@
           <button onclick={() => (step = 2)}>Saltar: escribiré mi CV a mano en Perfiles</button>
         </div>
       {:else if !cv}
-        <p>Elige tu CV en PDF o Word. La IA lo leerá y lo pasará a un formato que la app entiende.</p>
+        <p>Elige tu CV en PDF o Word.</p>
         <label class="filebtn">
           <input type="file" accept=".pdf,.docx" onchange={importFile} disabled={busy} />
           <span>{busy ? "Leyendo tu CV…" : "Elegir archivo"}</span>
@@ -174,8 +173,7 @@
     {:else if step === 2}
       <h2>¿Qué puestos buscas?</h2>
       <p class="muted small">
-        Escribe los nombres de los puestos como aparecen en los anuncios, separados por comas.
-        Con ellos buscamos vacantes.
+        Como aparecen en los anuncios, separados por comas.
       </p>
       <label>Puestos<input bind:value={titles} placeholder="Editor de video, Motion designer" /></label>
       <div class="row">
@@ -184,7 +182,7 @@
     {:else}
       <h2>Buscar vacantes</h2>
       {#if found === null}
-        <p>Buscaremos en varios portales de empleo remoto las vacantes que encajan con tus puestos.</p>
+        <p>Buscaremos en varios portales de empleo remoto.</p>
         <div class="row">
           <button class="primary" onclick={search} disabled={busy}>{busy ? "Buscando…" : "Buscar vacantes"}</button>
         </div>
@@ -195,8 +193,7 @@
           <p>No encontramos vacantes con esos puestos. En Perfiles puedes probar con otros nombres más comunes (también en inglés).</p>
         {/if}
         <p class="muted small">
-          En Vacantes verás cuánto encaja cada una con tu CV. Desde ahí puedes adaptar tu CV a la que
-          te guste y seguirla en el Tablero.
+          En Vacantes verás cuáles encajan mejor contigo.
         </p>
         <div class="row">
           <button class="primary" onclick={() => goto("/vacantes")}>Ver vacantes</button>

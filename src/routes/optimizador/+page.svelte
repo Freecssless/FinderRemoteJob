@@ -111,8 +111,7 @@
     {:else if !view}
       <div class="card">
         <p>
-          La IA analiza la vacante, propone cómo redactar tu resumen y tus logros, y el guardián rechaza
-          cualquier dato que no esté en tu CV maestro. Tú decides qué se usa. Nada se guarda hasta que pulses «Guardar CV».
+          La IA reescribe tu resumen y tus logros para esta vacante, sin inventar nada. Tú eliges qué usar.
         </p>
         <button class="primary" onclick={run} disabled={busy !== ""}>
           {busy === "run" ? "Analizando y redactando…" : "Generar propuesta"}
@@ -139,7 +138,7 @@
         </div>
       </div>
       {#if changed && !saved}
-        <p class="muted small">Cambiaste decisiones: el puntaje final se recalcula al guardar.</p>
+        <p class="muted small">El puntaje se actualiza al guardar.</p>
       {/if}
 
       {#if opt.prepared.notes.length}
@@ -156,12 +155,12 @@
       <div class="card">
         <h3>Lo que pide la vacante y no está en tu CV</h3>
         {#if opt.prepared.gaps.with_evidence.length}
-          <p class="small"><strong>Tu CV lo respalda</strong> (el redactor pudo usarlo): {terms(opt.prepared.gaps.with_evidence)}</p>
+          <p class="small"><strong>Ya lo tienes:</strong> {terms(opt.prepared.gaps.with_evidence)}</p>
         {/if}
         {#if opt.prepared.gaps.without_evidence.length}
           <p class="small">
-            <strong>Sin respaldo, no se agrega:</strong> {terms(opt.prepared.gaps.without_evidence)}.
-            <span class="muted">Si sí lo tienes, agrégalo a tu CV maestro en <a href="/perfiles">Perfiles</a> y genera de nuevo.</span>
+            <strong>No está en tu CV:</strong> {terms(opt.prepared.gaps.without_evidence)}.
+            <span class="muted">Si lo tienes, agrégalo en <a href="/perfiles">Perfiles</a>.</span>
           </p>
         {/if}
         {#if !opt.prepared.gaps.with_evidence.length && !opt.prepared.gaps.without_evidence.length}
@@ -215,7 +214,7 @@
           {#if issues.length}
             <p class="danger small">Rechazado por el guardián: {issues.join(" ")} Se mantiene tu texto.</p>
           {:else if !opt.choices.bullets[i]}
-            <p class="muted small">Desmarcada: tu texto tiene términos de la vacante que la propuesta pierde.</p>
+            <p class="muted small">Desmarcada: tu versión ya usa palabras del anuncio.</p>
           {/if}
         </div>
       {/each}

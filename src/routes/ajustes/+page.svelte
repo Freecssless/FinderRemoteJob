@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Select from "$lib/components/Select.svelte";
   import { revealItemInDir } from "@tauri-apps/plugin-opener";
   import { backupApi, jobsApi, settingsApi, type LlmSettings } from "$lib/api";
 
@@ -189,8 +190,7 @@
     <section class="card">
       <h2>¿Qué IA adapta tus CV?</h2>
       <p class="muted small">
-        Puedes cambiarla cuando quieras. A una IA en internet solo se envían la vacante y tu experiencia, nunca tu nombre,
-        correo, teléfono ni dirección.
+        Tu nombre, correo y teléfono nunca se envían a una IA en internet.
       </p>
 
       <fieldset class="choice" disabled={locked("FRJ_WRITER")}>
@@ -233,7 +233,7 @@
       {#if s.keyring_error}
         <p class="danger small">No se pueden guardar claves: el llavero del sistema no responde ({s.keyring_error}).</p>
       {:else if writer !== "local"}
-        <p class="muted small">La clave se guarda cifrada en el llavero de tu sistema.</p>
+        <p class="muted small">Se guarda cifrada en tu computadora.</p>
       {/if}
 
       <div class="row">
@@ -251,25 +251,28 @@
       <summary>Opciones avanzadas</summary>
 
       <h3>IA en tu computadora (Ollama)</h3>
-      {@render field("FRJ_LOCAL_URL", "Dirección de Ollama", "http://localhost:11434/v1")}
-      {@render field("FRJ_LOCAL_MODEL", "Modelo", "qwen3:8b")}
-      {@render field("FRJ_EMBED_MODEL", "Modelo de similitud (embeddings)", "bge-m3")}
+      <div class="grid">
+        {@render field("FRJ_LOCAL_URL", "Dirección de Ollama", "http://localhost:11434/v1")}
+        {@render field("FRJ_LOCAL_MODEL", "Modelo", "qwen3:8b")}
+        {@render field("FRJ_EMBED_MODEL", "Modelo de similitud", "bge-m3")}
+      </div>
       <p class="muted small">En uso: {s.local ?? "—"}</p>
 
       <h3>Claude</h3>
-      {@render field("FRJ_ANTHROPIC_MODEL", "Modelo", "claude-opus-5-5")}
-      <label>
-        Esfuerzo (más alto = mejor y más caro)
-        <select bind:value={values.FRJ_ANTHROPIC_EFFORT} disabled={locked("FRJ_ANTHROPIC_EFFORT")}>
-          <option value="">Por defecto (medium)</option>
-          {#each EFFORTS as e}<option value={e}>{e}</option>{/each}
-        </select>
-      </label>
+      <div class="grid">
+        {@render field("FRJ_ANTHROPIC_MODEL", "Modelo", "claude-opus-5-5")}
+        <label>
+          Esfuerzo (más alto = mejor y más caro)
+          <Select bind:value={values.FRJ_ANTHROPIC_EFFORT} label="Esfuerzo" disabled={locked("FRJ_ANTHROPIC_EFFORT")}
+            options={[{ value: "", label: "Por defecto (medium)" }, ...EFFORTS.map((e) => ({ value: e, label: e }))]} />
+        </label>
+      </div>
 
-      <h3>Proveedor compatible con OpenAI</h3>
-      <p class="muted small">Para Groq, OpenRouter u otro: su dirección y el nombre del modelo.</p>
-      {@render field("FRJ_OPENAI_URL", "Dirección", "https://api.openai.com/v1")}
-      {@render field("FRJ_OPENAI_MODEL", "Modelo", "")}
+      <h3>Otro proveedor compatible con OpenAI</h3>
+      <div class="grid">
+        {@render field("FRJ_OPENAI_URL", "Dirección", "https://api.openai.com/v1")}
+        {@render field("FRJ_OPENAI_MODEL", "Modelo", "")}
+      </div>
 
       <div class="row">
         <button onclick={save} disabled={saving}>{saving ? "Guardando…" : "Guardar"}</button>
@@ -331,9 +334,9 @@
   .page { display: flex; flex-direction: column; gap: 0.75rem; max-width: 720px; }
   section, .advanced { display: flex; flex-direction: column; gap: 0.6rem; }
   section h2, section p, .advanced p { margin: 0; }
-  .advanced h3 { margin: 0.6rem 0 0; }
-  .advanced summary { cursor: pointer; font-weight: 600; }
-  .advanced[open] summary { margin-bottom: 0.4rem; }
+  .advanced h3 { margin: 1.25rem 0 0.1rem; }
+  .advanced > .row { margin-top: 0.5rem; }
+  .advanced > summary { font-size: 1.375rem; }
   .choice { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.4rem; }
   .option { display: flex; flex-direction: row; gap: 0.85rem; align-items: flex-start; padding: 0.9rem 1rem; border: 1px solid var(--md-outline-variant); border-radius: var(--radius-m); cursor: pointer; color: var(--md-on-surface); transition: background-color 150ms var(--ease); }
   .option:hover { background: color-mix(in srgb, var(--md-on-surface) 6%, transparent); }

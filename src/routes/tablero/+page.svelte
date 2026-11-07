@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Select from "$lib/components/Select.svelte";
   import Icon from "$lib/components/Icon.svelte";
   import Meter from "$lib/components/Meter.svelte";
   import { rise, sheet } from "$lib/motion";
@@ -33,6 +34,36 @@
 
   let dragging = $state<string | null>(null);
   let dropTarget = $state<Status | null>(null);
+  let board = $state<HTMLDivElement>();
+  let edges = $state({ start: true, end: true });
+
+  // La rueda del ratón desplaza el tablero de lado; al llegar al borde, sigue la página.
+  function wheelScroll(node: HTMLElement) {
+    const onWheel = (e: WheelEvent) => {
+      if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      const max = node.scrollWidth - node.clientWidth;
+      const atEdge = (e.deltaY < 0 && node.scrollLeft <= 0) || (e.deltaY > 0 && node.scrollLeft >= max - 1);
+      if (max <= 0 || atEdge) return;
+      e.preventDefault();
+      node.scrollLeft += e.deltaY;
+    };
+    const onScroll = () => {
+      const max = node.scrollWidth - node.clientWidth;
+      edges = { start: node.scrollLeft <= 1, end: node.scrollLeft >= max - 1 };
+    };
+    node.addEventListener("wheel", onWheel, { passive: false });
+    node.addEventListener("scroll", onScroll, { passive: true });
+    const ro = new ResizeObserver(onScroll);
+    ro.observe(node);
+    return {
+      destroy() {
+        node.removeEventListener("wheel", onWheel);
+        node.removeEventListener("scroll", onScroll);
+        ro.disconnect();
+      },
+    };
+  }
+  const page = (dir: 1 | -1) => board?.scrollBy({ left: dir * 260, behavior: "smooth" });
 
   const today = new Date().toISOString().slice(0, 10);
   const day = (iso: string | null) => iso?.slice(0, 10) ?? "";
@@ -206,9 +237,8 @@
       <h1>Tablero</h1>
       <label class="inline">
         Perfil
-        <select bind:value={profileId} onchange={changeProfile} disabled={!profiles.length}>
-          {#each profiles as p}<option value={p.id}>{p.name}</option>{/each}
-        </select>
+        <Select bind:value={profileId} label="Perfil" onchange={changeProfile} disabled={!profiles.length}
+          options={profiles.map((p) => ({ value: p.id, label: p.name }))} />
       </label>
       <div class="segmented" role="group" aria-label="Vista">
         <button aria-pressed={view === "kanban"} onclick={() => (view = "kanban")}>Kanban</button>
@@ -265,17 +295,13 @@
       <div class="filters row">
         {#if view === "lista"}
           <label>Estado
-            <select bind:value={filters.status}>
-              <option value="">Todos</option>
-              {#each STATUSES as s}<option value={s.id}>{s.label}</option>{/each}
-            </select>
+            <Select bind:value={filters.status} label="Estado"
+              options={[{ value: "", label: "Todos" }, ...STATUSES.map((s) => ({ value: s.id, label: s.label }))]} />
           </label>
         {/if}
         <label>Portal
-          <select bind:value={filters.source}>
-            <option value="">Todos</option>
-            {#each sources as s}<option value={s}>{SOURCE_LABELS[s] ?? s}</option>{/each}
-          </select>
+          <Select bind:value={filters.source} label="Portal"
+            options={[{ value: "", label: "Todos" }, ...sources.map((s) => ({ value: s, label: SOURCE_LABELS[s] ?? s }))]} />
         </label>
         <label>Desde <input type="date" bind:value={filters.from} /></label>
         <label>Hasta <input type="date" bind:value={filters.to} /></label>
@@ -285,13 +311,7 @@
         {#if filtered}<button class="link" onclick={() => (filters = { ...NO_FILTERS })}>Quitar filtros</button>{/if}
       </div>
       </details>
-      <p class="muted small">
-        {#if view === "kanban"}
-          Arrastra una tarjeta a otra columna para cambiar su estado, o cámbialo en su ficha.
-        {:else}
-          {visible.length} de {rows.length} postulaciones. Las fechas son de postulación (o de hallazgo si aún no te postulas).
-        {/if}
-      </p>
+      {#if view === "lista"}<p class="muted small">{visible.length} de {rows.length} postulaciones</p>{/if}
       {#if view === "lista"}
         <div class="list">
           {#if visible.length}
@@ -327,7 +347,12 @@
           {/if}
         </div>
       {:else}
-      <div class="board">
+      <div class="boardnav">
+        <span class="muted small">Arrastra las tarjetas para cambiar su estado</span>
+        <button class="icon-btn" onclick={() => page(-1)} disabled={edges.start} aria-label="Columnas anteriores"><Icon name="chevron_left" size={24} /></button>
+        <button class="icon-btn" onclick={() => page(1)} disabled={edges.end} aria-label="Columnas siguientes"><Icon name="chevron_right" size={24} /></button>
+      </div>
+      <div class="board" class:more-start={!edges.start} class:more-end={!edges.end} bind:this={board} use:wheelScroll>
         {#each columns as col (col.id)}
           <section
             class="col"
@@ -337,7 +362,8 @@
             ondragleave={() => { if (dropTarget === col.id) dropTarget = null; }}
             ondrop={(e) => onDrop(e, col.id)}
           >
-            <h2>{col.label} <span class="muted">{col.items.length}</span></h2>
+            <h2>{col.label} <span class="count">{col.items.length}</span></h2>
+            {#if !col.items.length}<div class="drop" aria-hidden="true">Suelta aquí</div>{/if}
             {#each col.items as r (r.application.id)}
               {@const a = r.application}
               <button
@@ -403,9 +429,8 @@
 
       <label>
         Estado
-        <select value={a.status} onchange={(e) => move(a.id, e.currentTarget.value as Status)}>
-          {#each STATUSES as s}<option value={s.id}>{s.label}</option>{/each}
-        </select>
+        <Select value={a.status} label="Estado" onchange={(v) => move(a.id, v as Status)}
+          options={STATUSES.map((s) => ({ value: s.id, label: s.label }))} />
       </label>
 
       <dl class="dates small">
@@ -483,11 +508,12 @@
   .main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
   header { margin-bottom: 1rem; }
   header h1 { margin: 0 1rem 0 0; }
-  header label.inline select { width: auto; }
+  header label.inline :global(.select) { width: auto; min-width: 11rem; }
   .search { max-width: 260px; margin-left: auto; }
   .filters { align-items: end; margin-bottom: 0.25rem; }
   .filters label { width: auto; }
-  .filters select, .filters input[type="number"] { width: auto; max-width: 11rem; }
+  .filters :global(.select) { min-width: 10rem; }
+  .filters input[type="number"] { width: auto; max-width: 11rem; }
   .list { flex: 1; min-height: 0; overflow: auto; }
   .list table { width: 100%; border-collapse: collapse; }
   .list th, .list td { padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--border); text-align: left; }
@@ -496,19 +522,35 @@
   .list tbody th button { text-align: left; }
   .list tr.active { background: var(--accent-soft); }
   .list .num { text-align: right; }
-  /* Columnas que caben enteras (4, o 2 en ventanas angostas); el desplazamiento se detiene en el borde de una columna. */
+  /* Columnas de ancho fijo y alto según su contenido; la rueda del ratón las recorre de lado. */
   .board {
-    display: flex; gap: 0.75rem; overflow-x: auto; flex: 1; min-height: 360px; padding-bottom: 0.5rem;
-    scroll-snap-type: x mandatory; container-type: inline-size;
+    display: flex; align-items: flex-start; gap: 0.75rem; overflow-x: auto; padding: 0.25rem 0.25rem 0.75rem;
+    scroll-padding-inline: 0.25rem; overscroll-behavior-x: contain;
+    --fade-l: 0px; --fade-r: 0px;
+    mask-image: linear-gradient(to right, transparent 0, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent 100%);
   }
-  .board > .col { flex: 0 0 calc((100cqi - 2.25rem) / 4); scroll-snap-align: start; }
-  @container (max-width: 780px) { .board > .col { flex-basis: calc((100cqi - 0.75rem) / 2); } }
+  /* Desvanecido en el borde donde hay más columnas. */
+  .board.more-start { --fade-l: 40px; }
+  .board.more-end { --fade-r: 56px; }
+  .boardnav { display: flex; align-items: center; gap: 0.25rem; margin: -0.25rem 0 0.25rem; }
+  .boardnav span { margin-right: auto; }
+  .cardbtn { cursor: grab; }
+  .cardbtn:active { cursor: grabbing; }
   .col {
-    flex: 0 0 220px; display: flex; flex-direction: column; gap: 0.5rem;
-    background: var(--md-surface-container); border: 2px dashed transparent; border-radius: var(--radius-l); padding: 0.6rem; overflow-y: auto;
+    flex: 0 0 248px; display: flex; flex-direction: column; gap: 0.5rem;
+    background: var(--md-surface-container); border: 2px dashed transparent; border-radius: var(--radius-l); padding: 0.5rem;
+    transition: background-color 150ms var(--ease), border-color 150ms var(--ease);
   }
   .col.target { border-color: var(--md-primary); background: var(--md-primary-container); }
-  .col h2 { font-size: 0.9375rem; margin: 0.2rem 0.4rem 0.3rem; display: flex; justify-content: space-between; color: var(--md-on-surface-variant); }
+  .col h2 { font-size: 0.9375rem; margin: 0.25rem 0.35rem 0.1rem; display: flex; align-items: center; justify-content: space-between; color: var(--md-on-surface-variant); }
+  .count {
+    min-width: 1.75rem; padding: 0 0.45rem; border-radius: var(--radius-full); text-align: center;
+    background: var(--md-surface-container-highest); color: var(--md-on-surface-variant); font-size: 0.875rem; font-weight: 700;
+  }
+  .drop {
+    display: grid; place-items: center; min-height: 56px; border-radius: var(--radius-m);
+    border: 1.5px dashed var(--md-outline-variant); color: var(--md-on-surface-variant); font-size: 0.875rem;
+  }
   .cardbtn {
     display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 0.25rem;
     text-align: left; width: 100%; min-height: 0; padding: 0.7rem 0.8rem;

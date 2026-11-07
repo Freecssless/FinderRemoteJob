@@ -162,13 +162,6 @@ input:not([type="checkbox"], [type="radio"], [type="file"]):focus-visible, selec
   box-shadow: inset 0 0 0 1px var(--md-primary);
 }
 input:disabled, select:disabled, textarea:disabled { opacity: 0.6; cursor: not-allowed; }
-select {
-  appearance: none;
-  padding-right: 2.5rem;
-  background: no-repeat right 0.75rem center / 20px
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960' fill='%23737783'%3E%3Cpath d='M480-361q-8 0-15-2.5t-13-8.5L268-556q-11-11-11-28t11-28q11-11 28-11t28 11l156 156 156-156q11-11 28-11t28 11q11 11 11 28t-11 28L508-372q-6 6-13 8.5t-15 2.5Z'/%3E%3C/svg%3E");
-}
-select option { background: var(--md-surface-container-high); color: var(--md-on-surface); }
 textarea { resize: vertical; min-height: 5rem; line-height: 1.5; }
 input[type="checkbox"], input[type="radio"] { width: 18px; height: 18px; margin: 0; accent-color: var(--md-primary); cursor: pointer; }
 
@@ -222,6 +215,10 @@ button.primary.danger, button.danger.filled { background: var(--md-error); borde
 .filebtn:hover span { background: color-mix(in srgb, var(--md-on-secondary-container) 8%, var(--md-secondary-container)); }
 .filebtn:focus-within span { outline: 3px solid var(--md-primary); outline-offset: 2px; }
 .filebtn:has(input:disabled) span { opacity: 0.6; cursor: not-allowed; }
+
+/* Botón de icono (M3): círculo de 40px sin borde. */
+button.icon-btn { width: 40px; min-height: 40px; padding: 0; border: 0; border-radius: var(--radius-full); color: var(--md-on-surface-variant); }
+button.icon-btn:disabled { border: 0; background: transparent; opacity: 0.38; }
 
 /* Un enlace que lleva a otra pantalla, con aspecto de botón. */
 a.button {
@@ -288,7 +285,25 @@ p.ok[role="status"] {
 .notice .muted { color: inherit; opacity: 0.85; }
 .notice ul { margin: 0.4rem 0 0; padding-left: 1.2rem; }
 
-details > summary { cursor: pointer; font-weight: 650; padding: 0.5rem 0; }
+/* Panel expandible (M3): fila con flecha que gira, capa de estado y foco visible. */
+details { border-radius: var(--radius-m); }
+details > summary {
+  display: flex; align-items: center; gap: 0.6rem; list-style: none;
+  min-height: 48px; padding: 0 0.75rem; margin: 0 -0.75rem; border-radius: var(--radius-m);
+  cursor: pointer; font-weight: 650; color: var(--md-on-surface);
+  transition: background-color 150ms var(--ease);
+}
+details > summary::-webkit-details-marker { display: none; }
+details > summary::after {
+  content: ""; margin-left: auto; flex: none; width: 24px; height: 24px; background: var(--md-on-surface-variant);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-361q-8 0-15-2.5t-13-8.5L268-556q-11-11-11-28t11-28q11-11 28-11t28 11l156 156 156-156q11-11 28-11t28 11q11 11 11 28t-11 28L508-372q-6 6-13 8.5t-15 2.5Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  transition: transform 250ms var(--ease-decel);
+}
+details[open] > summary::after { transform: rotate(180deg); background: var(--md-primary); }
+details > summary:hover { background: color-mix(in srgb, var(--md-on-surface) 6%, transparent); }
+details > summary:focus-visible { outline: 3px solid var(--md-primary); outline-offset: -3px; }
+details[open] > summary { margin-bottom: 0.5rem; }
+details[open] > :not(summary) { animation: rise-in 240ms var(--ease-decel) both; }
 /* Abrir y cerrar con suavidad donde el motor lo permita (mejora progresiva). */
 :root { interpolate-size: allow-keywords; }
 details::details-content { height: 0; overflow: clip; transition: height 280ms var(--ease), content-visibility 280ms allow-discrete; }
@@ -305,7 +320,6 @@ details[open]::details-content { height: auto; }
 /* Entrada breve de avisos y mensajes. */
 @keyframes rise-in { from { opacity: 0; transform: translateY(6px); } }
 p[role="status"], p[role="alert"], .notice[role="status"], div[role="status"].card { animation: rise-in 240ms var(--ease-decel) both; }
-details > summary::marker { color: var(--md-primary); }
 
 table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
 th { text-align: left; font-size: 0.875rem; font-weight: 650; color: var(--md-on-surface-variant); padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--md-outline-variant); }

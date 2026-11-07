@@ -41,7 +41,7 @@
 
 <section class="card">
   <h3>Datos básicos</h3>
-  <p class="muted small">Estos datos solo los usa la plantilla; nunca se envían al redactor de IA.</p>
+  <p class="muted small">No se envían a la IA.</p>
   <div class="grid">
     <label>Nombre completo<input bind:value={cv.basics.name} /></label>
     <label>Titular<input bind:value={cv.basics.headline} placeholder="Editor de video" /></label>

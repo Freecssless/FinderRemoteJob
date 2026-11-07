@@ -219,6 +219,20 @@
 - La ficha de compatibilidad muestra «Similitud con tu CV» cuando existe.
 - `finder_infra::semantic` (`ensure`, `Vectors`), `Db::embeddings` y `Db::put_embedding`.
 
+### Desplegables, Kanban y menos texto
+- **Menús desplegables propios** (`Select.svelte`) en lugar de `<select>`: en Linux la lista salía con el estilo de GTK. Ahora siguen Material 3, con animación, marca en la opción elegida y uso completo con teclado.
+- **Paneles expandibles** («Filtros», «Opciones avanzadas», «Plazos», informe de búsqueda): fila con flecha que gira, capa de estado y entrada suave.
+- **Kanban:**
+  - La rueda del ratón desplaza el tablero de lado.
+  - Hay flechas ‹ › y un desvanecido en el borde donde hay más columnas.
+  - Las columnas miden 248px y su alto se ajusta al contenido; las vacías muestran solo «Suelta aquí».
+- **Menos texto:**
+  - Se acortaron o quitaron explicaciones en Vacantes, Postular, Optimizador, Ajustes, Bienvenida y el editor de CV.
+  - El resultado de «Buscar vacantes nuevas» es una línea («6 vacantes nuevas · 1 portal falló»), con el detalle por portal plegado.
+  - En Vacantes, «Volver a analizar con IA» pasa a botón de texto y «Abrir anuncio» a «Anuncio».
+  - En Postular, el estado de cada vacante se muestra con fichas («CV adaptado»).
+- **Opciones avanzadas:** sus campos están en dos columnas.
+
 ### Interfaz más fluida, adaptable y legible
 - **Contraste:** los botones deshabilitados («Guardar perfil», «Guardar CV», «Siguiente») eran casi invisibles, con un contraste de 1,04 a 1,4. Ahora se leen, con 3:1 o más. El texto secundario de la vacante seleccionada sube a 4,5:1 o más. Una medición automática de contraste pasa en todas las pantallas, en claro y oscuro.
 - **Tamaños de ventana:** cajón lateral desde 1100px y riel de navegación entre 720 y 1099px. La ventana mínima baja de 900 a 720px.

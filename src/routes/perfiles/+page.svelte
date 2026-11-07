@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Select from "$lib/components/Select.svelte";
   import { api, emptyCv, rememberedProfile, rememberProfile, REMOTE_LABELS, type CvMaster, type Profile, type RemotePref } from "$lib/api";
   import CvEditor from "$lib/components/CvEditor.svelte";
   import Icon from "$lib/components/Icon.svelte";
@@ -236,11 +237,8 @@
             <input bind:value={form.titles} placeholder="Editor de video, Motion designer" />
           </label>
           <label>Modalidad
-            <select bind:value={form.remote}>
-              {#each Object.entries(REMOTE_LABELS) as [value, label]}
-                <option {value}>{label}</option>
-              {/each}
-            </select>
+            <Select bind:value={form.remote} label="Modalidad"
+              options={Object.entries(REMOTE_LABELS).map(([value, label]) => ({ value: value as RemotePref, label }))} />
           </label>
           <label>Ubicaciones aceptadas (separadas por comas)
             <input bind:value={form.locations} placeholder="México, LATAM" />
