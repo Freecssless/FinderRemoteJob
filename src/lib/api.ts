@@ -290,12 +290,34 @@ export const TEMPLATES: { id: Template; label: string; hint: string }[] = [
 ];
 export const TEMPLATE_LABELS: Record<string, string> = Object.fromEntries(TEMPLATES.map((t) => [t.id, t.label]));
 
+/** El CV listo para imprimir (crates/core/src/document.rs); también es el `content_json` guardado. */
+export interface CvDocument {
+  template: Template;
+  headings: Record<"summary" | "experience" | "education" | "skills" | "certifications" | "languages", string>;
+  name: string;
+  headline: string;
+  contact: string[];
+  summary: string | null;
+  experience: { title: string; company: string; dates: string; bullets: string[] }[];
+  skills: string[];
+  education: { degree: string; institution: string; dates: string }[];
+  certifications: string[];
+  languages: string[];
+}
+export interface SavedEntry { version: CvVersion & { content_json: string; job_id: string | null }; job_title: string | null; company: string | null }
+
 export const optimizerApi = {
   get: (jobId: string, profileId: string) =>
     invoke<OptimizerView | null>("get_optimization", { jobId, profileId }),
   run: (jobId: string, profileId: string) => invoke<OptimizerView>("run_optimizer", { jobId, profileId }),
   save: (jobId: string, choices: Choices, template: Template) =>
     invoke<SavedCv>("save_optimized", { jobId, choices, template }),
+  /** `bullet` = null corrige el resumen. */
+  edit: (jobId: string, bullet: number | null, text: string) =>
+    invoke<OptimizerView>("edit_proposal", { jobId, bullet, text }),
+  preview: (jobId: string, choices: Choices, template: Template) =>
+    invoke<CvDocument>("preview_cv", { jobId, choices, template }),
+  listSaved: (profileId: string) => invoke<SavedEntry[]>("list_saved_cvs", { profileId }),
 };
 
 // ---------------------------------------------------------------------------

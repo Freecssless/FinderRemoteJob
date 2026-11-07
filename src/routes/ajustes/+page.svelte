@@ -340,10 +340,13 @@
       {#if wsMsg}<p class="small" role="status">{wsMsg}</p>{/if}
     </section>
   {/if}
+    </div>
+  </div>
   {#if s}
     <details class="card advanced">
       <summary>Opciones avanzadas</summary>
-
+      <div class="advgrid">
+      <div class="group">
       <h3>IA en tu computadora (Ollama)</h3>
       <div class="grid">
         {@render field("FRJ_LOCAL_URL", "Dirección de Ollama", "http://localhost:11434/v1")}
@@ -351,7 +354,9 @@
         {@render field("FRJ_EMBED_MODEL", "Modelo de similitud", "bge-m3")}
       </div>
       <p class="muted small">En uso: {s.local ?? "—"}</p>
+      </div>
 
+      <div class="group">
       <h3>Claude</h3>
       <div class="grid">
         {@render field("FRJ_ANTHROPIC_MODEL", "Modelo", "claude-opus-5-5")}
@@ -371,7 +376,9 @@
       <div class="row">
         <button onclick={save} disabled={saving}>{saving ? "Guardando…" : "Guardar"}</button>
       </div>
+      </div>
 
+      <div class="group">
       <h3>Empresas que sigues</h3>
       <p class="muted small">
         Vacantes de empresas concretas que publican en Greenhouse, Lever o Ashby. Pega la dirección de su página de
@@ -386,12 +393,12 @@
         <button onclick={saveBoards}>Guardar empresas</button>
         {#if boardsMsg}<span class="ok small" role="status">{boardsMsg}</span>{/if}
       </div>
+      </div>
+      </div>
 
       {#if s.env_file}<p class="muted small">Archivo .env: {s.env_file} (lo que fija manda sobre esta pantalla).</p>{/if}
     </details>
   {/if}
-    </div>
-  </div>
 
 </div>
 
@@ -404,14 +411,20 @@
   .wtable .up { color: var(--md-success); }
   .wtable .down { color: var(--md-tertiary); }
   /* Dos columnas en ventanas anchas: la IA a la izquierda; respaldo y avanzadas a la derecha. */
-  .cols { display: grid; grid-template-columns: 1fr; gap: 1rem; align-items: start; }
+  /* Las dos columnas terminan a la misma altura: la última tarjeta de cada una se estira. */
+  .cols { display: grid; grid-template-columns: 1fr; gap: 1rem; align-items: stretch; }
   .col { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+  .col > :last-child { flex: 1 1 auto; }
   @container main (min-width: 880px) { .cols { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); } }
   section, .advanced { display: flex; flex-direction: column; gap: 0.6rem; }
   section h2, section p, .advanced p { margin: 0; }
-  .advanced h3 { margin: 1.25rem 0 0.1rem; }
-  .advanced > .row { margin-top: 0.5rem; }
-  .advanced > summary { font-size: 1.375rem; }
+  /* Avanzadas a todo el ancho, debajo de las dos columnas, con sus grupos lado a lado. */
+  .advanced > summary { font-size: 1.375rem; line-height: 1.75rem; }
+  .advgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 1rem; }
+  .group { display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; padding: 1rem 1.1rem; border-radius: var(--radius-m); background: var(--md-surface-container); }
+  .group h3 { margin: 0; }
+  .group .grid { grid-template-columns: 1fr; gap: 0.75rem; }
+  .group > .row { margin-top: auto; padding-top: 0.25rem; }
   .choice { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.4rem; }
   .option { display: flex; flex-direction: row; gap: 0.85rem; align-items: flex-start; padding: 0.9rem 1rem; border: 1px solid var(--md-outline-variant); border-radius: var(--radius-m); cursor: pointer; color: var(--md-on-surface); transition: background-color 150ms var(--ease); }
   .option:hover { background: color-mix(in srgb, var(--md-on-surface) 6%, transparent); }

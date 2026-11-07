@@ -36,11 +36,18 @@
     if (cv.skills[i].id === editingSkill) editingSkill = null;
     cv.skills.splice(i, 1);
   }
-  const addEducation = () =>
-    cv.education.push({
-      id: nextId("edu", cv.education.map((e) => e.id)),
-      institution: "", degree: "", start: null, end: null,
-    });
+  // Educación: fichas con el título; al agregar se abre su editor para institución y fechas.
+  let newEdu = $state("");
+  let editingEdu = $state<string | null>(null);
+  function addEducation(e: SubmitEvent) {
+    e.preventDefault();
+    const degree = newEdu.trim();
+    if (!degree) return;
+    const id = nextId("edu", cv.education.map((x) => x.id));
+    cv.education.push({ id, institution: "", degree, start: null, end: null });
+    newEdu = "";
+    editingEdu = id;
+  }
   // Certificaciones e idiomas: mismas fichas que las habilidades.
   let newCert = $state("");
   let editingCert = $state<string | null>(null);
@@ -162,19 +169,38 @@
 </section>
 
 <section class="blk">
-<h2>Educación</h2>
-{#each cv.education as ed, i (ed.id)}
-  <section class="card item">
-    <div class="grid">
-      <label>Título<input bind:value={ed.degree} /></label>
-      <label>Institución<input bind:value={ed.institution} /></label>
-      <label>Inicio<input value={ed.start ?? ""} oninput={(e) => (ed.start = opt(e.currentTarget.value))} /></label>
-      <label>Fin<input value={ed.end ?? ""} oninput={(e) => (ed.end = opt(e.currentTarget.value))} /></label>
-    </div>
-    <button class="link danger" onclick={() => cv.education.splice(i, 1)}>Quitar</button>
-  </section>
-{/each}
-<button onclick={addEducation}><Icon name="add" /> Educación</button>
+<h2>Educación <span class="count">{cv.education.length}</span></h2>
+<section class="card">
+  {#if cv.education.length}
+    <ul class="chips" aria-label="Educación">
+      {#each cv.education as ed, i (ed.id)}
+        <li class="chip" class:sel={editingEdu === ed.id}>
+          <button class="chipname" aria-expanded={editingEdu === ed.id}
+            onclick={() => (editingEdu = editingEdu === ed.id ? null : ed.id)} title="Editar institución y fechas">
+            {ed.degree || "Sin título"}{#if ed.institution || ed.end}<span class="yrs">{[ed.institution, ed.end].filter(Boolean).join(" · ")}</span>{/if}
+          </button>
+          <button class="chipx" aria-label="Quitar {ed.degree}"
+            onclick={() => { if (editingEdu === ed.id) editingEdu = null; cv.education.splice(i, 1); }}><Icon name="close" size={18} /></button>
+        </li>
+      {/each}
+    </ul>
+  {/if}
+  {#each cv.education as ed (ed.id)}
+    {#if editingEdu === ed.id}
+      <div class="chipedit">
+        <label>Título<input bind:value={ed.degree} /></label>
+        <label>Institución<input bind:value={ed.institution} /></label>
+        <label>Inicio<input value={ed.start ?? ""} oninput={(e) => (ed.start = opt(e.currentTarget.value))} placeholder="2016" /></label>
+        <label>Fin<input value={ed.end ?? ""} oninput={(e) => (ed.end = opt(e.currentTarget.value))} placeholder="2020" /></label>
+        <button class="tonal" onclick={() => (editingEdu = null)}><Icon name="check" size={20} /> Listo</button>
+      </div>
+    {/if}
+  {/each}
+  <form class="addrow" onsubmit={addEducation}>
+    <input bind:value={newEdu} placeholder="Escribe tu título o carrera y pulsa Enter" aria-label="Nueva educación" />
+    <button type="submit" disabled={!newEdu.trim()}><Icon name="add" /> Agregar</button>
+  </form>
+</section>
 </section>
 
 <section class="blk">

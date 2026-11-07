@@ -219,6 +219,15 @@
 - La ficha de compatibilidad muestra «Similitud con tu CV» cuando existe.
 - `finder_infra::semantic` (`ensure`, `Vectors`), `Db::embeddings` y `Db::put_embedding`.
 
+### Optimizador con vista previa y correcciones, Kanban en cuadrícula
+- **Optimizador → Mis CVs**: sin vacante elegida, la pantalla muestra los CVs adaptados del perfil activo, cada uno con su miniatura, la vacante, la fecha, la plantilla y cuánto subió el puntaje. El elegido se ve en grande, con «Abrir PDF», «Mostrar en la carpeta», «Abrir DOCX» y «Adaptar de nuevo». Comando `list_saved_cvs`.
+- **Vista previa en vivo**: al adaptar, la hoja «Así quedará tu CV» se rehace al marcar propuestas o cambiar de plantilla (ahora un botón segmentado junto a la hoja). Comando `preview_cv` (`optimizer::preview`, sin generar el PDF). La hoja (`CvPaper.svelte`) se mide en `cqi`: la misma sirve de miniatura y de vista grande, y es blanca en los dos temas (tokens `--paper*`).
+- **Corregir texto**: cada propuesta (resumen y logros, también las rechazadas) se puede corregir a mano. La corrección vuelve a pasar por el guardián (`optimizer::edit_proposal`, comando `edit_proposal`): corregir una palabra no deja inventar cifras ni habilidades. Se conservan tus otras decisiones y la corregida se marca «Corregido por ti».
+- **Educación en fichas**, como Habilidades, Idiomas y Certificaciones: se escribe el título y se abre su editor para institución y fechas.
+- **Postular**: «Respuestas frecuentes» tiene pestañas («De tu CV» / «Tuyas») y toma el alto de «Cola de hoy» (mínimo 24rem), con la lista desplazable dentro. Ya no se repite la etiqueta «CV adaptado».
+- **Tablero**: el Kanban pasa de una fila con desplazamiento lateral a una cuadrícula que llena el espacio; una columna con muchas tarjetas se desplaza dentro (máximo 26rem).
+- **Ajustes**: las dos columnas terminan a la misma altura y «Opciones avanzadas» pasa a todo el ancho, debajo, con sus grupos lado a lado.
+
 ### Compatibilidad a tu medida, idiomas y certificaciones en fichas
 - **Reajuste de pesos con tus datos** (Ajustes → «Compatibilidad a tu medida»). Con 30 postulaciones con resultado claro (al menos 5 que avanzaron y 5 que no), la app sugiere pesos según qué partes del puntaje eran más altas en las que avanzaron.
   - **Qué cuenta como avanzar:** en proceso, entrevista u oferta.

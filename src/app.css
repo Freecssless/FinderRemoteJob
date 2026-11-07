@@ -34,6 +34,12 @@
   --md-inverse-on-surface: #f0f0f8;
   --md-shadow: 26 27 33;
   --md-scrim: #000000;
+  /* La hoja del CV (CvPaper) es papel en los dos temas: no se redefine en oscuro. */
+  --paper: #ffffff;
+  --on-paper: #1a1b21;
+  --on-paper-variant: #4a4e58;
+  --paper-accent: #1f50a0;
+  --paper-rule: #c3c6d3;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {

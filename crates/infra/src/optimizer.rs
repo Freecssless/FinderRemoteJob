@@ -39,6 +39,8 @@ pub enum OptimizeError {
     Io(#[from] std::io::Error),
     #[error("el redactor devolvió datos con otra forma: {0}")]
     Shape(#[from] serde_json::Error),
+    #[error("{0}")]
+    Edit(&'static str),
 }
 
 pub type Result<T> = std::result::Result<T, OptimizeError>;
@@ -191,6 +193,43 @@ pub fn apply_draft(
         ats_after,
         roundtrip,
     })
+}
+
+/// Corrección del usuario a una propuesta (`bullet` = `None` para el resumen). El texto nuevo pasa
+/// otra vez por el guardián: corregir una palabra no abre la puerta a inventar.
+pub fn edit_proposal(
+    dict: &SkillDict,
+    input: &OptimizeInput<'_>,
+    opt: &Optimization,
+    bullet: Option<usize>,
+    text: &str,
+) -> Result<Optimization> {
+    let mut draft = opt.draft.clone();
+    let text = text.trim().to_string();
+    match bullet {
+        None => match draft.summary.as_mut() {
+            Some(s) => s.text = text,
+            None => return Err(OptimizeError::Edit("No hay resumen que editar.")),
+        },
+        Some(i) => match draft.bullets.get_mut(i) {
+            Some(b) => b.text = text,
+            None => return Err(OptimizeError::Edit("Ese logro no existe.")),
+        },
+    }
+    apply_draft(dict, input, opt.prepared.clone(), draft)
+}
+
+/// El CV tal como saldría con estas decisiones, para la vista previa (sin generar el PDF).
+pub fn preview(
+    dict: &SkillDict,
+    input: &OptimizeInput<'_>,
+    opt: &Optimization,
+    choices: &Choices,
+    template: Template,
+) -> CvDocument {
+    let mut doc = build_document(dict, input, &opt.review, choices, &opt.prepared);
+    doc.template = template;
+    doc
 }
 
 /// CV final con las decisiones, y las habilidades escritas como las nombra la vacante.
@@ -543,6 +582,63 @@ mod tests {
                 .iter()
                 .any(|t| t.canonical == "TikTok")
         );
+        Ok(())
+    }
+
+    #[test]
+    fn corregir_una_propuesta_pasa_por_el_guardian() -> R {
+        let dict = SkillDict::builtin()?;
+        let (m, j) = (master()?, job());
+        let input = OptimizeInput {
+            master: &m,
+            original_text: None,
+            job: &j,
+            today: TODAY,
+        };
+        let prepared = prepare_with(&dict, &input, dictionary_only(&dict, &j), vec![]);
+        let opt = apply_draft(&dict, &input, prepared, honest_draft())?;
+
+        let fixed = edit_proposal(
+            &dict,
+            &input,
+            &opt,
+            Some(1),
+            "Reduje 30% el tiempo de entrega con plantillas reutilizables",
+        )?;
+        assert!(fixed.review.bullets[1].accepted());
+        assert_eq!(
+            fixed.review.bullets[1].proposed,
+            "Reduje 30% el tiempo de entrega con plantillas reutilizables"
+        );
+        assert!(
+            fixed
+                .document
+                .to_plain_text()
+                .contains("con plantillas reutilizables")
+        );
+
+        // Una cifra nueva escrita a mano también se rechaza.
+        let bad = edit_proposal(
+            &dict,
+            &input,
+            &opt,
+            Some(1),
+            "Reduje 90% el tiempo de entrega",
+        )?;
+        assert!(
+            bad.review.bullets[1]
+                .issues
+                .contains(&Issue::NewNumber("90".into())),
+            "{:?}",
+            bad.review.bullets[1].issues
+        );
+
+        let summary = edit_proposal(&dict, &input, &opt, None, "Editor de video para YouTube.")?;
+        assert_eq!(
+            summary.review.summary.as_ref().map(|s| s.proposed.as_str()),
+            Some("Editor de video para YouTube.")
+        );
+        assert!(edit_proposal(&dict, &input, &opt, Some(99), "x").is_err());
         Ok(())
     }
 

@@ -304,6 +304,8 @@ Una paleta M3 generada con `@material/material-color-utilities`: un azul con ofi
 
 **The Paired Theme Rule.** Todo color se escribe con su variable `--md-*`, que tiene valor claro y oscuro. Ningún hex suelto en las pantallas.
 
+**The Paper Rule.** La hoja del CV (`CvPaper`) representa el papel impreso: usa los tokens `--paper`, `--on-paper`, `--on-paper-variant`, `--paper-accent` y `--paper-rule`, que no cambian en tema oscuro. Sus medidas van en `cqi`, así la misma hoja es miniatura o vista grande.
+
 ## Typography
 
 **Display Font:** no hay; el título más grande es headline.
@@ -339,9 +341,9 @@ Un shell de dos columnas a pantalla completa: navegación a la izquierda y conte
   - Perfiles apila la lista arriba, en fila, por debajo de 760px.
   - Postular apila sus dos columnas por debajo de 820px.
   - La ficha del Tablero se vuelve hoja lateral modal con fondo atenuado (se cierra con Esc o tocando fuera) por debajo de 900px.
-  - El Optimizador pasa a una columna por debajo de 700px.
+  - El Optimizador apila la hoja de vista previa bajo las propuestas por debajo de 1100px, la lista de «Mis CVs» sobre el CV elegido por debajo de 820px, y el antes/después de cada propuesta por debajo de 700px.
 
-Cada pantalla abre con una cabecera en fila: título headline a la izquierda, selector de perfil a su lado y la acción principal (botón relleno) a la derecha, con `flex-wrap` para ventanas angostas. Las pantallas de lista y detalle (Vacantes) usan una rejilla `minmax(280px, 2fr) 3fr` con el detalle fijo (`sticky`). El Tablero muestra 4 columnas que caben enteras (2 bajo 780px de contenedor) con `scroll-snap`, y abre una ficha lateral de 340px. Las pantallas de lectura larga (Optimizador) se limitan a 960px.
+Cada pantalla abre con una cabecera en fila: título headline a la izquierda, selector de perfil a su lado y la acción principal (botón relleno) a la derecha, con `flex-wrap` para ventanas angostas. Las pantallas de lista y detalle (Vacantes) usan una rejilla `minmax(280px, 2fr) 3fr` con el detalle fijo (`sticky`). El Tablero muestra sus estados en una cuadrícula (`auto-fill, minmax(232px, 1fr)`) que llena el espacio sin desplazamiento lateral; una columna con muchas tarjetas se desplaza dentro. Abre una ficha lateral de 340px. El Optimizador usa dos rejillas: «Mis CVs» (lista con miniaturas `minmax(300px, 2fr)` y el CV elegido en grande `3fr`, fijo) y la revisión (propuestas a la izquierda y la hoja «Así quedará tu CV» fija a la derecha, de 320 a 440px). Ajustes tiene dos columnas que terminan a la misma altura y «Opciones avanzadas» a todo el ancho debajo.
 
 El ritmo es de 4px: los huecos habituales son 4, 8, 12, 16, 20 y 24px; las separaciones entre bloques, 12 a 16px; entre secciones (h2), 32px.
 

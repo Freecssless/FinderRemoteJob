@@ -22,6 +22,8 @@
   let msg = $state("");
   let faqMsg = $state("");
   let editingFaq = $state<number | null>(null);
+  // Pestañas para que el bloque no crezca más que la cola: «De tu CV» o «Tuyas».
+  let faqTab = $state<"cv" | "own">("cv");
 
   async function init() {
     try {
@@ -124,7 +126,7 @@
     <p class="notice">Primero crea un perfil en <a href="/perfiles">Perfiles</a>.</p>
   {:else}
     <div class="cols">
-      <section aria-labelledby="queue-title">
+      <section class="queuecol" aria-labelledby="queue-title">
         <h2 id="queue-title">Cola de hoy</h2>
         <p class="muted small">
           Las que más encajan contigo (70 o más) y aún no envías.
@@ -145,7 +147,7 @@
               </div>
               <p class="chips">
                 {#if it.pdf_path}<span class="chip ok"><Icon name="check" size={16} /> CV adaptado</span>{/if}
-                {#if it.status}<span class="chip">{STATUS_LABELS[it.status]}</span>{/if}
+                {#if it.status && !(it.pdf_path && it.status === "CvAdaptado")}<span class="chip">{STATUS_LABELS[it.status]}</span>{/if}
               </p>
               <div class="row">
                 {#if !it.pdf_path}
@@ -166,18 +168,23 @@
           {#if faqMsg}<p class="small" role="status">{faqMsg}</p>{/if}
 
           {#if faq.from_cv.length}
-            <h3>De tu CV</h3>
+            <div class="segmented tabs" role="tablist" aria-label="Respuestas">
+              <button role="tab" aria-selected={faqTab === "cv"} onclick={() => (faqTab = "cv")}>De tu CV</button>
+              <button role="tab" aria-selected={faqTab === "own"} onclick={() => (faqTab = "own")}>Tuyas <span class="n">{custom.length}</span></button>
+            </div>
+          {/if}
+
+          <div class="qascroll" role="tabpanel">
+          {#if faqTab === "cv" && faq.from_cv.length}
             <ul class="qalist">
               {#each faq.from_cv as f}
                 <li class="qa">
-                  <span class="qtext"><span class="q">{f.question}</span><span class="a">{f.answer}</span></span>
+                  <span class="qtext"><span class="q">{f.question}</span><span class="a" title={f.answer}>{f.answer}</span></span>
                   <button class="icon-btn" onclick={() => copy(f.answer)} aria-label="Copiar respuesta: {f.question}" title="Copiar"><Icon name="content_copy" size={20} /></button>
                 </li>
               {/each}
             </ul>
-          {/if}
-
-          <h3>Tuyas</h3>
+          {:else}
           <ul class="qalist">
             {#each custom as f, i}
               {#if editingFaq === i}
@@ -191,7 +198,7 @@
                 </li>
               {:else}
                 <li class="qa">
-                  <span class="qtext"><span class="q">{f.question || "Sin pregunta"}</span><span class="a">{f.answer || "—"}</span></span>
+                  <span class="qtext"><span class="q">{f.question || "Sin pregunta"}</span><span class="a" title={f.answer}>{f.answer || "—"}</span></span>
                   <button class="icon-btn" onclick={() => copy(f.answer)} disabled={!f.answer.trim()} aria-label="Copiar respuesta: {f.question}" title="Copiar"><Icon name="content_copy" size={20} /></button>
                   <button class="icon-btn" onclick={() => (editingFaq = i)} aria-label="Editar: {f.question}" title="Editar"><Icon name="edit" size={20} /></button>
                 </li>
@@ -200,8 +207,10 @@
               <li class="muted small">Agrega las preguntas que te repiten los formularios.</li>
             {/each}
           </ul>
-          <div class="row">
-            <button onclick={() => { custom.push({ question: "", answer: "" }); editingFaq = custom.length - 1; }}><Icon name="add" /> Pregunta</button>
+          {/if}
+          </div>
+          <div class="row faqactions">
+            <button onclick={() => { custom.push({ question: "", answer: "" }); editingFaq = custom.length - 1; faqTab = "own"; }}><Icon name="add" /> Pregunta</button>
             <button class="primary" onclick={saveFaq}>Guardar</button>
           </div>
         </section>
@@ -217,8 +226,18 @@
   section h2, section p { margin: 0 0 0.5rem; }
   .queue { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.6rem; }
   .queue p { margin: 0.3rem 0 0.5rem; }
-  .faq { display: flex; flex-direction: column; gap: 0.5rem; }
-  .faq h3 { margin: 0.75rem 0 0; font-size: 0.9375rem; color: var(--md-on-surface-variant); }
+  .faq { display: flex; flex-direction: column; gap: 0.6rem; padding: 1.1rem 1.25rem; }
+  /* Junto a la cola, el bloque toma su alto (sin bajar de 24rem) y la lista se desplaza dentro. */
+  @container main (min-width: 821px) {
+    .cols { align-items: stretch; }
+    .queuecol { align-self: start; }
+    .faq { contain: size; min-height: 24rem; }
+  }
+  .tabs { display: flex; }
+  .tabs button { flex: 1; padding: 0 0.6rem; justify-content: center; }
+  .n { font-variant-numeric: tabular-nums; opacity: 0.8; }
+  .qascroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin: 0 -0.5rem; padding: 0 0.5rem; scrollbar-width: thin; }
+  .faqactions { margin-top: auto; padding-top: 0.25rem; }
   .qalist { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
   .qa { display: flex; align-items: center; gap: 0.25rem; padding: 0.5rem 0; border-bottom: 1px solid var(--md-outline-variant); }
   .qa:last-child { border-bottom: 0; }

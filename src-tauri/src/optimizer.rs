@@ -3,9 +3,9 @@
 //! La propuesta se guarda en memoria por vacante: la interfaz solo envía las decisiones del
 //! usuario al guardar, y puede volver a la pantalla sin repetir las llamadas a la IA.
 
-use finder_infra::core::document::{Choices, Template};
+use finder_infra::core::document::{Choices, CvDocument, Template};
 use finder_infra::core::guard::Checked;
-use finder_infra::core::model::{CvMaster, Job};
+use finder_infra::core::model::{CvMaster, CvVersion, Job};
 use finder_infra::llm::LlmClient;
 use finder_infra::optimizer::{self, Optimization, OptimizeInput, SaveTarget};
 use serde::Serialize;
@@ -244,4 +244,75 @@ async fn save(
         docx_path: v.docx_path,
         missing: v.missing,
     })
+}
+
+/// Corrige a mano el texto de una propuesta (`bullet` = `None` para el resumen). El guardián lo
+/// vuelve a revisar y el puntaje se recalcula.
+#[tauri::command]
+pub fn edit_proposal(
+    state: State<'_, AppState>,
+    job_id: String,
+    bullet: Option<usize>,
+    text: String,
+) -> CmdResult<OptimizerView> {
+    let mut sessions = state.sessions.lock().map_err(err)?;
+    let s = sessions
+        .get_mut(&job_id)
+        .ok_or("La propuesta ya no está en memoria (¿reiniciaste la app?). Genérala de nuevo.")?;
+    s.opt = optimizer::edit_proposal(&state.dict, &input(s), &s.opt, bullet, &text).map_err(err)?;
+    Ok(view(s))
+}
+
+/// El CV como quedaría con tus decisiones, para la vista previa.
+#[tauri::command]
+pub fn preview_cv(
+    state: State<'_, AppState>,
+    job_id: String,
+    choices: Choices,
+    template: Template,
+) -> CmdResult<CvDocument> {
+    let sessions = state.sessions.lock().map_err(err)?;
+    let s = sessions
+        .get(&job_id)
+        .ok_or("La propuesta ya no está en memoria. Genérala de nuevo.")?;
+    Ok(optimizer::preview(
+        &state.dict,
+        &input(s),
+        &s.opt,
+        &choices,
+        template,
+    ))
+}
+
+#[derive(Debug, Serialize)]
+pub struct SavedEntry {
+    version: CvVersion,
+    job_title: Option<String>,
+    company: Option<String>,
+}
+
+/// CVs adaptados de un perfil, más recientes primero, con la vacante para la que se hicieron.
+#[tauri::command]
+pub async fn list_saved_cvs(
+    state: State<'_, AppState>,
+    profile_id: String,
+) -> CmdResult<Vec<SavedEntry>> {
+    let versions = state
+        .db
+        .list_cv_versions(&profile_id, None)
+        .await
+        .map_err(err)?;
+    let mut out = Vec::with_capacity(versions.len());
+    for version in versions {
+        let job = match &version.job_id {
+            Some(id) => state.db.get_job(id).await.map_err(err)?,
+            None => None,
+        };
+        out.push(SavedEntry {
+            job_title: job.as_ref().map(|j| j.title.clone()),
+            company: job.and_then(|j| j.company),
+            version,
+        });
+    }
+    Ok(out)
 }

@@ -37,37 +37,6 @@
 
   let dragging = $state<string | null>(null);
   let dropTarget = $state<Status | null>(null);
-  let board = $state<HTMLDivElement>();
-  let edges = $state({ start: true, end: true });
-
-  // La rueda del ratón desplaza el tablero de lado; al llegar al borde, sigue la página.
-  function wheelScroll(node: HTMLElement) {
-    const onWheel = (e: WheelEvent) => {
-      if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
-      const max = node.scrollWidth - node.clientWidth;
-      const atEdge = (e.deltaY < 0 && node.scrollLeft <= 0) || (e.deltaY > 0 && node.scrollLeft >= max - 1);
-      if (max <= 0 || atEdge) return;
-      e.preventDefault();
-      node.scrollLeft += e.deltaY;
-    };
-    const onScroll = () => {
-      const max = node.scrollWidth - node.clientWidth;
-      edges = { start: node.scrollLeft <= 1, end: node.scrollLeft >= max - 1 };
-    };
-    node.addEventListener("wheel", onWheel, { passive: false });
-    node.addEventListener("scroll", onScroll, { passive: true });
-    const ro = new ResizeObserver(onScroll);
-    ro.observe(node);
-    return {
-      destroy() {
-        node.removeEventListener("wheel", onWheel);
-        node.removeEventListener("scroll", onScroll);
-        ro.disconnect();
-      },
-    };
-  }
-  const page = (dir: 1 | -1) => board?.scrollBy({ left: dir * 260, behavior: "smooth" });
-
   const today = new Date().toISOString().slice(0, 10);
   const day = (iso: string | null) => iso?.slice(0, 10) ?? "";
 
@@ -355,10 +324,8 @@
       {:else}
       <div class="boardnav">
         <span class="muted small">Arrastra las tarjetas para cambiar su estado</span>
-        <button class="icon-btn" onclick={() => page(-1)} disabled={edges.start} aria-label="Columnas anteriores"><Icon name="chevron_left" size={24} /></button>
-        <button class="icon-btn" onclick={() => page(1)} disabled={edges.end} aria-label="Columnas siguientes"><Icon name="chevron_right" size={24} /></button>
       </div>
-      <div class="board" class:more-start={!edges.start} class:more-end={!edges.end} bind:this={board} use:wheelScroll>
+      <div class="board">
         {#each columns as col (col.id)}
           <section
             class="col"
@@ -370,6 +337,7 @@
           >
             <h2>{col.label} <span class="count">{col.items.length}</span></h2>
             {#if !col.items.length}<div class="drop" aria-hidden="true">Suelta aquí</div>{/if}
+            <div class="colcards">
             {#each col.items as r (r.application.id)}
               {@const a = r.application}
               <button
@@ -396,6 +364,7 @@
                 {/if}
               </button>
             {/each}
+            </div>
           </section>
         {/each}
       </div>
@@ -525,26 +494,24 @@
   .list tbody th button { text-align: left; }
   .list tr.active { background: var(--accent-soft); }
   .list .num { text-align: right; }
-  /* Columnas de ancho fijo y alto según su contenido; la rueda del ratón las recorre de lado. */
+  /* Estados en cuadrícula: caben todos sin desplazarse de lado y llenan el espacio de abajo. */
   .board {
-    display: flex; align-items: flex-start; gap: 0.75rem; overflow-x: auto; padding: 0.25rem 0.25rem 0.75rem;
-    scroll-padding-inline: 0.25rem; overscroll-behavior-x: contain;
-    --fade-l: 0px; --fade-r: 0px;
-    mask-image: linear-gradient(to right, transparent 0, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent 100%);
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 0.75rem;
+    align-items: stretch; padding: 0.25rem 0 0.75rem;
   }
-  /* Desvanecido en el borde donde hay más columnas. */
-  .board.more-start { --fade-l: 40px; }
-  .board.more-end { --fade-r: 56px; }
   .boardnav { display: flex; align-items: center; gap: 0.25rem; margin: -0.25rem 0 0.25rem; }
   .boardnav span { margin-right: auto; }
   .cardbtn { cursor: grab; }
   .cardbtn:active { cursor: grabbing; }
   .col {
-    flex: 0 0 248px; display: flex; flex-direction: column; gap: 0.5rem;
+    min-width: 0; display: flex; flex-direction: column; gap: 0.5rem;
     background: var(--md-surface-container); border: 2px dashed transparent; border-radius: var(--radius-l); padding: 0.5rem;
     transition: background-color 150ms var(--ease), border-color 150ms var(--ease);
   }
   .col.target { border-color: var(--md-primary); background: var(--md-primary-container); }
+  /* Una columna con muchas tarjetas se desplaza dentro y no estira su fila. */
+  .colcards { display: flex; flex-direction: column; gap: 0.5rem; max-height: 26rem; overflow-y: auto; padding: 2px; margin: -2px; scrollbar-width: thin; }
+  .colcards:empty { display: none; }
   .col h2 { font-size: 0.9375rem; margin: 0.25rem 0.35rem 0.1rem; display: flex; align-items: center; justify-content: space-between; color: var(--md-on-surface-variant); }
   .count {
     min-width: 1.75rem; padding: 0 0.45rem; border-radius: var(--radius-full); text-align: center;
