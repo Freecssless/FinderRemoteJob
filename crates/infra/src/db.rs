@@ -376,6 +376,16 @@ impl Db {
     }
 
     /// Vacantes más recientes primero.
+    /// Vacantes encontradas en las últimas `hours` horas (aviso «nuevas» del menú).
+    pub async fn count_jobs_found_within(&self, hours: u32) -> Result<i64> {
+        Ok(sqlx::query_scalar(
+            "SELECT COUNT(*) FROM jobs WHERE found_at >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', ?)",
+        )
+        .bind(format!("-{hours} hours"))
+        .fetch_one(&self.pool)
+        .await?)
+    }
+
     pub async fn list_jobs(&self, limit: u32) -> Result<Vec<Job>> {
         sqlx::query("SELECT * FROM jobs ORDER BY found_at DESC, id DESC LIMIT ?")
             .bind(limit)
@@ -1051,6 +1061,17 @@ mod tests {
             ))
             .await?;
         Ok((db, p, j.id))
+    }
+
+    #[tokio::test]
+    async fn cuenta_solo_las_vacantes_recientes() -> R {
+        let (db, _, _) = setup().await?; // su vacante es de 2026-11-05
+        assert_eq!(db.count_jobs_found_within(24).await?, 0);
+        let mut nueva = job("j2", "Motion designer", "Estudio Y", "After Effects");
+        nueva.found_at = db.now().await?;
+        db.insert_job(&nueva).await?;
+        assert_eq!(db.count_jobs_found_within(24).await?, 1);
+        Ok(())
     }
 
     #[tokio::test]

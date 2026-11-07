@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { untrack } from "svelte";
+  import { profileStore } from "$lib/profile.svelte";
   import PageHead from "$lib/components/PageHead.svelte";
   import Select from "$lib/components/Select.svelte";
   import Icon from "$lib/components/Icon.svelte";
@@ -227,6 +229,15 @@
     if (id) move(id, status);
   }
 
+  // El perfil se elige en el menú lateral: al cambiarlo, esta pantalla se recarga.
+  $effect(() => {
+    const id = profileStore.id;
+    if (id && id !== profileId && profiles.some((p) => p.id === id)) {
+      profileId = id;
+      untrack(() => changeProfile());
+    }
+  });
+
   init();
 </script>
 
@@ -235,11 +246,6 @@
 <div class="page" class:with-detail={selected}>
   <div class="main">
     <PageHead icon="view_kanban" title="Tablero" subtitle="Sigue cada postulación hasta la respuesta" tone="secondary">
-      <label class="inline">
-        Perfil
-        <Select bind:value={profileId} label="Perfil" onchange={changeProfile} disabled={!profiles.length}
-          options={profiles.map((p) => ({ value: p.id, label: p.name }))} />
-      </label>
       <div class="segmented" role="group" aria-label="Vista">
         <button aria-pressed={view === "kanban"} onclick={() => (view = "kanban")}>Kanban</button>
         <button aria-pressed={view === "lista"} onclick={() => (view = "lista")}>Lista</button>

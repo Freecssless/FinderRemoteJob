@@ -219,6 +219,11 @@
 - La ficha de compatibilidad muestra «Similitud con tu CV» cuando existe.
 - `finder_infra::semantic` (`ensure`, `Vectors`), `Db::embeddings` y `Db::put_embedding`.
 
+### Perfil activo en el menú
+- **Selector único:** el perfil se elige una sola vez en el menú lateral («Perfil activo»), en lugar de un selector en Vacantes, Postular y Tablero. Esas pantallas se recargan solas al cambiarlo, y las pestañas de Perfiles también lo cambian. En el riel de ventanas medianas aparece como un círculo con la inicial, que lleva a Perfiles.
+- **Avisos más ligeros:** se calculan con un solo comando, `nav_counts`, en vez de cargar todas las vacantes en cada cambio de pantalla. Las vacantes nuevas se cuentan con una consulta SQL (`Db::count_jobs_found_within`).
+- **Prueba en vivo de la similitud semántica** con `bge-m3`: la vacante parecida al CV puntúa 0,74 y una sin relación 0,38.
+
 ### Más fácil de navegar, sin huecos y con más personalidad
 - **Encabezado común en cada pantalla:** un icono de color propio de la sección (con una entrada animada), el título, una línea que dice para qué sirve y las acciones a la derecha.
 - **Avisos en el menú:** cuántas vacantes nuevas hay (24 h), cuántas esperan en Postular y cuántos recordatorios vencieron en el Tablero.

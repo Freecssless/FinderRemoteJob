@@ -107,6 +107,41 @@ async fn ollama_status(state: State<'_, AppState>) -> CmdResult<OllamaStatus> {
     })
 }
 
+/// Avisos del menú: vacantes nuevas (24 h), pendientes de postular y recordatorios vencidos.
+#[derive(Debug, Serialize)]
+struct NavCounts {
+    new_jobs: i64,
+    queue: usize,
+    due: usize,
+}
+
+#[tauri::command]
+async fn nav_counts(
+    state: State<'_, AppState>,
+    profile_id: Option<String>,
+) -> CmdResult<NavCounts> {
+    let new_jobs = state.db.count_jobs_found_within(24).await.map_err(err)?;
+    let Some(pid) = profile_id else {
+        return Ok(NavCounts {
+            new_jobs,
+            queue: 0,
+            due: 0,
+        });
+    };
+    let due = state
+        .db
+        .list_due_reminders(Some(&pid))
+        .await
+        .map_err(err)?
+        .len();
+    let queue = queue::application_queue(state, pid).await?.len();
+    Ok(NavCounts {
+        new_jobs,
+        queue,
+        due,
+    })
+}
+
 #[tauri::command]
 async fn list_profiles(state: State<'_, AppState>) -> CmdResult<Vec<Profile>> {
     state.db.list_profiles().await.map_err(err)
@@ -248,6 +283,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             app_info,
             ollama_status,
+            nav_counts,
             backup::create_backup,
             backup::restore_backup,
             list_profiles,

@@ -2,7 +2,9 @@
   import { onNavigate } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
-  import { api, boardApi, jobsApi, queueApi, rememberedProfile, type AppInfo } from "$lib/api";
+  import { api, type AppInfo } from "$lib/api";
+  import Select from "$lib/components/Select.svelte";
+  import { chooseProfile, profileStore, refreshProfiles } from "$lib/profile.svelte";
   import Icon from "$lib/components/Icon.svelte";
   import type { IconName } from "$lib/icons";
   import "../app.css";
@@ -12,18 +14,16 @@
   // Se vuelve a pedir al navegar: los Ajustes pueden cambiar los modelos.
   // Avisos del menú: vacantes nuevas (24 h), pendientes de postular y recordatorios vencidos.
   let badges = $state<Record<string, number>>({});
+  onMount(() => void refreshProfiles().catch(() => {}));
   $effect(() => {
     void page.url.pathname;
+    const pid = profileStore.id;
     api.appInfo().then((i) => (info = i)).catch(() => {});
-    const pid = rememberedProfile();
-    if (!pid) return;
-    const day = Date.now() - 86_400_000;
-    Promise.all([
-      jobsApi.list(pid, "").then((r) => r.filter((j) => Date.parse(j.found_at) > day).length).catch(() => 0),
-      queueApi.list(pid).then((r) => r.length).catch(() => 0),
-      boardApi.dueReminders(pid).then((r) => r.length).catch(() => 0),
-    ]).then(([vacantes, cola, tablero]) => (badges = { "/vacantes": vacantes, "/cola": cola, "/tablero": tablero }));
+    api.navCounts(pid)
+      .then((c) => (badges = { "/vacantes": c.new_jobs, "/cola": c.queue, "/tablero": c.due }))
+      .catch(() => {});
   });
+  const current_profile = $derived(profileStore.list.find((p) => p.id === profileStore.id) ?? null);
   const badgeLabel: Record<string, string> = { "/vacantes": "nuevas", "/cola": "por enviar", "/tablero": "recordatorios" };
 
   // Onda de M3 al pulsar: nace donde tocas y se desvanece.
@@ -74,6 +74,18 @@
       <span class="mark" aria-hidden="true"><Icon name="travel_explore" size={22} /></span>
       <span class="brandname">FinderRemoteJob</span>
     </a>
+    {#if profileStore.list.length}
+      <div class="profilesel">
+        <span class="plabel">Perfil activo</span>
+        <Select value={profileStore.id} label="Perfil activo" onchange={(id) => chooseProfile(id)}
+          options={profileStore.list.map((p) => ({ value: p.id, label: p.name }))} />
+      </div>
+      {#if current_profile}
+        <a class="pavatar" href="/perfiles" title="Perfil activo: {current_profile.name}" aria-label="Perfil activo: {current_profile.name}">
+          {current_profile.name.trim().charAt(0).toUpperCase()}
+        </a>
+      {/if}
+    {/if}
     <nav aria-label="Secciones">
       {#each nav as item}
         {@const on = current(item.href)}
@@ -129,6 +141,10 @@
     background: var(--md-primary); color: var(--md-on-primary);
     box-shadow: var(--elev-1);
   }
+  .profilesel { display: flex; flex-direction: column; gap: 0.3rem; padding: 0 0.25rem; }
+  .plabel { font-size: 0.875rem; font-weight: 650; color: var(--md-on-surface-variant); padding-left: 0.5rem; }
+  .profilesel :global(.select) { border-radius: var(--radius-m); background: var(--md-surface-container-lowest); }
+  .pavatar { display: none; }
   nav { display: flex; flex-direction: column; gap: 0.25rem; }
   nav a {
     position: relative; isolation: isolate;
@@ -179,6 +195,12 @@
     .shell { grid-template-columns: 96px 1fr; }
     aside { padding: 1rem 0.25rem; align-items: center; gap: 1rem; }
     .brand { padding: 0; justify-content: center; }
+    .profilesel { display: none; }
+    .pavatar {
+      display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
+      background: var(--md-secondary-container); color: var(--md-on-secondary-container);
+      font-weight: 750; text-decoration: none;
+    }
     .brandname { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
     nav { gap: 0.6rem; width: 100%; }
     nav a {

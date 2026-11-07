@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { untrack } from "svelte";
+  import { profileStore } from "$lib/profile.svelte";
   import PageHead from "$lib/components/PageHead.svelte";
   import Select from "$lib/components/Select.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
@@ -177,16 +179,20 @@
   // `found_at` viene en UTC: «nueva» = encontrada en las últimas 24 horas.
   const isNew = (iso: string) => Date.now() - Date.parse(iso) < 86_400_000;
 
+  // El perfil se elige en el menú lateral: al cambiarlo, esta pantalla se recarga.
+  $effect(() => {
+    const id = profileStore.id;
+    if (id && id !== profileId && profiles.some((p) => p.id === id)) {
+      profileId = id;
+      untrack(() => changeProfile());
+    }
+  });
+
   init();
 </script>
 
 <div class="page">
   <PageHead icon="work" title="Vacantes" subtitle="Ofertas remotas, ordenadas por qué tanto encajan contigo">
-    <label class="inline">
-      Perfil
-      <Select bind:value={profileId} label="Perfil" onchange={changeProfile} disabled={!profiles.length}
-        options={profiles.map((p) => ({ value: p.id, label: p.name }))} />
-    </label>
     <button class="primary" onclick={sync} disabled={!profileId || busy !== ""}>
       {busy === "sync" ? "Buscando en las fuentes…" : "Buscar vacantes nuevas"}
     </button>

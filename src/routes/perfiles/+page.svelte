@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { chooseProfile, refreshProfiles } from "$lib/profile.svelte";
   import PageHead from "$lib/components/PageHead.svelte";
   import Select from "$lib/components/Select.svelte";
-  import { api, emptyCv, rememberedProfile, rememberProfile, REMOTE_LABELS, type CvMaster, type Profile, type RemotePref } from "$lib/api";
+  import { api, emptyCv, rememberedProfile, REMOTE_LABELS, type CvMaster, type Profile, type RemotePref } from "$lib/api";
   import CvEditor from "$lib/components/CvEditor.svelte";
   import Icon from "$lib/components/Icon.svelte";
 
@@ -88,7 +89,7 @@
     if (!p) return;
     creating = false;
     selectedId = id;
-    rememberProfile(id);
+    chooseProfile(id);
     confirmDelete = false;
     warnings = [];
     sourceText = null;
@@ -123,6 +124,7 @@
         profiles = [...profiles, p];
         await open(p.id);
         done("Perfil creado. Ahora importa o escribe tu CV maestro.");
+        void refreshProfiles();
       } else if (selected) {
         const p = { ...selected, ...fields };
         await api.updateProfile(p);
@@ -130,6 +132,7 @@
         form.titles = p.target_titles.join(", ");
         form.locations = p.locations.join(", ");
         done("Perfil guardado.");
+        void refreshProfiles();
       }
     } catch (e) {
       fail(e);
@@ -148,6 +151,7 @@
       cv = null;
       profiles.length ? await open(profiles[0].id) : startNew();
       done("Perfil borrado.");
+      void refreshProfiles();
     } catch (e) {
       fail(e);
     } finally {

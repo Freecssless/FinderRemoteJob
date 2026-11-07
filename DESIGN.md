@@ -441,6 +441,9 @@ Cuadro de 52px con radio de 16px y el icono de la sección en un contenedor tona
 
 Al aparecer, el cuadro escala y gira levemente (420ms). Al lado van el título (headline) y una línea que dice para qué sirve la pantalla, en tinta secundaria. Las acciones van a la derecha y bajan a una segunda fila si no caben.
 
+### Perfil activo
+En el cajón, bajo la marca, aparece el rótulo «Perfil activo» y un menú desplegable con radio de 12px sobre `surface-container-lowest`. En el riel se reduce a un círculo de 40px con la inicial, en `secondary-container`, que lleva a Perfiles. Es la única forma de elegir perfil: ninguna pantalla repite el selector.
+
 ### Avisos de navegación
 Píldora `tertiary-container` (cempasúchil, porque es «lo nuevo») a la derecha del destino en el cajón, o sobre el icono en el riel. Entra con un pequeño rebote. Muestra:
 - **Vacantes:** vacantes encontradas en las últimas 24 horas.
