@@ -97,7 +97,7 @@ mod tests {
         let text = verify(&d, &render_pdf(&d)?, CvFileKind::Pdf)?.text;
         let pos = |h: &str| text.find(h);
         assert!(
-            pos("HABILIDADES") < pos("EXPERIENCIA PROFESIONAL"),
+            pos("Habilidades\n") < pos("Experiencia profesional"),
             "{text}"
         );
         Ok(())
@@ -157,14 +157,14 @@ mod tests {
         Ok(())
     }
 
-    /// Caso real: pdf-extract lee "VillegasEditor de Video": la palabra está, solo pegada.
+    /// Caso real: pdf-extract pega líneas ("VillegasEditor", "Videoejemplo@…"): la palabra está.
     #[test]
     fn palabras_pegadas_al_cambiar_de_linea_no_cuentan_como_perdidas() -> R {
         let mut d = doc(DocLang::Es)?;
         d.name = "Gael Cabrera Villegas".into();
         d.headline = "Editor de Video".into();
         let rt = verify(&d, &render_pdf(&d)?, CvFileKind::Pdf)?;
-        assert!(rt.text.contains("VillegasEditor"), "{}", rt.text);
+        assert!(rt.text.contains("Videoejemplo"), "{}", rt.text);
         assert!(rt.missing_words.is_empty(), "{:?}", rt.missing_words);
         Ok(())
     }

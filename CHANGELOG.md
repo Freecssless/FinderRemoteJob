@@ -219,6 +219,13 @@
 - La ficha de compatibilidad muestra «Similitud con tu CV» cuando existe.
 - `finder_infra::semantic` (`ensure`, `Vectors`), `Db::embeddings` y `Db::put_embedding`.
 
+### CVs generados con el aspecto de la vista previa y corrección de CVs guardados
+- **PDF y DOCX con el estilo de la vista previa**: nombre grande, titular y encabezados en azul talavera con una línea fina debajo, fechas a la derecha, empresa o institución en gris, habilidades separadas por « · » y certificaciones e idiomas en lista. Los encabezados ya no van en mayúsculas. La vista previa usa la misma fuente que los archivos (Liberation Sans, incluida en `static/fonts`) y el tamaño carta.
+- **Corregir un CV ya guardado** (Optimizador → Mis CVs → «Corregir texto»): se edita todo el texto (encabezado, resumen, logros, educación, habilidades, certificaciones e idiomas) con la hoja al lado actualizándose al escribir. Al guardar se rehacen el PDF y el DOCX en los mismos archivos y se recalcula el puntaje (`optimizer::update_saved`, comando `update_saved_cv`, `Db::update_cv_version`). Es tu texto, así que no pasa por el guardián de la IA.
+- `CvDocument` y `Headings` se pueden leer de vuelta del `content_json` (los encabezados pasan a `String`).
+- **Educación**: fichas de dos líneas con más aire (título; institución y años por separado).
+- **Ajustes → Compatibilidad a tu medida**: mientras no hay datos suficientes, la tarjeta muestra cómo se reparte hoy el puntaje (barras por parte) en lugar de un hueco vacío.
+
 ### Optimizador con vista previa y correcciones, Kanban en cuadrícula
 - **Optimizador → Mis CVs**: sin vacante elegida, la pantalla muestra los CVs adaptados del perfil activo, cada uno con su miniatura, la vacante, la fecha, la plantilla y cuánto subió el puntaje. El elegido se ve en grande, con «Abrir PDF», «Mostrar en la carpeta», «Abrir DOCX» y «Adaptar de nuevo». Comando `list_saved_cvs`.
 - **Vista previa en vivo**: al adaptar, la hoja «Así quedará tu CV» se rehace al marcar propuestas o cambiar de plantilla (ahora un botón segmentado junto a la hoja). Comando `preview_cv` (`optimizer::preview`, sin generar el PDF). La hoja (`CvPaper.svelte`) se mide en `cqi`: la misma sirve de miniatura y de vista grande, y es blanca en los dos temas (tokens `--paper*`).

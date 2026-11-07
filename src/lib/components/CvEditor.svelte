@@ -172,12 +172,19 @@
 <h2>Educación <span class="count">{cv.education.length}</span></h2>
 <section class="card">
   {#if cv.education.length}
-    <ul class="chips" aria-label="Educación">
+    <ul class="chips tall" aria-label="Educación">
       {#each cv.education as ed, i (ed.id)}
+        {@const years = [ed.start, ed.end].filter(Boolean).join(" – ")}
         <li class="chip" class:sel={editingEdu === ed.id}>
           <button class="chipname" aria-expanded={editingEdu === ed.id}
             onclick={() => (editingEdu = editingEdu === ed.id ? null : ed.id)} title="Editar institución y fechas">
-            {ed.degree || "Sin título"}{#if ed.institution || ed.end}<span class="yrs">{[ed.institution, ed.end].filter(Boolean).join(" · ")}</span>{/if}
+            <span class="eduname">{ed.degree || "Sin título"}</span>
+            {#if ed.institution || years}
+              <span class="edumeta">
+                {#if ed.institution}<span>{ed.institution}</span>{/if}
+                {#if years}<span class="eduyears">{years}</span>{/if}
+              </span>
+            {/if}
           </button>
           <button class="chipx" aria-label="Quitar {ed.degree}"
             onclick={() => { if (editingEdu === ed.id) editingEdu = null; cv.education.splice(i, 1); }}><Icon name="close" size={18} /></button>
@@ -304,6 +311,16 @@
   .chip.sel button { color: var(--md-on-secondary-container); }
   .chipname { padding: 0 0.4rem 0 0.75rem; gap: 0.4rem; }
   .yrs { font-weight: 400; color: var(--md-on-surface-variant); }
+  /* Educación: fichas de dos líneas (título; institución y años) con aire alrededor. */
+  .chips.tall { gap: 0.75rem; }
+  .tall .chip { height: auto; min-height: 64px; border-radius: var(--radius-m); align-items: stretch; }
+  .tall .chipname { flex-direction: column; align-items: flex-start; justify-content: center; gap: 0.3rem; padding: 0.7rem 0.75rem 0.7rem 1rem; text-align: left; line-height: 1.3; }
+  .tall .chipx { width: 44px; align-self: center; }
+  .eduname { font-weight: 700; font-size: 1rem; }
+  .edumeta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.6rem; font-weight: 400; font-size: 0.9375rem; color: var(--md-on-surface-variant); }
+  .chip.sel .edumeta { color: inherit; }
+  .eduyears { padding: 0.05rem 0.5rem; border-radius: var(--radius-s); background: var(--md-surface-container-high); font-variant-numeric: tabular-nums; }
+  .chip.sel .eduyears { background: color-mix(in srgb, var(--md-on-secondary-container) 10%, transparent); }
   .chipx { width: 32px; padding: 0; color: var(--md-on-surface-variant) !important; }
   .chipedit {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); align-items: end; gap: 0.75rem;

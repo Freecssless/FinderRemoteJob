@@ -2,6 +2,10 @@
    Tonos generados con @material/material-color-utilities (semilla #1D4E9E, acento #E8890C). */
 @import "@fontsource-variable/atkinson-hyperlegible-next/wght.css";
 
+/* La fuente del PDF y el DOCX, para que la hoja de vista previa (CvPaper) sea igual al archivo. */
+@font-face { font-family: "Liberation Sans"; src: url("/fonts/LiberationSans-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Liberation Sans"; src: url("/fonts/LiberationSans-Bold.ttf") format("truetype"); font-weight: 700; font-display: swap; }
+
 :root {
   --md-primary: #1f50a0;
   --md-on-primary: #ffffff;

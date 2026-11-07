@@ -292,6 +292,7 @@ export const TEMPLATE_LABELS: Record<string, string> = Object.fromEntries(TEMPLA
 
 /** El CV listo para imprimir (crates/core/src/document.rs); también es el `content_json` guardado. */
 export interface CvDocument {
+  lang: "es" | "en";
   template: Template;
   headings: Record<"summary" | "experience" | "education" | "skills" | "certifications" | "languages", string>;
   name: string;
@@ -318,6 +319,9 @@ export const optimizerApi = {
   preview: (jobId: string, choices: Choices, template: Template) =>
     invoke<CvDocument>("preview_cv", { jobId, choices, template }),
   listSaved: (profileId: string) => invoke<SavedEntry[]>("list_saved_cvs", { profileId }),
+  /** Guarda tus correcciones a un CV ya generado y rehace su PDF y DOCX. */
+  updateSaved: (versionId: string, doc: CvDocument) =>
+    invoke<SavedEntry["version"]>("update_saved_cv", { versionId, doc }),
 };
 
 // ---------------------------------------------------------------------------

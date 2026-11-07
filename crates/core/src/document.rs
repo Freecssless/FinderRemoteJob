@@ -11,7 +11,7 @@ use crate::ats::keywords::{SkillDict, contains_word, normalize};
 use crate::guard::{Checked, GuardReport};
 use crate::model::{CvMaster, Term};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum DocLang {
     Es,
@@ -77,35 +77,36 @@ impl Choices {
     }
 }
 
-/// Encabezados estándar que los ATS reconocen (plan §4.6).
-#[derive(Debug, Clone, PartialEq, Serialize)]
+/// Encabezados estándar que los ATS reconocen (plan §4.6). Son `String` para poder leer de vuelta
+/// un CV guardado (`content_json`) y editarlo.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Headings {
-    pub summary: &'static str,
-    pub experience: &'static str,
-    pub education: &'static str,
-    pub skills: &'static str,
-    pub certifications: &'static str,
-    pub languages: &'static str,
+    pub summary: String,
+    pub experience: String,
+    pub education: String,
+    pub skills: String,
+    pub certifications: String,
+    pub languages: String,
 }
 
 impl Headings {
     pub fn for_lang(lang: DocLang) -> Self {
         match lang {
             DocLang::Es => Self {
-                summary: "Resumen",
-                experience: "Experiencia profesional",
-                education: "Educación",
-                skills: "Habilidades",
-                certifications: "Certificaciones",
-                languages: "Idiomas",
+                summary: "Resumen".into(),
+                experience: "Experiencia profesional".into(),
+                education: "Educación".into(),
+                skills: "Habilidades".into(),
+                certifications: "Certificaciones".into(),
+                languages: "Idiomas".into(),
             },
             DocLang::En => Self {
-                summary: "Summary",
-                experience: "Professional Experience",
-                education: "Education",
-                skills: "Skills",
-                certifications: "Certifications",
-                languages: "Languages",
+                summary: "Summary".into(),
+                experience: "Professional Experience".into(),
+                education: "Education".into(),
+                skills: "Skills".into(),
+                certifications: "Certifications".into(),
+                languages: "Languages".into(),
             },
         }
     }
@@ -173,7 +174,7 @@ pub enum Section {
     Languages,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CvDocument {
     pub lang: DocLang,
     pub template: Template,
@@ -190,7 +191,7 @@ pub struct CvDocument {
     pub languages: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DocExperience {
     pub title: String,
     pub company: String,
@@ -198,7 +199,7 @@ pub struct DocExperience {
     pub bullets: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DocEducation {
     pub degree: String,
     pub institution: String,
@@ -405,15 +406,15 @@ impl CvDocument {
             .collect()
     }
 
-    pub fn heading(&self, s: Section) -> &'static str {
+    pub fn heading(&self, s: Section) -> &str {
         let h = &self.headings;
         match s {
-            Section::Summary => h.summary,
-            Section::Experience => h.experience,
-            Section::Education => h.education,
-            Section::Skills => h.skills,
-            Section::Certifications => h.certifications,
-            Section::Languages => h.languages,
+            Section::Summary => &h.summary,
+            Section::Experience => &h.experience,
+            Section::Education => &h.education,
+            Section::Skills => &h.skills,
+            Section::Certifications => &h.certifications,
+            Section::Languages => &h.languages,
         }
     }
 
@@ -449,7 +450,7 @@ impl CvDocument {
     }
 
     /// Encabezados de las secciones presentes, en orden (para la prueba de ida y vuelta).
-    pub fn section_headings(&self) -> Vec<&'static str> {
+    pub fn section_headings(&self) -> Vec<&str> {
         self.sections()
             .into_iter()
             .map(|s| self.heading(s))

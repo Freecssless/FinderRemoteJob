@@ -37,6 +37,31 @@
 
   const expLabel = $derived(new Map(view?.experiences ?? []));
 
+  // Corregir un CV ya guardado: se edita una copia y la hoja de abajo la muestra al instante.
+  let draft = $state<CvDocument | null>(null);
+  let draftBusy = $state(false);
+  let draftMsg = $state("");
+  const lines = (t: string) => t.split("\n").map((l) => l.trim()).filter(Boolean);
+  function startEdit(d: CvDocument) {
+    draft = structuredClone($state.snapshot(d)) as CvDocument;
+    draftMsg = "";
+  }
+  async function saveDraft(id: string) {
+    if (!draft) return;
+    draftBusy = true;
+    error = "";
+    try {
+      const v = await optimizerApi.updateSaved(id, $state.snapshot(draft) as CvDocument);
+      library = library.map((e) => (e.version.id === id ? { ...e, version: v } : e));
+      draft = null;
+      draftMsg = "Cambios guardados: el PDF y el DOCX ya los tienen.";
+    } catch (e) {
+      error = String(e);
+    } finally {
+      draftBusy = false;
+    }
+  }
+
   // Corrección a mano: una propuesta a la vez ("s" = resumen, número = logro).
   let editing = $state<{ key: "s" | number; text: string } | null>(null);
   let editBusy = $state(false);
@@ -184,13 +209,13 @@
   {:else}
     {@const v = selected.version}
     {@const sdoc = docs.get(v.id)}
-    <div class="library">
+    <div class="library" class:editing={draft !== null}>
       <ul class="cvlist" aria-label="CVs adaptados">
         {#each library as e (e.version.id)}
           {@const d = docs.get(e.version.id)}
           <li>
             <button class="cvitem" aria-current={e.version.id === v.id ? "true" : undefined}
-              onclick={() => (selectedId = e.version.id)}>
+              onclick={() => { selectedId = e.version.id; draft = null; draftMsg = ""; }}>
               <span class="thumb" aria-hidden="true">{#if d}<CvPaper doc={d} />{/if}</span>
               <span class="cvmeta">
                 <strong>{e.job_title ?? "Vacante eliminada"}</strong>
@@ -210,7 +235,7 @@
         {/each}
       </ul>
 
-      <section class="viewer" aria-label="CV elegido">
+      <section class="viewer" class:editing={draft !== null} aria-label="CV elegido">
         <div class="card viewhead">
           <div>
             <h2>{selected.job_title ?? "Vacante eliminada"}</h2>
@@ -229,12 +254,92 @@
               <button onclick={() => revealItemInDir(v.pdf_path!)}>Mostrar en la carpeta</button>
             {/if}
             {#if v.docx_path}<button onclick={() => openPath(v.docx_path!)}><Icon name="description" size={20} /> Abrir DOCX</button>{/if}
+            {#if sdoc && !draft}
+              <button class="tonal" onclick={() => startEdit(sdoc)}><Icon name="edit" size={20} /> Corregir texto</button>
+            {/if}
             {#if v.job_id && selected.job_title}
               <a class="button link" href="/optimizador?job={v.job_id}"><Icon name="refresh" size={20} /> Adaptar de nuevo</a>
             {/if}
           </div>
+          {#if draftMsg}<p class="ok small" role="status">{draftMsg}</p>{/if}
         </div>
-        {#if sdoc}<div class="sheet"><CvPaper doc={sdoc} label="CV para {selected.job_title ?? 'la vacante'}" /></div>{/if}
+        {#if draft}
+          <form class="card docedit" onsubmit={(e) => { e.preventDefault(); saveDraft(v.id); }} aria-label="Corregir el CV">
+            <div class="edhead">
+              <h2>Corregir el CV</h2>
+              <p class="muted small">Cambia lo que quieras: la hoja se actualiza mientras escribes. Al guardar se rehacen el PDF y el DOCX.</p>
+            </div>
+            <fieldset>
+              <legend>Encabezado</legend>
+              <div class="grid">
+                <label>Nombre<input bind:value={draft.name} /></label>
+                <label>Titular<input bind:value={draft.headline} /></label>
+              </div>
+              <label>Contacto (uno por línea)
+                <textarea rows="4" value={draft.contact.join("\n")} oninput={(e) => (draft!.contact = lines(e.currentTarget.value))}></textarea>
+              </label>
+            </fieldset>
+            {#if draft.summary !== null}
+              <fieldset>
+                <legend>{draft.headings.summary}</legend>
+                <textarea rows="3" bind:value={draft.summary} aria-label={draft.headings.summary}></textarea>
+              </fieldset>
+            {/if}
+            {#if draft.experience.length}
+              <fieldset>
+                <legend>{draft.headings.experience}</legend>
+                {#each draft.experience as ex, i}
+                  <div class="edblock">
+                    <div class="grid three">
+                      <label>Puesto<input bind:value={ex.title} /></label>
+                      <label>Empresa<input bind:value={ex.company} /></label>
+                      <label>Fechas<input bind:value={ex.dates} /></label>
+                    </div>
+                    {#each ex.bullets as _, j}
+                      <textarea rows="2" bind:value={ex.bullets[j]} aria-label="Logro {j + 1} de {ex.title || `experiencia ${i + 1}`}"></textarea>
+                    {/each}
+                  </div>
+                {/each}
+              </fieldset>
+            {/if}
+            {#if draft.education.length}
+              <fieldset>
+                <legend>{draft.headings.education}</legend>
+                {#each draft.education as ed}
+                  <div class="grid three">
+                    <label>Título<input bind:value={ed.degree} /></label>
+                    <label>Institución<input bind:value={ed.institution} /></label>
+                    <label>Fechas<input bind:value={ed.dates} /></label>
+                  </div>
+                {/each}
+              </fieldset>
+            {/if}
+            <fieldset>
+              <legend>{draft.headings.skills}, {draft.headings.certifications.toLowerCase()} e {draft.headings.languages.toLowerCase()}</legend>
+              <label>{draft.headings.skills} (separadas por comas)
+                <textarea rows="2" value={draft.skills.join(", ")}
+                  oninput={(e) => (draft!.skills = e.currentTarget.value.split(",").map((x) => x.trim()).filter(Boolean))}></textarea>
+              </label>
+              <div class="grid">
+                <label>{draft.headings.certifications} (una por línea)
+                  <textarea rows="2" value={draft.certifications.join("\n")} oninput={(e) => (draft!.certifications = lines(e.currentTarget.value))}></textarea>
+                </label>
+                <label>{draft.headings.languages} (uno por línea)
+                  <textarea rows="2" value={draft.languages.join("\n")} oninput={(e) => (draft!.languages = lines(e.currentTarget.value))}></textarea>
+                </label>
+              </div>
+            </fieldset>
+            <div class="row edactions">
+              <button type="submit" class="primary" disabled={draftBusy}><Icon name="check" size={20} /> {draftBusy ? "Guardando…" : "Guardar cambios"}</button>
+              <button type="button" class="link" onclick={() => (draft = null)} disabled={draftBusy}>Cancelar</button>
+            </div>
+          </form>
+        {/if}
+        {#if draft}
+          <div class="sheet"><CvPaper doc={draft} label="Vista previa con tus cambios" /></div>
+        {:else if sdoc}
+          <div class="sheet"><CvPaper doc={sdoc} label="CV para {selected.job_title ?? 'la vacante'}" /></div>
+        {/if}
       </section>
     </div>
   {/if}
@@ -427,6 +532,25 @@
   .viewhead h2 { margin: 0; }
   .viewhead p { margin: 0.15rem 0 0; }
   .sheet { max-width: 640px; width: 100%; margin-inline: auto; }
+  /* Al corregir: sin la lista, el formulario a la izquierda y la hoja fija a la derecha. */
+  .library.editing { grid-template-columns: minmax(0, 1fr); }
+  .library.editing .cvlist { display: none; }
+  .viewer.editing { position: static; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .viewer.editing > .viewhead, .viewer.editing > .docedit { grid-column: 1; }
+  .viewer.editing > .sheet { grid-column: 2; grid-row: 1 / span 2; position: sticky; top: 0; }
+  @container main (max-width: 1000px) {
+    .viewer.editing { grid-template-columns: minmax(0, 1fr); }
+    .viewer.editing > .sheet { grid-column: 1; grid-row: auto; position: static; }
+  }
+  .docedit { display: flex; flex-direction: column; gap: 1.25rem; animation: rise-in 220ms var(--ease-decel) both; }
+  .edhead h2 { margin: 0; }
+  .edhead p { margin: 0.2rem 0 0; }
+  .docedit fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; }
+  .docedit legend { padding: 0; margin-bottom: 0.6rem; font-size: 1.0625rem; font-weight: 700; color: var(--md-on-surface); }
+  .edblock { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.9rem; border-radius: var(--radius-m); background: var(--md-surface-container); }
+  .edblock + .edblock { margin-top: 0.25rem; }
+  .grid.three { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem; }
+  .edactions { position: sticky; bottom: 0; padding: 0.75rem 0 0.25rem; background: var(--md-surface-container-low); }
 
   /* Adaptar: revisión a la izquierda, hoja y guardado fijos a la derecha. */
   .crumbs { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }

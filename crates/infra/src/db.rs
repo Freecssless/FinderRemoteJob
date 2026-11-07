@@ -877,6 +877,23 @@ impl Db {
         Ok(())
     }
 
+    /// Tras corregir a mano un CV guardado: contenido, puntaje y archivos nuevos.
+    pub async fn update_cv_version(&self, v: &CvVersion) -> Result<()> {
+        sqlx::query(
+            "UPDATE cv_versions SET content_json = ?, ats_after = ?, missing_json = ?,
+                                    pdf_path = ?, docx_path = ? WHERE id = ?",
+        )
+        .bind(&v.content_json)
+        .bind(v.ats_after)
+        .bind(serde_json::to_string(&v.missing)?)
+        .bind(&v.pdf_path)
+        .bind(&v.docx_path)
+        .bind(&v.id)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
     pub async fn get_cv_version(&self, id: &str) -> Result<Option<CvVersion>> {
         sqlx::query("SELECT * FROM cv_versions WHERE id = ?")
             .bind(id)

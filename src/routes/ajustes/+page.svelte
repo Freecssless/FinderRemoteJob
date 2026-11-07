@@ -335,6 +335,19 @@
         <Meter layout="row" value={ws.samples} max={ws.needed} label="Postulaciones con resultado" />
         <p class="small">{ws.advanced} avanzaron · {ws.not_advanced} no avanzaron</p>
         {#if custom}<div class="row"><button onclick={resetWeights}>Volver a lo normal</button></div>{/if}
+      <div class="split">
+        <h3>Cómo se reparte hoy tu compatibilidad</h3>
+        <ul class="parts">
+          {#each PARTS as [k, label]}
+            <li>
+              <span>{label}</span>
+              <span class="pbar" aria-hidden="true"><span style="width: {Math.round(ws.current[k])}%"></span></span>
+              <strong>{Math.round(ws.current[k])}</strong>
+            </li>
+          {/each}
+        </ul>
+        <p class="muted small">Puntos de 100. Lo que más pesa son las habilidades que pide la vacante y tú tienes.</p>
+      </div>
       {/if}
       {#if custom}<p class="small ok">Usando pesos ajustados a tus resultados.</p>{/if}
       {#if wsMsg}<p class="small" role="status">{wsMsg}</p>{/if}
@@ -405,6 +418,15 @@
 <style>
   .page { display: flex; flex-direction: column; gap: 1rem; }
   .tune h2 { margin: 0; }
+  /* Reparto actual del puntaje: llena la tarjeta con algo útil mientras no hay datos. */
+  .split { display: flex; flex-direction: column; gap: 0.6rem; margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--md-outline-variant); }
+  .split h3 { margin: 0; }
+  .parts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: max-content 1fr 2.5ch; align-items: center; gap: 0.5rem 0.9rem; }
+  .parts li { display: contents; }
+  .parts li > span:first-child { color: var(--md-on-surface-variant); }
+  .parts strong { text-align: right; font-variant-numeric: tabular-nums; }
+  .pbar { height: 8px; border-radius: var(--radius-full); background: var(--md-surface-container-highest); overflow: hidden; }
+  .pbar span { display: block; height: 100%; border-radius: inherit; background: var(--md-primary); }
   .wtable { display: grid; grid-template-columns: 1fr auto; gap: 0.35rem 1rem; margin: 0; font-variant-numeric: tabular-nums; }
   .wtable dt { color: var(--md-on-surface-variant); }
   .wtable dd { margin: 0; text-align: right; }

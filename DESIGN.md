@@ -92,6 +92,10 @@ typography:
     fontSize: "1rem"
     fontWeight: 750
     fontFeature: "tnum"
+  paper:
+    fontFamily: "Liberation Sans, Arial, Helvetica, sans-serif"
+    fontSize: "10.5pt"
+    fontWeight: 400
   code:
     fontFamily: "ui-monospace, Cascadia Mono, DejaVu Sans Mono, monospace"
     fontSize: "0.92em"
@@ -304,12 +308,13 @@ Una paleta M3 generada con `@material/material-color-utilities`: un azul con ofi
 
 **The Paired Theme Rule.** Todo color se escribe con su variable `--md-*`, que tiene valor claro y oscuro. Ningún hex suelto en las pantallas.
 
-**The Paper Rule.** La hoja del CV (`CvPaper`) representa el papel impreso: usa los tokens `--paper`, `--on-paper`, `--on-paper-variant`, `--paper-accent` y `--paper-rule`, que no cambian en tema oscuro. Sus medidas van en `cqi`, así la misma hoja es miniatura o vista grande.
+**The Paper Rule.** La hoja del CV (`CvPaper`) representa el papel impreso: usa los tokens `--paper`, `--on-paper`, `--on-paper-variant`, `--paper-accent` y `--paper-rule`, que no cambian en tema oscuro. Sus medidas van en `cqi`, así la misma hoja es miniatura o vista grande. Usa Liberation Sans y tamaño carta, igual que la plantilla Typst (`crates/infra/templates/cv.typ`) y el DOCX: lo que se ve es lo que se descarga.
 
 ## Typography
 
 **Display Font:** no hay; el título más grande es headline.
 **Body Font:** Atkinson Hyperlegible Next Variable (con `system-ui, sans-serif`), autoalojada vía `@fontsource-variable`.
+**Hoja del CV:** Liberation Sans, solo dentro de `CvPaper`, porque es la fuente incrustada en el PDF y el DOCX.
 **Mono:** `ui-monospace, "Cascadia Mono", "DejaVu Sans Mono", monospace`, solo para `code`.
 
 **Character:** una sola familia variable, hecha para lectores con baja visión; la jerarquía sale del peso (400 a 750) y del tamaño, no de una segunda familia.

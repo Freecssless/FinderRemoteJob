@@ -314,6 +314,7 @@ pub fn run() {
             optimizer::edit_proposal,
             optimizer::preview_cv,
             optimizer::list_saved_cvs,
+            optimizer::update_saved_cv,
             board::list_board,
             board::set_application_status,
             board::save_application_notes,

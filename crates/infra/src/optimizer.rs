@@ -346,6 +346,49 @@ pub async fn save(
     Ok(version)
 }
 
+/// Corrección a mano de un CV ya guardado: se vuelven a generar el PDF y el DOCX en los mismos
+/// archivos (o en `out_dir` si ya no existen) y se recalcula el puntaje con la vacante, si sigue.
+/// Lo escribe el usuario sobre su propio CV, así que no pasa por el guardián de la IA.
+pub async fn update_saved(
+    db: &Db,
+    dict: &SkillDict,
+    version: &CvVersion,
+    mut doc: CvDocument,
+    job: Option<&Job>,
+    out_dir: &Path,
+) -> Result<CvVersion> {
+    // La plantilla es la que se eligió al guardar.
+    doc.template = Template::parse(&version.variant).unwrap_or_default();
+    let pdf = docgen::render_pdf(&doc)?;
+    let docx = docgen::render_docx(&doc)?;
+    let mut v = version.clone();
+    if let Some(job) = job {
+        let req = job
+            .requirements
+            .clone()
+            .unwrap_or_else(|| dictionary_only(dict, job));
+        let rt = docgen::verify(&doc, &pdf, CvFileKind::Pdf)?;
+        let ats = rendered_ats(dict, &doc, &rt, &job.title, &req.terms);
+        v.ats_after = Some(ats.total);
+        v.missing = ats.missing.iter().map(|t| t.surface.clone()).collect();
+    }
+    let target = |old: &Option<String>, ext: &str| -> PathBuf {
+        old.as_ref().map(PathBuf::from).unwrap_or_else(|| {
+            let id = v.id.get(..8).unwrap_or(&v.id);
+            out_dir.join(format!("{}_{id}.{ext}", doc.file_stem("CV", None)))
+        })
+    };
+    let (pdf_path, docx_path) = (target(&v.pdf_path, "pdf"), target(&v.docx_path, "docx"));
+    std::fs::create_dir_all(out_dir)?;
+    std::fs::write(&pdf_path, &pdf)?;
+    std::fs::write(&docx_path, &docx)?;
+    v.pdf_path = Some(pdf_path.display().to_string());
+    v.docx_path = Some(docx_path.display().to_string());
+    v.content_json = serde_json::to_string(&doc)?;
+    db.update_cv_version(&v).await?;
+    Ok(v)
+}
+
 fn write(dir: &Path, stem: &str, ext: &str, bytes: &[u8]) -> Result<PathBuf> {
     let path = dir.join(format!("{stem}.{ext}"));
     std::fs::write(&path, bytes)?;
@@ -764,6 +807,20 @@ mod tests {
         );
         assert_eq!(v.master_hash, master_hash(&m)?);
         assert_eq!(v.variant, "tecnica");
+
+        // Corrección a mano desde la app: se reescriben los mismos archivos y la base.
+        let mut doc: CvDocument = serde_json::from_str(&v.content_json)?;
+        doc.experience[0].bullets[0] = "Edité 120 videos de viajes para YouTube".into();
+        let pdf_before = std::fs::read(v.pdf_path.as_deref().ok_or("sin pdf")?)?;
+        let edited = update_saved(&db, &dict, &v, doc, Some(&j), &dir).await?;
+        assert_eq!(edited.pdf_path, v.pdf_path);
+        assert_ne!(
+            std::fs::read(v.pdf_path.as_deref().ok_or("sin pdf")?)?,
+            pdf_before
+        );
+        let stored = db.get_cv_version(&v.id).await?.ok_or("falta")?;
+        assert!(stored.content_json.contains("videos de viajes"));
+        assert_eq!(stored.variant, "tecnica");
         std::fs::remove_dir_all(&dir)?;
         Ok(())
     }

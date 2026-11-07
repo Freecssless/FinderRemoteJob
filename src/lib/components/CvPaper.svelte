@@ -57,23 +57,24 @@
   /* Una hoja es papel en los dos temas: sus colores no cambian con el sistema. */
   .paper {
     --u: 1cqi;
-    aspect-ratio: 210 / 297; overflow: hidden;
+    aspect-ratio: 216 / 279; /* carta, como el PDF */ overflow: hidden;
     padding: calc(var(--u) * 7) calc(var(--u) * 7.5);
     background: var(--paper); color: var(--on-paper);
     border-radius: calc(var(--u) * 0.8);
     box-shadow: var(--elev-1);
+    font-family: "Liberation Sans", Arial, Helvetica, sans-serif;
     font-size: calc(var(--u) * 1.75); line-height: 1.38;
     text-align: left; user-select: text;
   }
   .paper.compacta { font-size: calc(var(--u) * 1.55); padding: calc(var(--u) * 5.5) calc(var(--u) * 6); }
   header { margin-bottom: 1.1em; }
-  h1 { margin: 0; font-size: 2em; line-height: 1.1; font-weight: 750; letter-spacing: -0.01em; color: var(--on-paper); }
-  .headline { margin: 0.25em 0 0; font-size: 1.15em; font-weight: 600; color: var(--paper-accent); }
+  h1 { margin: 0; font-size: 2em; line-height: 1.1; font-weight: 700; color: var(--on-paper); }
+  .headline { margin: 0.25em 0 0; font-size: 1.15em; font-weight: 700; color: var(--paper-accent); }
   .contact { margin: 0.35em 0 0; color: var(--on-paper-variant); }
   section { margin-top: 0.9em; }
   h2 {
     margin: 0 0 0.4em; padding-bottom: 0.2em; border-bottom: max(1px, calc(var(--u) * 0.15)) solid var(--paper-rule);
-    font-size: 1.05em; font-weight: 750; letter-spacing: 0; color: var(--paper-accent);
+    font-size: 1.05em; font-weight: 700; letter-spacing: 0; color: var(--paper-accent);
   }
   p { margin: 0; }
   .entry + .entry { margin-top: 0.6em; }

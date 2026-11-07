@@ -316,3 +316,32 @@ pub async fn list_saved_cvs(
     }
     Ok(out)
 }
+
+/// Guarda tus correcciones a un CV ya generado: rehace el PDF y el DOCX (los mismos archivos).
+#[tauri::command]
+pub async fn update_saved_cv(
+    state: State<'_, AppState>,
+    version_id: String,
+    doc: CvDocument,
+) -> CmdResult<CvVersion> {
+    let version = state
+        .db
+        .get_cv_version(&version_id)
+        .await
+        .map_err(err)?
+        .ok_or("Ese CV ya no existe.")?;
+    let job = match &version.job_id {
+        Some(id) => state.db.get_job(id).await.map_err(err)?,
+        None => None,
+    };
+    optimizer::update_saved(
+        &state.db,
+        &state.dict,
+        &version,
+        doc,
+        job.as_ref(),
+        &state.data_dir.join("cvs"),
+    )
+    .await
+    .map_err(err)
+}
