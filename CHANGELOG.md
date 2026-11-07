@@ -219,6 +219,10 @@
 - La ficha de compatibilidad muestra «Similitud con tu CV» cuando existe.
 - `finder_infra::semantic` (`ensure`, `Vectors`), `Db::embeddings` y `Db::put_embedding`.
 
+### Instaladores
+- `tauri.conf.json`: instaladores `.deb`, `.rpm`, AppImage, NSIS (`.exe`, español/inglés, sin permisos de administrador) y `.msi`, con descripción y categoría.
+- `.github/workflows/release.yml`: genera los de Windows y Linux en GitHub al subir una etiqueta `v*`, como borrador de versión.
+
 ### Copia de seguridad
 - Ajustes → «Copia de seguridad»: «Hacer copia ahora» crea `Documentos/FinderRemoteJob-respaldo-AAAA-MM-DD.zip` con la base (copia consistente con `VACUUM INTO`, sin cerrar la app) y la carpeta `cvs/`. Las claves de API no se incluyen (siguen en el llavero).
 - «Restaurar una copia» valida el archivo, lo deja pendiente y reinicia la app; al arrancar se cambia la base antes de abrirla. Lo anterior queda como `finder.db.antes-de-restaurar` y `cvs.antes-de-restaurar`. Si el respaldo viene de otra carpeta, se corrigen las rutas de los CV generados.

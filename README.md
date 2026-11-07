@@ -49,6 +49,13 @@ npm run check         # tipos de la interfaz
 - El `.env` se busca en `~/.config/com.finderremotejob.app/.env` y, en desarrollo, en el directorio actual y sus padres (la raíz del repo). Una variable real del entorno gana sobre el archivo.
 - Si la ventana sale en blanco en Linux, prueba `WEBKIT_DISABLE_DMABUF_RENDERER=1 npm run tauri dev`.
 
+### Instaladores
+
+- **Linux** (en tu equipo): `npm run tauri build -- --bundles deb,rpm,appimage`. Quedan en `target/release/bundle/`.
+- **Windows** (`.exe` y `.msi`) y Linux en GitHub: sube el repo y una etiqueta (`git tag v0.1.0 && git push --tags`), o lanza «Instaladores» a mano en la pestaña Actions. El flujo `.github/workflows/release.yml` deja un borrador de versión con los instaladores adjuntos.
+- Los instaladores no van firmados: Windows mostrará «Windows protegió su PC» (pulsa «Más información» → «Ejecutar de todas formas»).
+- La IA local necesita [Ollama](https://ollama.com/download) aparte; el asistente de bienvenida explica cómo instalarlo.
+
 ## IA y claves de API
 
 La app usa dos "papeles" de IA:
