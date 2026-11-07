@@ -219,6 +219,10 @@
 - La ficha de compatibilidad muestra «Similitud con tu CV» cuando existe.
 - `finder_infra::semantic` (`ensure`, `Vectors`), `Db::embeddings` y `Db::put_embedding`.
 
+### «Corregir texto» ordenado y monitores ultrawide
+- **Optimizador → Corregir texto**: la vista ocupa todo el ancho con una barra fija arriba (qué CV corriges, Cancelar y Guardar cambios siempre a mano). El formulario va en tarjetas (Encabezado, Resumen, Experiencia, Educación, Habilidades, Certificaciones e idiomas) con etiquetas alineadas, y la hoja queda fija al lado. En ventanas medianas la hoja pasa arriba; en tarjetas angostas, las fechas van debajo de puesto y empresa.
+- **Monitores grandes y ultrawide**: el contenido crece hasta 1760px (pantallas de 1920px) y 2320px (2560px o más). Con 1600px o más de contenido: «Mis CVs» pone la ficha del CV junto a su hoja, la revisión de propuestas agranda la hoja, el formulario de corrección se reparte en dos columnas, el CV maestro de Perfiles usa tres columnas y la cola de Postular se muestra en cuadrícula.
+
 ### CVs generados con el aspecto de la vista previa y corrección de CVs guardados
 - **PDF y DOCX con el estilo de la vista previa**: nombre grande, titular y encabezados en azul talavera con una línea fina debajo, fechas a la derecha, empresa o institución en gris, habilidades separadas por « · » y certificaciones e idiomas en lista. Los encabezados ya no van en mayúsculas. La vista previa usa la misma fuente que los archivos (Liberation Sans, incluida en `static/fonts`) y el tamaño carta.
 - **Corregir un CV ya guardado** (Optimizador → Mis CVs → «Corregir texto»): se edita todo el texto (encabezado, resumen, logros, educación, habilidades, certificaciones e idiomas) con la hoja al lado actualizándose al escribir. Al guardar se rehacen el PDF y el DOCX en los mismos archivos y se recalcula el puntaje (`optimizer::update_saved`, comando `update_saved_cv`, `Db::update_cv_version`). Es tu texto, así que no pasa por el guardián de la IA.

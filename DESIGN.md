@@ -338,7 +338,7 @@ Una paleta M3 generada con `@material/material-color-utilities`: un azul con ofi
 
 Un shell de dos columnas a pantalla completa: navegación a la izquierda y contenido con desplazamiento propio. El contenido tiene relleno de 32px arriba, `clamp(16px, 3vw, 40px)` a los lados y 48px abajo, y un ancho máximo de 1440px centrado. El orden de destinos es fijo: Perfiles, Vacantes, Optimizador, Postular, Tablero, Ajustes.
 
-**Tamaños de ventana (clases de M3).** La ventana mínima es de 720px.
+**Tamaños de ventana (clases de M3).** La ventana mínima es de 720px. En monitores grandes el ancho máximo del contenido sube a 1760px (≥ 1920px de ventana) y 2320px (≥ 2560px, ultrawide); cada pantalla usa el espacio extra con `@container main (min-width: 1600px)`.
 - **≥ 1100px:** cajón de 256px.
 - **720–1099px:** riel de 96px, con el icono en una píldora de 56×32 y la etiqueta debajo, a 15px.
 - **Adaptación de pantallas:** `<main>` es un contenedor (`container: main / inline-size`) y cada pantalla se adapta con `@container main`, no con el ancho de la ventana.

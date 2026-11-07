@@ -190,6 +190,10 @@
     view-transition-name: page;
   }
 
+  /* Monitores grandes y ultrawide: más ancho útil; cada pantalla reparte el espacio con @container. */
+  @media (min-width: 1920px) { .content { max-width: 1760px; } }
+  @media (min-width: 2560px) { .content { max-width: 2320px; padding-inline: 3rem; } }
+
   /* Ventanas medianas: riel de navegación (M3), icono con su etiqueta debajo. */
   @media (max-width: 1099px) {
     .shell { grid-template-columns: 96px 1fr; }

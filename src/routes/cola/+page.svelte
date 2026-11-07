@@ -252,4 +252,10 @@
     background: var(--md-surface-container-highest); color: var(--md-on-surface-variant); font-size: 0.875rem; font-weight: 650;
   }
   .chip.ok { background: var(--md-success-container); color: var(--md-on-success-container); }
+  /* Muy ancho: la cola en dos columnas de tarjetas y las respuestas con más espacio. */
+  @container main (min-width: 1600px) {
+    .cols { grid-template-columns: minmax(0, 1fr) minmax(360px, 440px); }
+    .faq { min-height: 30rem; }
+    .queue { align-items: stretch; gap: 0.75rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(480px, 1fr)); }
+  }
 </style>

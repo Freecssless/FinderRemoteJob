@@ -285,6 +285,10 @@
     .cvgrid { grid-template-columns: 1fr 1fr; }
     .wide { grid-column: 1 / -1; }
   }
+  /* Muy ancho: tres columnas; los bloques cortos rellenan los huecos junto a los demás. */
+  @container main (min-width: 1600px) {
+    .cvgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-flow: row dense; }
+  }
   /* Datos básicos y Habilidades lado a lado; Experiencia debajo, a todo el ancho. */
   .blk { order: 4; }
   .blk.basics { order: 1; }
