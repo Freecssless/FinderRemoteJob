@@ -219,6 +219,18 @@
 - La ficha de compatibilidad muestra «Similitud con tu CV» cuando existe.
 - `finder_infra::semantic` (`ensure`, `Vectors`), `Db::embeddings` y `Db::put_embedding`.
 
+### Compatibilidad a tu medida, idiomas y certificaciones en fichas
+- **Reajuste de pesos con tus datos** (Ajustes → «Compatibilidad a tu medida»). Con 30 postulaciones con resultado claro (al menos 5 que avanzaron y 5 que no), la app sugiere pesos según qué partes del puntaje eran más altas en las que avanzaron.
+  - **Qué cuenta como avanzar:** en proceso, entrevista u oferta.
+  - **Qué cuenta como no avanzar:** rechazada, sin respuesta, o postulada hace más de 14 días sin respuesta.
+  - **Límites:** cada peso cambia como mucho ±50 % y la suma sigue en 100.
+  - **Control:** nunca se aplican solos; tú pulsas «Aplicar» o «Volver a lo normal».
+  - **Desglose:** en Vacantes muestra los máximos en uso.
+  - **Código:** `Weights`, `reweigh` y `learn_weights` en `finder-core`, y los comandos `weights_status`, `apply_weights` y `reset_weights`.
+- **Idiomas y Certificaciones en fichas,** como Habilidades: se agregan con Enter y se editan tocándolas. Una certificación nueva abre su editor para completar emisor y fecha, y los idiomas repetidos se ignoran.
+- **Torre: no se integra.** Sus términos prohíben el scraping, la API no documentada ya rechaza las consultas y la oficial está en beta privada (https://torre.ai/apiforprofessionals).
+- **`docs/ARQUITECTURA.md`:** casillas del plan actualizadas.
+
 ### Perfil activo en el menú
 - **Selector único:** el perfil se elige una sola vez en el menú lateral («Perfil activo»), en lugar de un selector en Vacantes, Postular y Tablero. Esas pantallas se recargan solas al cambiarlo, y las pestañas de Perfiles también lo cambian. En el riel de ventanas medianas aparece como un círculo con la inicial, que lleva a Perfiles.
 - **Avisos más ligeros:** se calculan con un solo comando, `nav_counts`, en vez de cargar todas las vacantes en cada cambio de pantalla. Las vacantes nuevas se cuentan con una consulta SQL (`Db::count_jobs_found_within`).

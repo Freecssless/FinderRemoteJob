@@ -147,7 +147,19 @@ export interface MatchReport {
   missing_required: string[];
   blockers: string[];
   low_relevance: boolean;
+  /** Máximo de cada parte (los pesos en uso). */
+  max: Weights;
 }
+export interface Weights { skills: number; semantic: number; title: number; seniority: number; years: number; logistics: number }
+export interface WeightsStatus {
+  samples: number; advanced: number; not_advanced: number; needed: number; min_each: number;
+  current: Weights; default: Weights; suggested: Weights | null;
+}
+export const weightsApi = {
+  status: () => invoke<WeightsStatus>("weights_status"),
+  apply: (weights: Weights) => invoke<void>("apply_weights", { weights }),
+  reset: () => invoke<void>("reset_weights"),
+};
 export interface JobRow {
   id: string;
   title: string;

@@ -41,12 +41,27 @@
       id: nextId("edu", cv.education.map((e) => e.id)),
       institution: "", degree: "", start: null, end: null,
     });
-  const addCert = () =>
-    cv.certifications.push({
-      id: nextId("cert", cv.certifications.map((c) => c.id)),
-      name: "", issuer: null, date: null,
-    });
-  const addLanguage = () => cv.languages.push({ name: "", level: "" });
+  // Certificaciones e idiomas: mismas fichas que las habilidades.
+  let newCert = $state("");
+  let editingCert = $state<string | null>(null);
+  function addCert(e: SubmitEvent) {
+    e.preventDefault();
+    const name = newCert.trim();
+    if (!name) return;
+    const id = nextId("cert", cv.certifications.map((c) => c.id));
+    cv.certifications.push({ id, name, issuer: null, date: null });
+    newCert = "";
+    editingCert = id; // para completar emisor y fecha
+  }
+  let newLang = $state({ name: "", level: "" });
+  let editingLang = $state<number | null>(null);
+  function addLanguage(e: SubmitEvent) {
+    e.preventDefault();
+    const name = newLang.name.trim();
+    if (!name || cv.languages.some((l) => l.name.toLowerCase() === name.toLowerCase())) return;
+    cv.languages.push({ name, level: newLang.level.trim() });
+    newLang = { name: "", level: "" };
+  }
 
   // Campos opcionales: texto vacío se guarda como null.
   const opt = (v: string) => (v.trim() === "" ? null : v);
@@ -113,22 +128,22 @@
 <h2>Habilidades <span class="count">{cv.skills.length}</span></h2>
 <section class="card">
   {#if cv.skills.length}
-    <ul class="skills" aria-label="Habilidades">
+    <ul class="chips" aria-label="Habilidades">
       {#each cv.skills as s, i (s.id)}
-        <li class="skill" class:sel={editingSkill === s.id}>
-          <button class="skillname" aria-expanded={editingSkill === s.id}
+        <li class="chip" class:sel={editingSkill === s.id}>
+          <button class="chipname" aria-expanded={editingSkill === s.id}
             onclick={() => (editingSkill = editingSkill === s.id ? null : s.id)}
             title="Editar nivel y años">
             {s.name || "Sin nombre"}{#if s.years}<span class="yrs">{s.years} {s.years === 1 ? "año" : "años"}</span>{/if}
           </button>
-          <button class="skillx" aria-label="Quitar {s.name}" onclick={() => removeSkill(i)}><Icon name="close" size={18} /></button>
+          <button class="chipx" aria-label="Quitar {s.name}" onclick={() => removeSkill(i)}><Icon name="close" size={18} /></button>
         </li>
       {/each}
     </ul>
   {/if}
   {#each cv.skills as s (s.id)}
     {#if editingSkill === s.id}
-      <div class="skilledit">
+      <div class="chipedit">
         <label>Habilidad<input bind:value={s.name} /></label>
         <label>Nivel<input value={s.level ?? ""} oninput={(e) => (s.level = opt(e.currentTarget.value))} placeholder="Opcional" /></label>
         <label>Años
@@ -139,7 +154,7 @@
       </div>
     {/if}
   {/each}
-  <form class="addskill" onsubmit={addSkill}>
+  <form class="addrow" onsubmit={addSkill}>
     <input bind:value={newSkill} placeholder="Escribe una habilidad y pulsa Enter (o varias separadas por comas)" aria-label="Nueva habilidad" />
     <button type="submit" disabled={!newSkill.trim()}><Icon name="add" /> Agregar</button>
   </form>
@@ -163,31 +178,69 @@
 </section>
 
 <section class="blk">
-<h2>Certificaciones</h2>
+<h2>Certificaciones <span class="count">{cv.certifications.length}</span></h2>
 <section class="card">
-  {#each cv.certifications as c, i (c.id)}
-    <div class="row nowrap">
-      <input bind:value={c.name} placeholder="Certificación" aria-label="Certificación" />
-      <input value={c.issuer ?? ""} oninput={(e) => (c.issuer = opt(e.currentTarget.value))} placeholder="Emisor" aria-label="Emisor" />
-      <input value={c.date ?? ""} oninput={(e) => (c.date = opt(e.currentTarget.value))} placeholder="Fecha" aria-label="Fecha" class="narrow" />
-      <button class="link danger" onclick={() => cv.certifications.splice(i, 1)}>Quitar</button>
-    </div>
+  {#if cv.certifications.length}
+    <ul class="chips" aria-label="Certificaciones">
+      {#each cv.certifications as c, i (c.id)}
+        <li class="chip" class:sel={editingCert === c.id}>
+          <button class="chipname" aria-expanded={editingCert === c.id}
+            onclick={() => (editingCert = editingCert === c.id ? null : c.id)} title="Editar emisor y fecha">
+            {c.name || "Sin nombre"}{#if c.issuer || c.date}<span class="yrs">{[c.issuer, c.date].filter(Boolean).join(" · ")}</span>{/if}
+          </button>
+          <button class="chipx" aria-label="Quitar {c.name}"
+            onclick={() => { if (editingCert === c.id) editingCert = null; cv.certifications.splice(i, 1); }}><Icon name="close" size={18} /></button>
+        </li>
+      {/each}
+    </ul>
+  {/if}
+  {#each cv.certifications as c (c.id)}
+    {#if editingCert === c.id}
+      <div class="chipedit">
+        <label>Certificación<input bind:value={c.name} /></label>
+        <label>Emisor<input value={c.issuer ?? ""} oninput={(e) => (c.issuer = opt(e.currentTarget.value))} placeholder="Opcional" /></label>
+        <label>Fecha<input value={c.date ?? ""} oninput={(e) => (c.date = opt(e.currentTarget.value))} placeholder="2024-05" /></label>
+        <button class="tonal" onclick={() => (editingCert = null)}><Icon name="check" size={20} /> Listo</button>
+      </div>
+    {/if}
   {/each}
-  <button onclick={addCert}><Icon name="add" /> Certificación</button>
+  <form class="addrow" onsubmit={addCert}>
+    <input bind:value={newCert} placeholder="Escribe una certificación y pulsa Enter" aria-label="Nueva certificación" />
+    <button type="submit" disabled={!newCert.trim()}><Icon name="add" /> Agregar</button>
+  </form>
 </section>
 </section>
 
 <section class="blk">
-<h2>Idiomas</h2>
+<h2>Idiomas <span class="count">{cv.languages.length}</span></h2>
 <section class="card">
-  {#each cv.languages as l, i}
-    <div class="row nowrap">
-      <input bind:value={l.name} placeholder="Idioma" aria-label="Idioma" />
-      <input bind:value={l.level} placeholder="Nivel (B2, nativo…)" aria-label="Nivel del idioma" />
-      <button class="link danger" onclick={() => cv.languages.splice(i, 1)}>Quitar</button>
+  {#if cv.languages.length}
+    <ul class="chips" aria-label="Idiomas">
+      {#each cv.languages as l, i}
+        <li class="chip" class:sel={editingLang === i}>
+          <button class="chipname" aria-expanded={editingLang === i}
+            onclick={() => (editingLang = editingLang === i ? null : i)} title="Editar nivel">
+            {l.name || "Sin nombre"}{#if l.level}<span class="yrs">{l.level}</span>{/if}
+          </button>
+          <button class="chipx" aria-label="Quitar {l.name}"
+            onclick={() => { editingLang = null; cv.languages.splice(i, 1); }}><Icon name="close" size={18} /></button>
+        </li>
+      {/each}
+    </ul>
+  {/if}
+  {#if editingLang !== null && cv.languages[editingLang]}
+    {@const l = cv.languages[editingLang]}
+    <div class="chipedit">
+      <label>Idioma<input bind:value={l.name} /></label>
+      <label>Nivel<input bind:value={l.level} placeholder="B2, nativo…" /></label>
+      <button class="tonal" onclick={() => (editingLang = null)}><Icon name="check" size={20} /> Listo</button>
     </div>
-  {/each}
-  <button onclick={addLanguage}><Icon name="add" /> Idioma</button>
+  {/if}
+  <form class="addrow" onsubmit={addLanguage}>
+    <input bind:value={newLang.name} placeholder="Idioma" aria-label="Nuevo idioma" />
+    <input class="narrow" bind:value={newLang.level} placeholder="Nivel (B2…)" aria-label="Nivel del nuevo idioma" />
+    <button type="submit" disabled={!newLang.name.trim()}><Icon name="add" /> Agregar</button>
+  </form>
 </section>
 </section>
 </div>
@@ -213,26 +266,28 @@
     border-radius: var(--radius-full); background: var(--md-surface-container-highest);
     color: var(--md-on-surface-variant); font-size: 0.875rem; font-weight: 700; vertical-align: middle;
   }
-  .skills { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; padding: 0; margin: 0 0 1rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; padding: 0; margin: 0 0 1rem; }
   /* Ficha de entrada (M3): nombre que abre el editor y una X para quitar. */
-  .skill {
+  .chip {
     display: inline-flex; align-items: center; height: 36px; border-radius: var(--radius-s);
     border: 1px solid var(--md-outline-variant); background: var(--md-surface-container-lowest);
     transition: background-color 150ms var(--ease), border-color 150ms var(--ease);
   }
-  .skill.sel { background: var(--md-secondary-container); border-color: transparent; }
-  .skill button { min-height: 0; height: 100%; border: 0; border-radius: inherit; background: transparent; font-weight: 600; font-size: 0.9375rem; color: var(--md-on-surface); }
-  .skill.sel button { color: var(--md-on-secondary-container); }
-  .skillname { padding: 0 0.4rem 0 0.75rem; gap: 0.4rem; }
+  .chip.sel { background: var(--md-secondary-container); border-color: transparent; }
+  .chip button { min-height: 0; height: 100%; border: 0; border-radius: inherit; background: transparent; font-weight: 600; font-size: 0.9375rem; color: var(--md-on-surface); }
+  .chip.sel button { color: var(--md-on-secondary-container); }
+  .chipname { padding: 0 0.4rem 0 0.75rem; gap: 0.4rem; }
   .yrs { font-weight: 400; color: var(--md-on-surface-variant); }
-  .skillx { width: 32px; padding: 0; color: var(--md-on-surface-variant) !important; }
-  .skilledit {
-    display: grid; grid-template-columns: 2fr 1.5fr 1fr auto; align-items: end; gap: 0.75rem;
+  .chipx { width: 32px; padding: 0; color: var(--md-on-surface-variant) !important; }
+  .chipedit {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); align-items: end; gap: 0.75rem;
     padding: 1rem; margin-bottom: 1rem; border-radius: var(--radius-m); background: var(--md-surface-container);
     animation: rise-in 220ms var(--ease-decel) both;
   }
-  @container main (max-width: 700px) { .skilledit { grid-template-columns: 1fr 1fr; } }
-  .addskill { display: flex; gap: 0.75rem; }
+  .addrow { display: flex; gap: 0.75rem; }
+  .addrow input { flex: 1 1 8rem; min-width: 0; }
+  .addrow input.narrow { flex: 0 1 8rem; }
+  .addrow button { flex: none; }
   .item { margin-bottom: 0.75rem; }
   .nowrap { flex-wrap: nowrap; margin-bottom: 0.5rem; }
   .narrow { max-width: 7rem; }

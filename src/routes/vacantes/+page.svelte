@@ -355,14 +355,14 @@
               <h3>Qué tanto encaja contigo</h3>
             </div>
             <dl class="breakdown">
-              <dt>Habilidades</dt><dd><Meter layout="row" value={s.breakdown.skills} max={45} label="Habilidades" /></dd>
+              <dt>Habilidades</dt><dd><Meter layout="row" value={s.breakdown.skills} max={Math.round(s.max.skills)} label="Habilidades" /></dd>
               {#if s.breakdown.semantic !== null}
-                <dt>Parecido con tu CV</dt><dd><Meter layout="row" value={s.breakdown.semantic} max={15} label="Parecido con tu CV" /></dd>
+                <dt>Parecido con tu CV</dt><dd><Meter layout="row" value={s.breakdown.semantic} max={Math.round(s.max.semantic)} label="Parecido con tu CV" /></dd>
               {/if}
-              <dt>Puesto</dt><dd><Meter layout="row" value={s.breakdown.title} max={10} label="Puesto" /></dd>
-              <dt>Nivel de experiencia</dt><dd><Meter layout="row" value={s.breakdown.seniority} max={5} label="Nivel de experiencia" /></dd>
-              <dt>Años ({s.years_experience.toFixed(1)})</dt><dd><Meter layout="row" value={s.breakdown.years} max={10} label="Años de experiencia" /></dd>
-              <dt>Remoto, región e idiomas</dt><dd><Meter layout="row" value={s.breakdown.logistics} max={15} label="Remoto, región e idiomas" /></dd>
+              <dt>Puesto</dt><dd><Meter layout="row" value={s.breakdown.title} max={Math.round(s.max.title)} label="Puesto" /></dd>
+              <dt>Nivel de experiencia</dt><dd><Meter layout="row" value={s.breakdown.seniority} max={Math.round(s.max.seniority)} label="Nivel de experiencia" /></dd>
+              <dt>Años ({s.years_experience.toFixed(1)})</dt><dd><Meter layout="row" value={s.breakdown.years} max={Math.round(s.max.years)} label="Años de experiencia" /></dd>
+              <dt>Remoto, región e idiomas</dt><dd><Meter layout="row" value={s.breakdown.logistics} max={Math.round(s.max.logistics)} label="Remoto, región e idiomas" /></dd>
             </dl>
 
             {#if s.blockers.length}

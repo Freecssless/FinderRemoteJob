@@ -8,6 +8,7 @@ mod optimizer;
 mod queue;
 mod reminders;
 mod settings;
+mod weights;
 
 use finder_infra::core::ats::keywords::SkillDict;
 use finder_infra::core::guard::numbers;
@@ -38,6 +39,8 @@ pub(crate) struct AppState {
     data_dir: std::path::PathBuf,
     /// Propuestas del optimizador pendientes de guardar, por id de vacante.
     sessions: std::sync::Mutex<std::collections::HashMap<String, optimizer::Session>>,
+    /// Pesos de la compatibilidad (los normales salvo que el usuario aplique los sugeridos).
+    weights: std::sync::RwLock<finder_infra::core::matching::Weights>,
     info: AppInfo,
 }
 
@@ -259,6 +262,7 @@ pub fn run() {
                 .map(|t| envfile::parse(&t))
                 .unwrap_or_default();
             let llm = tauri::async_runtime::block_on(settings::load(&db, &file_vars));
+            let weights = tauri::async_runtime::block_on(weights::load(&db));
 
             let info = AppInfo {
                 db_path: db_path.display().to_string(),
@@ -275,6 +279,7 @@ pub fn run() {
                 http: finder_infra::sources::http_client()?,
                 data_dir,
                 sessions: Default::default(),
+                weights: std::sync::RwLock::new(weights),
                 info,
             });
             reminders::spawn_checker(app.handle().clone());
@@ -284,6 +289,9 @@ pub fn run() {
             app_info,
             ollama_status,
             nav_counts,
+            weights::weights_status,
+            weights::apply_weights,
+            weights::reset_weights,
             backup::create_backup,
             backup::restore_backup,
             list_profiles,

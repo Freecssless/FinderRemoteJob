@@ -2,7 +2,7 @@
 //! compatibilidad y analizar requisitos con la IA local.
 
 use finder_infra::core::ats::keywords::{SkillDict, extract_terms};
-use finder_infra::core::matching::{MatchInput, MatchReport, match_score};
+use finder_infra::core::matching::{MatchInput, MatchReport, Weights, match_score, reweigh};
 use finder_infra::core::model::{CvMaster, Job, JobRequirements, Profile};
 use finder_infra::llm::LlmClient;
 use finder_infra::llm::tasks::extract_requirements;
@@ -63,7 +63,7 @@ pub struct ImportedJob {
 }
 
 /// Requisitos guardados o, si aún no se analizaron con IA, los del diccionario.
-fn requirements(dict: &SkillDict, job: &Job) -> JobRequirements {
+pub(crate) fn requirements(dict: &SkillDict, job: &Job) -> JobRequirements {
     job.requirements.clone().unwrap_or_else(|| JobRequirements {
         terms: extract_terms(dict, &job.title, &job.description),
         ..Default::default()
@@ -97,7 +97,7 @@ pub(crate) fn score(
     vectors: &Vectors,
 ) -> MatchReport {
     let req = requirements(&state.dict, job);
-    match_score(
+    let report = match_score(
         &state.dict,
         &MatchInput {
             profile: &ctx.0,
@@ -107,7 +107,12 @@ pub(crate) fn score(
             semantic: vectors.similarity(&job.id),
             today,
         },
-    )
+    );
+    // Pesos ajustados a tus resultados, si los aplicaste en Ajustes.
+    match state.weights.read() {
+        Ok(w) if *w != Weights::default() => reweigh(&report, &w),
+        _ => report,
+    }
 }
 
 /// "AAAA-MM" de hoy, del reloj de SQLite (igual que el resto de fechas de la app).

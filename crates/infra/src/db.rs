@@ -376,6 +376,16 @@ impl Db {
     }
 
     /// Vacantes más recientes primero.
+    /// Fecha y hora ISO de hace `days` días, del reloj de SQLite (como el resto de fechas).
+    pub async fn days_ago(&self, days: u32) -> Result<String> {
+        Ok(
+            sqlx::query_scalar("SELECT strftime('%Y-%m-%dT%H:%M:%SZ', 'now', ?)")
+                .bind(format!("-{days} days"))
+                .fetch_one(&self.pool)
+                .await?,
+        )
+    }
+
     /// Vacantes encontradas en las últimas `hours` horas (aviso «nuevas» del menú).
     pub async fn count_jobs_found_within(&self, hours: u32) -> Result<i64> {
         Ok(sqlx::query_scalar(

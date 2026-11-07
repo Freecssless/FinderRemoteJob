@@ -10,9 +10,10 @@
 //! | Logística           | 15   | (remoto 6 · región 5 · idiomas 4)
 //!
 //! Con un bloqueante ("US only", idioma requerido que no hablas…) el total se limita a 20.
-//! Es *compatibilidad*, no probabilidad: los pesos se recalibrarán con datos reales en la fase 2.
+//! Es *compatibilidad*, no probabilidad. Con suficientes postulaciones con resultado, los pesos se
+//! pueden reajustar a tus datos ([`learn_weights`] y [`reweigh`]); el usuario decide si aplicarlos.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::ats::keywords::{SkillDict, contains_word, normalize};
 use crate::ats::score::{Evidence, title_overlap};
@@ -55,6 +56,56 @@ pub struct MatchReport {
     pub blockers: Vec<String>,
     /// Cubres menos del 20 % de las habilidades pedidas; la interfaz lo muestra como "Poco relevante".
     pub low_relevance: bool,
+    /// Máximo de cada parte del desglose (los pesos en uso).
+    pub max: Weights,
+}
+
+/// Puntos máximos de cada parte; suman 100.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Weights {
+    pub skills: f32,
+    pub semantic: f32,
+    pub title: f32,
+    pub seniority: f32,
+    pub years: f32,
+    pub logistics: f32,
+}
+
+impl Default for Weights {
+    fn default() -> Self {
+        Weights {
+            skills: MAX_SKILLS,
+            semantic: MAX_SEMANTIC,
+            title: MAX_TITLE,
+            seniority: MAX_SENIORITY,
+            years: MAX_YEARS,
+            logistics: MAX_REMOTE + MAX_REGION + MAX_LANGUAGES,
+        }
+    }
+}
+
+impl Weights {
+    fn parts(&self) -> [f32; 6] {
+        [
+            self.skills,
+            self.semantic,
+            self.title,
+            self.seniority,
+            self.years,
+            self.logistics,
+        ]
+    }
+
+    fn from_parts(p: [f32; 6]) -> Self {
+        Weights {
+            skills: p[0],
+            semantic: p[1],
+            title: p[2],
+            seniority: p[3],
+            years: p[4],
+            logistics: p[5],
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -174,35 +225,120 @@ pub fn match_score(dict: &SkillDict, input: &MatchInput) -> MatchReport {
     }
     blockers.extend(req.blockers.iter().cloned());
 
-    // --- Total.
-    let mut sum = skills + title + seniority + years + logistics;
-    match semantic {
-        Some(s) => sum += s,
-        // Sin embeddings: los 85 puntos restantes se escalan a 100.
-        None => sum *= 100.0 / (100.0 - MAX_SEMANTIC),
-    }
-    if low_relevance {
-        sum = sum.min(LOW_RELEVANCE_CAP);
-    }
-    if !blockers.is_empty() {
-        sum = sum.min(BLOCKED_CAP);
-    }
-
+    // --- Total (sin embeddings, los 85 puntos restantes se escalan a 100).
+    let breakdown = MatchBreakdown {
+        skills,
+        semantic,
+        title,
+        seniority,
+        years,
+        logistics,
+    };
     MatchReport {
-        total: sum.round().clamp(0.0, 100.0) as u8,
-        breakdown: MatchBreakdown {
-            skills,
-            semantic,
-            title,
-            seniority,
-            years,
-            logistics,
-        },
+        total: capped_total(
+            &breakdown,
+            MAX_SEMANTIC,
+            low_relevance,
+            !blockers.is_empty(),
+        ),
+        breakdown,
         years_experience,
         missing_required,
         blockers,
         low_relevance,
+        max: Weights::default(),
     }
+}
+
+/// Total con los límites de siempre: sin similitud semántica se escala a 100, y los topes de
+/// «poco relevante» y bloqueos se respetan.
+fn capped_total(
+    b: &MatchBreakdown,
+    semantic_weight: f32,
+    low_relevance: bool,
+    blocked: bool,
+) -> u8 {
+    let mut sum = b.skills + b.title + b.seniority + b.years + b.logistics;
+    match b.semantic {
+        Some(s) => sum += s,
+        None => sum *= 100.0 / (100.0 - semantic_weight),
+    }
+    if low_relevance {
+        sum = sum.min(LOW_RELEVANCE_CAP);
+    }
+    if blocked {
+        sum = sum.min(BLOCKED_CAP);
+    }
+    sum.round().clamp(0.0, 100.0) as u8
+}
+
+/// El mismo puntaje con otros pesos: cada parte conserva su proporción (valor / máximo).
+pub fn reweigh(r: &MatchReport, w: &Weights) -> MatchReport {
+    let f = |v: f32, new: f32, old: f32| if old > 0.0 { v * new / old } else { 0.0 };
+    let o = r.max;
+    let breakdown = MatchBreakdown {
+        skills: f(r.breakdown.skills, w.skills, o.skills),
+        semantic: r.breakdown.semantic.map(|s| f(s, w.semantic, o.semantic)),
+        title: f(r.breakdown.title, w.title, o.title),
+        seniority: f(r.breakdown.seniority, w.seniority, o.seniority),
+        years: f(r.breakdown.years, w.years, o.years),
+        logistics: f(r.breakdown.logistics, w.logistics, o.logistics),
+    };
+    MatchReport {
+        total: capped_total(
+            &breakdown,
+            w.semantic,
+            r.low_relevance,
+            !r.blockers.is_empty(),
+        ),
+        breakdown,
+        max: *w,
+        ..r.clone()
+    }
+}
+
+/// Postulaciones con resultado necesarias para sugerir pesos, y mínimo de cada tipo.
+pub const LEARN_MIN_SAMPLES: usize = 30;
+pub const LEARN_MIN_EACH: usize = 5;
+
+/// Pesos sugeridos por tus resultados. Cada muestra es el desglose con los pesos normales y si
+/// la postulación avanzó (entrevista, en proceso u oferta). Sube el peso de las partes que eran
+/// más altas en las que avanzaron y baja el de las que no distinguían; cada peso cambia como
+/// mucho ±50 % y la suma sigue en 100. `None` si aún no hay datos suficientes.
+pub fn learn_weights(samples: &[(MatchBreakdown, bool)]) -> Option<Weights> {
+    let pos = samples.iter().filter(|(_, ok)| *ok).count();
+    let neg = samples.len() - pos;
+    if samples.len() < LEARN_MIN_SAMPLES || pos < LEARN_MIN_EACH || neg < LEARN_MIN_EACH {
+        return None;
+    }
+    let d = Weights::default().parts();
+    let values = |b: &MatchBreakdown| -> [Option<f32>; 6] {
+        [
+            Some(b.skills),
+            b.semantic,
+            Some(b.title),
+            Some(b.seniority),
+            Some(b.years),
+            Some(b.logistics),
+        ]
+    };
+    let mut parts = d;
+    for (i, part) in parts.iter_mut().enumerate() {
+        let mean = |want: bool| {
+            let v: Vec<f32> = samples
+                .iter()
+                .filter(|(_, ok)| *ok == want)
+                .filter_map(|(b, _)| values(b)[i])
+                .map(|v| v / d[i])
+                .collect();
+            (v.len() >= LEARN_MIN_EACH).then(|| v.iter().sum::<f32>() / v.len() as f32)
+        };
+        if let (Some(p), Some(n)) = (mean(true), mean(false)) {
+            *part = d[i] * (1.0 + (p - n)).clamp(0.5, 1.5);
+        }
+    }
+    let total: f32 = parts.iter().sum();
+    Some(Weights::from_parts(parts.map(|p| p * 100.0 / total)))
 }
 
 /// Lo que representa al CV maestro en los embeddings: titular, habilidades, puestos y logros
@@ -438,6 +574,73 @@ mod tests {
     use super::*;
     use crate::ats::keywords::extract_terms;
     use crate::model::Experience;
+
+    fn bd(skills: f32, title: f32) -> MatchBreakdown {
+        MatchBreakdown {
+            skills,
+            semantic: None,
+            title,
+            seniority: 3.0,
+            years: 6.0,
+            logistics: 10.0,
+        }
+    }
+
+    #[test]
+    fn reponderar_con_los_pesos_normales_no_cambia_nada() {
+        let r = MatchReport {
+            total: capped_total(&bd(30.0, 8.0), MAX_SEMANTIC, false, false),
+            breakdown: bd(30.0, 8.0),
+            years_experience: 3.0,
+            missing_required: vec![],
+            blockers: vec![],
+            low_relevance: false,
+            max: Weights::default(),
+        };
+        assert_eq!(reweigh(&r, &Weights::default()), r);
+        // Con más peso a habilidades (que van al 67 %) y menos a puesto (al 80 %), el total baja.
+        let w = Weights {
+            skills: 55.0,
+            title: 0.0,
+            ..Weights::default()
+        };
+        let r2 = reweigh(&r, &w);
+        assert_eq!(r2.max, w);
+        assert!((r2.breakdown.skills - 30.0 * 55.0 / 45.0).abs() < 1e-4);
+        assert_eq!(r2.breakdown.title, 0.0);
+        // Los topes se respetan: con un bloqueo nunca pasa de 20.
+        let blocked = MatchReport {
+            blockers: vec!["US only".into()],
+            ..r
+        };
+        assert!(reweigh(&blocked, &w).total <= 20);
+    }
+
+    #[test]
+    fn sin_datos_suficientes_no_sugiere_pesos() {
+        let few: Vec<_> = (0..10).map(|i| (bd(40.0, 9.0), i % 2 == 0)).collect();
+        assert_eq!(learn_weights(&few), None);
+        let all_pos: Vec<_> = (0..40).map(|_| (bd(40.0, 9.0), true)).collect();
+        assert_eq!(learn_weights(&all_pos), None);
+    }
+
+    #[test]
+    fn sube_el_peso_de_lo_que_distingue_a_las_que_avanzaron() -> Result<(), &'static str> {
+        // Las que avanzaron tenían habilidades altas; el puesto no distinguía.
+        let mut s: Vec<_> = (0..20).map(|_| (bd(42.0, 8.0), true)).collect();
+        s.extend((0..20).map(|_| (bd(15.0, 8.0), false)));
+        let w = learn_weights(&s).ok_or("debería sugerir")?;
+        let d = Weights::default();
+        assert!(w.skills > d.skills, "habilidades debería subir: {w:?}");
+        assert!(
+            w.title < d.title,
+            "al renormalizar, lo que no distingue baja: {w:?}"
+        );
+        let sum: f32 = w.parts().iter().sum();
+        assert!((sum - 100.0).abs() < 1e-3);
+        assert!(w.skills <= d.skills * 1.5 * 100.0 / 85.0); // tope de +50 % (antes de renormalizar)
+        Ok(())
+    }
 
     type R = Result<(), Box<dyn std::error::Error>>;
     const TODAY: &str = "2026-11";

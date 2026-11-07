@@ -3,7 +3,8 @@
   import PageHead from "$lib/components/PageHead.svelte";
   import Select from "$lib/components/Select.svelte";
   import { revealItemInDir } from "@tauri-apps/plugin-opener";
-  import { backupApi, jobsApi, settingsApi, type LlmSettings } from "$lib/api";
+  import { backupApi, jobsApi, settingsApi, weightsApi, type LlmSettings, type Weights, type WeightsStatus } from "$lib/api";
+  import Meter from "$lib/components/Meter.svelte";
 
   const NO_KEYS = { ANTHROPIC_API_KEY: "", FRJ_OPENAI_API_KEY: "" };
   /** Proveedores con la dirección y el modelo ya puestos (compatibles con la API de OpenAI). */
@@ -157,6 +158,30 @@
     }
   }
 
+  // Compatibilidad a tu medida: pesos sugeridos por tus resultados (nunca se aplican solos).
+  let ws = $state<WeightsStatus | null>(null);
+  let wsMsg = $state("");
+  const PARTS: [keyof Weights, string][] = [
+    ["skills", "Habilidades"], ["semantic", "Parecido con tu CV"], ["title", "Puesto"],
+    ["seniority", "Nivel de experiencia"], ["years", "Años"], ["logistics", "Remoto, región e idiomas"],
+  ];
+  const custom = $derived(ws ? PARTS.some(([k]) => Math.abs(ws!.current[k] - ws!.default[k]) > 0.01) : false);
+  async function loadWeights() {
+    try { ws = await weightsApi.status(); } catch (e) { wsMsg = String(e); }
+  }
+  async function applyWeights() {
+    if (!ws?.suggested) return;
+    await weightsApi.apply(ws.suggested);
+    wsMsg = "Listo: la compatibilidad ya usa tus pesos.";
+    await loadWeights();
+  }
+  async function resetWeights() {
+    await weightsApi.reset();
+    wsMsg = "Volviste a los pesos normales.";
+    await loadWeights();
+  }
+  loadWeights();
+
   init();
 </script>
 
@@ -285,6 +310,36 @@
       </div>
     {/if}
   </section>
+  {#if ws}
+    <section class="card tune">
+      <h2>Compatibilidad a tu medida</h2>
+      {#if ws.suggested}
+        <p class="muted small">Según {ws.samples} postulaciones con resultado, esto pesaría más o menos:</p>
+        <dl class="wtable">
+          {#each PARTS as [k, label]}
+            {@const d = ws.default[k]}
+            {@const n = ws.suggested[k]}
+            <dt>{label}</dt>
+            <dd><span class="muted">{Math.round(d)}</span> → <strong class:up={n > d + 0.5} class:down={n < d - 0.5}>{Math.round(n)}</strong></dd>
+          {/each}
+        </dl>
+        <div class="row">
+          <button class="primary" onclick={applyWeights}>Aplicar</button>
+          {#if custom}<button onclick={resetWeights}>Volver a lo normal</button>{/if}
+        </div>
+      {:else}
+        <p class="muted small">
+          La app aprende qué te funciona cuando tengas {ws.needed} postulaciones con resultado
+          (al menos {ws.min_each} que avanzaron a entrevista y {ws.min_each} sin respuesta o rechazadas).
+        </p>
+        <Meter layout="row" value={ws.samples} max={ws.needed} label="Postulaciones con resultado" />
+        <p class="small">{ws.advanced} avanzaron · {ws.not_advanced} no avanzaron</p>
+        {#if custom}<div class="row"><button onclick={resetWeights}>Volver a lo normal</button></div>{/if}
+      {/if}
+      {#if custom}<p class="small ok">Usando pesos ajustados a tus resultados.</p>{/if}
+      {#if wsMsg}<p class="small" role="status">{wsMsg}</p>{/if}
+    </section>
+  {/if}
   {#if s}
     <details class="card advanced">
       <summary>Opciones avanzadas</summary>
@@ -342,6 +397,12 @@
 
 <style>
   .page { display: flex; flex-direction: column; gap: 1rem; }
+  .tune h2 { margin: 0; }
+  .wtable { display: grid; grid-template-columns: 1fr auto; gap: 0.35rem 1rem; margin: 0; font-variant-numeric: tabular-nums; }
+  .wtable dt { color: var(--md-on-surface-variant); }
+  .wtable dd { margin: 0; text-align: right; }
+  .wtable .up { color: var(--md-success); }
+  .wtable .down { color: var(--md-tertiary); }
   /* Dos columnas en ventanas anchas: la IA a la izquierda; respaldo y avanzadas a la derecha. */
   .cols { display: grid; grid-template-columns: 1fr; gap: 1rem; align-items: start; }
   .col { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }

@@ -400,28 +400,32 @@ GROUP BY grupo ORDER BY tasa_respuesta DESC;
 ## 6. Roadmap (una persona, ~15–20 h/semana)
 
 ### Fase 0: cimientos (1 semana)
-- [ ] Workspace de Cargo, app Tauri con Svelte, CI local (`cargo test`, `clippy`).
-- [ ] Migración `0001_init.sql` y conexión `sqlx`.
-- [ ] Ollama funcionando y una llamada `complete_json` de prueba.
+- [x] Workspace de Cargo, app Tauri con Svelte, CI local (`cargo test`, `clippy`).
+- [x] Migración `0001_init.sql` y conexión `sqlx`.
+- [x] Ollama funcionando y una llamada `complete_json` de prueba.
 
 ### Fase 1: MVP (8–10 semanas)
-- [ ] **Perfiles + CV maestro:** crear y editar perfiles; importar PDF/DOCX → JSON → formulario de revisión.
-- [ ] **Fuentes MVP:** Remote OK, Remotive, We Work Remotely (RSS), Get on Board, Jobicy + **importación manual** por URL o texto pegado.
-- [ ] Normalización, deduplicación y búsqueda FTS5.
-- [ ] **Palabras clave:** diccionario inicial (ESCO filtrado + lista técnica y creativa + sinónimos) y extracción con LLM local.
-- [ ] **Puntaje de compatibilidad** y lista de vacantes ordenada con filtros.
-- [ ] **Optimizador v1:** puntaje ATS antes/después, huecos, reescritura + **guardián con tests**, diff aceptar/rechazar, PDF con Typst (plantilla Clásica), prueba de ida y vuelta.
-- [ ] **Seguimiento v1:** estados, historial, lista filtrable, ficha de la vacante y `cv_version` vinculada.
+- [x] **Perfiles + CV maestro:** crear y editar perfiles; importar PDF/DOCX → JSON → formulario de revisión.
+- [x] **Fuentes MVP:** Remote OK, Remotive, We Work Remotely (RSS), Get on Board, Jobicy + **importación manual** por URL o texto pegado.
+- [x] Normalización, deduplicación y búsqueda FTS5.
+- [x] **Palabras clave:** diccionario inicial (ESCO filtrado + lista técnica y creativa + sinónimos) y extracción con LLM local.
+- [x] **Puntaje de compatibilidad** y lista de vacantes ordenada con filtros.
+- [x] **Optimizador v1:** puntaje ATS antes/después, huecos, reescritura + **guardián con tests**, diff aceptar/rechazar, PDF con Typst (plantilla Clásica), prueba de ida y vuelta.
+- [x] **Seguimiento v1:** estados, historial, lista filtrable, ficha de la vacante y `cv_version` vinculada.
 - **Resultado:** ya la usas a diario para buscar, adaptar y registrar.
 
 ### Fase 2: versión completa (8–10 semanas)
-- [ ] DOCX, plantillas Compacta y Técnica, **carta de presentación**.
-- [ ] Cliente de API externa (OpenAI-compatible + Anthropic), anonimización de datos personales, costo estimado y claves en `keyring`.
-- [ ] **Kanban** con arrastrar, recordatorios y notificaciones.
-- [ ] **Cola de postulación asistida** y respuestas frecuentes.
-- [ ] Fuentes: Adzuna, Jooble, Himalayas, Greenhouse/Lever/Ashby por empresa, Torre; **lector IMAP de alertas** (LinkedIn, Indeed, OCC, Computrabajo, Bumeran).
-- [ ] Embeddings (similitud semántica), **estadísticas** y reajuste de pesos con tus datos.
-- [ ] Respaldo y exportación (copia de la base + carpeta de CVs), instaladores para Windows (`.msi`/NSIS) y Linux (AppImage/.deb).
+- [x] DOCX y plantillas Compacta y Técnica. *La carta de presentación se quitó al simplificar.*
+- [x] Cliente de API externa (Anthropic y compatible con OpenAI, con atajos para Gemini y ChatGPT), sin datos personales hacia la IA, y claves en `keyring`. *El costo estimado se quitó al simplificar.*
+- [x] **Kanban** con arrastrar, recordatorios y notificaciones.
+- [x] **Cola de postulación asistida** y respuestas frecuentes.
+- [x] Fuentes Himalayas y Greenhouse/Lever/Ashby por empresa. *Adzuna, Jooble y el lector IMAP de alertas se quitaron al simplificar.*
+- [ ] **Torre:** sus términos prohíben el scraping y su API no documentada ya rechaza las consultas. La API oficial («Torre API for professionals») está en beta privada; queda pendiente de pedir acceso.
+- [x] Embeddings (similitud semántica con `bge-m3`). *La pantalla de estadísticas pasó a un resumen en el Tablero.*
+- [x] Reajuste de pesos con tus datos: Ajustes → «Compatibilidad a tu medida» sugiere pesos con 30 postulaciones con resultado; el usuario decide si aplicarlos.
+- [x] Respaldo y restauración (base y carpeta de CVs en un `.zip`) e instaladores de Linux (`.deb`, `.rpm`, AppImage).
+- [ ] Instalador de Windows (`.msi` y NSIS): el flujo de GitHub Actions está listo, pero falta subir el repositorio. Los instaladores no van firmados.
+- [x] Interfaz Material 3, asistente de bienvenida, perfil activo en el menú y avisos de navegación (no estaban en el plan original).
 
 ### Fase 3: móvil (5–7 semanas)
 - [ ] Interfaz responsive (navegación inferior; Kanban → lista por estado en el teléfono).
