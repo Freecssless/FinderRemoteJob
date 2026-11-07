@@ -16,3 +16,11 @@ thiserror = "2"
 
 [workspace.lints.clippy]
 unwrap_used = "warn"
+
+# Menos información de depuración en desarrollo: `target/debug` ocupa varias veces menos.
+# Los mensajes de error siguen indicando archivo y línea.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
