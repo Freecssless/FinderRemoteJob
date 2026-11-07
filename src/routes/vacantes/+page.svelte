@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHead from "$lib/components/PageHead.svelte";
   import Select from "$lib/components/Select.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { goto } from "$app/navigation";
@@ -180,8 +181,7 @@
 </script>
 
 <div class="page">
-  <header class="row">
-    <h1>Vacantes</h1>
+  <PageHead icon="work" title="Vacantes" subtitle="Ofertas remotas, ordenadas por qué tanto encajan contigo">
     <label class="inline">
       Perfil
       <Select bind:value={profileId} label="Perfil" onchange={changeProfile} disabled={!profiles.length}
@@ -191,7 +191,7 @@
       {busy === "sync" ? "Buscando en las fuentes…" : "Buscar vacantes nuevas"}
     </button>
     <button onclick={() => (showImport = !showImport)} aria-expanded={showImport}>Importar vacante</button>
-  </header>
+  </PageHead>
   {#if embedMsg}<p class="ok small" role="status">{embedMsg}</p>{/if}
 
   {#if !profiles.length}
@@ -402,8 +402,6 @@
 
 <style>
   .page { display: flex; flex-direction: column; gap: 1rem; }
-  header h1 { margin: 0 auto 0 0; }
-  header label.inline :global(.select) { width: auto; min-width: 12rem; }
   .sourcesel { min-width: 13rem; }
   /* Bloques separados: barra de búsqueda, lista y detalle, cada uno en su panel. */
   .toolbar { display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem 1.25rem; border-radius: var(--radius-l); background: var(--md-surface-container-low); }
@@ -419,6 +417,12 @@
   .block h3 { margin-top: 0; }
   .pick { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 3rem 1rem; text-align: center; color: var(--md-on-surface-variant); }
   .pick p { margin: 0; }
+  /* Ancho: lista y detalle llenan la ventana y se desplazan cada uno por su cuenta. */
+  @container main (min-width: 821px) {
+    .page { height: calc(100vh - 5rem); }
+    .split { flex: 1; min-height: 420px; align-items: stretch; }
+    .split > .list.panel, .split > .detail.panel { height: 100%; max-height: none; overflow-y: auto; position: static; }
+  }
   .plain { list-style: none; margin: 0; padding: 0; }
   .split { display: grid; grid-template-columns: minmax(280px, 2fr) 3fr; gap: 1.25rem; align-items: start; }
   .detailbody { display: flex; flex-direction: column; gap: 0.75rem; }

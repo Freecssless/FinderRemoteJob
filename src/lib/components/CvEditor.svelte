@@ -52,7 +52,8 @@
   const opt = (v: string) => (v.trim() === "" ? null : v);
 </script>
 
-<section class="card">
+<div class="cvgrid">
+<section class="blk card basics">
   <h3>Datos básicos</h3>
   <p class="muted small">No se envían a la IA.</p>
   <div class="grid">
@@ -71,7 +72,8 @@
   </label>
 </section>
 
-<h2>Experiencia</h2>
+<section class="blk wide">
+<h2>Experiencia <span class="count">{cv.experience.length}</span></h2>
 {#each cv.experience as exp, i (exp.id)}
   <section class="card item">
     <div class="grid">
@@ -105,7 +107,9 @@
   </section>
 {/each}
 <button onclick={addExperience}><Icon name="add" /> Experiencia</button>
+</section>
 
+<section class="blk skillsblk">
 <h2>Habilidades <span class="count">{cv.skills.length}</span></h2>
 <section class="card">
   {#if cv.skills.length}
@@ -140,7 +144,9 @@
     <button type="submit" disabled={!newSkill.trim()}><Icon name="add" /> Agregar</button>
   </form>
 </section>
+</section>
 
+<section class="blk">
 <h2>Educación</h2>
 {#each cv.education as ed, i (ed.id)}
   <section class="card item">
@@ -154,7 +160,9 @@
   </section>
 {/each}
 <button onclick={addEducation}><Icon name="add" /> Educación</button>
+</section>
 
+<section class="blk">
 <h2>Certificaciones</h2>
 <section class="card">
   {#each cv.certifications as c, i (c.id)}
@@ -167,7 +175,9 @@
   {/each}
   <button onclick={addCert}><Icon name="add" /> Certificación</button>
 </section>
+</section>
 
+<section class="blk">
 <h2>Idiomas</h2>
 <section class="card">
   {#each cv.languages as l, i}
@@ -179,8 +189,25 @@
   {/each}
   <button onclick={addLanguage}><Icon name="add" /> Idioma</button>
 </section>
+</section>
+</div>
 
 <style>
+  /* Dos columnas en ventanas anchas: los bloques cortos se acomodan juntos, Experiencia ocupa todo el ancho. */
+  .cvgrid { display: grid; grid-template-columns: 1fr; gap: 1.5rem 1.25rem; align-items: start; }
+  @container main (min-width: 1000px) {
+    .cvgrid { grid-template-columns: 1fr 1fr; }
+    .wide { grid-column: 1 / -1; }
+  }
+  /* Datos básicos y Habilidades lado a lado; Experiencia debajo, a todo el ancho. */
+  .blk { order: 4; }
+  .blk.basics { order: 1; }
+  .blk.skillsblk { order: 2; }
+  .blk.wide { order: 3; }
+  .basics .grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+  .blk { min-width: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+  .blk > h2 { margin: 0; }
+  .blk > button { align-self: flex-start; }
   .count {
     display: inline-grid; place-items: center; min-width: 1.75rem; padding: 0 0.45rem; margin-left: 0.4rem;
     border-radius: var(--radius-full); background: var(--md-surface-container-highest);

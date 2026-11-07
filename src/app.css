@@ -216,6 +216,15 @@ button.primary.danger, button.danger.filled { background: var(--md-error); borde
 .filebtn:focus-within span { outline: 3px solid var(--md-primary); outline-offset: 2px; }
 .filebtn:has(input:disabled) span { opacity: 0.6; cursor: not-allowed; }
 
+/* Onda de M3 al pulsar (la crea el layout). */
+button, a.button, nav a, .tab { position: relative; overflow: hidden; }
+.ripple {
+  position: absolute; border-radius: 50%; pointer-events: none;
+  background: currentColor; opacity: 0.16; transform: scale(0);
+  animation: ripple 520ms var(--ease-decel) forwards;
+}
+@keyframes ripple { to { transform: scale(1); opacity: 0; } }
+
 /* Botón de icono (M3): círculo de 40px sin borde. */
 button.icon-btn { width: 40px; min-height: 40px; padding: 0; border: 0; border-radius: var(--radius-full); color: var(--md-on-surface-variant); }
 button.icon-btn:disabled { border: 0; background: transparent; opacity: 0.38; }

@@ -219,6 +219,19 @@
 - La ficha de compatibilidad muestra «Similitud con tu CV» cuando existe.
 - `finder_infra::semantic` (`ensure`, `Vectors`), `Db::embeddings` y `Db::put_embedding`.
 
+### Más fácil de navegar, sin huecos y con más personalidad
+- **Encabezado común en cada pantalla:** un icono de color propio de la sección (con una entrada animada), el título, una línea que dice para qué sirve y las acciones a la derecha.
+- **Avisos en el menú:** cuántas vacantes nuevas hay (24 h), cuántas esperan en Postular y cuántos recordatorios vencieron en el Tablero.
+- **Onda de Material 3** al pulsar botones, destinos y pestañas.
+- **Perfiles:**
+  - Los perfiles pasan a pestañas arriba, cada uno con su inicial; ya no hay columna lateral con hueco debajo.
+  - El formulario usa dos columnas.
+  - El CV se reparte en dos columnas, con Datos básicos y Habilidades lado a lado.
+  - La barra «CV maestro» queda fija arriba al desplazarse.
+- **Vacantes:** la lista y el detalle llenan la altura de la ventana y se desplazan cada uno por su cuenta.
+- **Ajustes:** dos columnas (la IA a la izquierda; respaldo y opciones avanzadas a la derecha), y «Restaurar una copia» como botón.
+- **Optimizador:** usa el mismo encabezado con el puesto y la empresa.
+
 ### Pantallas mejor seccionadas
 - **Perfiles:**
   - La lista va en su propio panel.

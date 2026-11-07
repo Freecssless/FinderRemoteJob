@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHead from "$lib/components/PageHead.svelte";
   import Icon from "$lib/components/Icon.svelte";
   import Select from "$lib/components/Select.svelte";
   import Meter from "$lib/components/Meter.svelte";
@@ -103,14 +104,13 @@
 </script>
 
 <div class="page">
-  <header class="row">
-    <h1>Postular</h1>
+  <PageHead icon="send" title="Postular" subtitle="Envía tus solicitudes en minutos" tone="tertiary">
     <label class="inline">
       Perfil
       <Select bind:value={profileId} label="Perfil" onchange={changeProfile} disabled={!profiles.length}
         options={profiles.map((p) => ({ value: p.id, label: p.name }))} />
     </label>
-  </header>
+  </PageHead>
 
   {#if error}<p class="danger" role="alert">{error}</p>{/if}
 

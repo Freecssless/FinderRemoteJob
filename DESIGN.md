@@ -433,6 +433,35 @@ Cada bloque de una pantalla va en su propio panel `surface-container-low` con ra
 - **Vacantes:** barra de búsqueda y filtros, lista, y detalle. La búsqueda es un campo en píldora con lupa.
 - **Dentro de un panel:** las secciones se separan con un divisor (`.block`), nunca con tarjetas anidadas.
 
+### Cabecera de pantalla (`PageHead.svelte`)
+Cuadro de 52px con radio de 16px y el icono de la sección en un contenedor tonal:
+- `primary` en Perfiles y Vacantes;
+- `tertiary` en Optimizador y Postular;
+- `secondary` en Tablero y Ajustes.
+
+Al aparecer, el cuadro escala y gira levemente (420ms). Al lado van el título (headline) y una línea que dice para qué sirve la pantalla, en tinta secundaria. Las acciones van a la derecha y bajan a una segunda fila si no caben.
+
+### Avisos de navegación
+Píldora `tertiary-container` (cempasúchil, porque es «lo nuevo») a la derecha del destino en el cajón, o sobre el icono en el riel. Entra con un pequeño rebote. Muestra:
+- **Vacantes:** vacantes encontradas en las últimas 24 horas.
+- **Postular:** vacantes por enviar.
+- **Tablero:** recordatorios vencidos.
+
+El número lleva su texto para lectores de pantalla.
+
+### Onda (ripple)
+Al pulsar un botón, un enlace-botón, un destino o una pestaña, nace un círculo de `currentColor` al 16 % donde tocas, que crece y se desvanece en 520ms. No aparece en menús ni con movimiento reducido.
+
+### Pestañas de perfil
+Fichas en píldora de 56px con una inicial en un círculo talavera de 40px, el nombre y la modalidad. La pestaña activa usa `secondary-container`.
+
+### Densidad
+- **Vacantes:** en ventanas anchas, la lista y el detalle llenan la altura de la ventana y se desplazan cada uno por su cuenta.
+- **Perfiles:**
+  - El CV se reparte en dos columnas: Datos básicos y Habilidades lado a lado, Experiencia a todo el ancho, y Educación, Certificaciones e Idiomas debajo.
+  - La barra «CV maestro» se queda fija arriba al desplazar, con «Guardar CV» siempre a mano.
+- **Ajustes:** la IA a la izquierda; la copia de seguridad y las opciones avanzadas a la derecha.
+
 ### Lists and Tables
 - **Elemento de lista seleccionable:** fila a lo ancho, 12px de radio, sin borde; hover con capa del 8%; activo en `secondary-container`.
 - **Tabla:** cifras tabulares, encabezados en label small `on-surface-variant`, divisores de 1px en `outline-variant`.

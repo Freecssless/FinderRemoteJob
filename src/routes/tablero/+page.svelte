@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHead from "$lib/components/PageHead.svelte";
   import Select from "$lib/components/Select.svelte";
   import Icon from "$lib/components/Icon.svelte";
   import Meter from "$lib/components/Meter.svelte";
@@ -233,8 +234,7 @@
 
 <div class="page" class:with-detail={selected}>
   <div class="main">
-    <header class="row">
-      <h1>Tablero</h1>
+    <PageHead icon="view_kanban" title="Tablero" subtitle="Sigue cada postulación hasta la respuesta" tone="secondary">
       <label class="inline">
         Perfil
         <Select bind:value={profileId} label="Perfil" onchange={changeProfile} disabled={!profiles.length}
@@ -245,7 +245,7 @@
         <button aria-pressed={view === "lista"} onclick={() => (view = "lista")}>Lista</button>
       </div>
       <input class="search" type="search" placeholder="Buscar puesto o empresa" bind:value={query} aria-label="Buscar" />
-    </header>
+    </PageHead>
 
     {#if error}<p class="danger" role="alert">{error}</p>{/if}
 
@@ -506,10 +506,7 @@
   .page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; min-height: calc(100vh - 5rem); }
   .page.with-detail { grid-template-columns: minmax(0, 1fr) 340px; }
   .main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-  header { margin-bottom: 1rem; }
-  header h1 { margin: 0 1rem 0 0; }
-  header label.inline :global(.select) { width: auto; min-width: 11rem; }
-  .search { max-width: 260px; margin-left: auto; }
+  .search { width: 15rem; }
   .filters { align-items: end; margin-bottom: 0.25rem; }
   .filters label { width: auto; }
   .filters :global(.select) { min-width: 10rem; }

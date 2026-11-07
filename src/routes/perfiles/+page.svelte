@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHead from "$lib/components/PageHead.svelte";
   import Select from "$lib/components/Select.svelte";
   import { api, emptyCv, rememberedProfile, rememberProfile, REMOTE_LABELS, type CvMaster, type Profile, type RemotePref } from "$lib/api";
   import CvEditor from "$lib/components/CvEditor.svelte";
@@ -200,26 +201,25 @@
   load();
 </script>
 
-<div class="layout">
-  <section class="list">
-    <h1>Perfiles</h1>
-    <div class="panel">
-    <ul>
+<div class="page">
+  <PageHead icon="person" title="Perfiles" subtitle="Tu CV y lo que buscas">
+    <a class="button tonal" href="/bienvenida"><Icon name="person_add" size={20} /> Crear paso a paso</a>
+    <button onclick={() => requestSwitch("new")} disabled={creating}><Icon name="add" /> Perfil vacío</button>
+  </PageHead>
+
+  {#if profiles.length}
+    <div class="tabs" role="tablist" aria-label="Tus perfiles">
       {#each profiles as p (p.id)}
-        <li>
-          <button class="list-item item" class:active={p.id === selectedId} onclick={() => requestSwitch(p.id)}>
-            <strong>{p.name}</strong>
-            <span class="muted small">{REMOTE_LABELS[p.remote_pref]}</span>
-          </button>
-        </li>
+        <button role="tab" class="tab" aria-selected={p.id === selectedId} onclick={() => requestSwitch(p.id)}>
+          <span class="avatar" aria-hidden="true">{p.name.trim().charAt(0).toUpperCase() || "?"}</span>
+          <span class="tabtext"><strong>{p.name}</strong><span>{REMOTE_LABELS[p.remote_pref]}</span></span>
+        </button>
       {/each}
-    </ul>
-    <div class="actions">
-      <a class="button tonal" href="/bienvenida"><Icon name="person_add" size={20} /> Crear paso a paso</a>
-      <button onclick={() => requestSwitch("new")} disabled={creating}><Icon name="add" /> Perfil vacío</button>
+      {#if creating}
+        <span class="tab" aria-selected="true"><span class="avatar" aria-hidden="true">+</span><span class="tabtext"><strong>Nuevo perfil</strong></span></span>
+      {/if}
     </div>
-    </div>
-  </section>
+  {/if}
 
   <section class="detail">
     {#if pendingSwitch}
@@ -299,20 +299,30 @@
 </div>
 
 <style>
-  .layout { display: grid; grid-template-columns: 240px 1fr; gap: 1.5rem; align-items: start; }
-  .list ul { list-style: none; padding: 0; margin: 0 0 0.75rem; display: flex; flex-direction: column; gap: 0.25rem; }
-  .item { flex-direction: column; gap: 0.1rem; }
-  .detail { min-width: 0; max-width: 960px; }
-  .cvbar { margin: 2rem 0 1rem; padding-top: 1.5rem; border-top: 1px solid var(--md-outline-variant); }
-  .panel { background: var(--md-surface-container-low); border-radius: var(--radius-l); padding: 0.5rem; }
-  .panel ul { margin: 0 0 0.5rem; }
-  .actions { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.5rem; border-top: 1px solid var(--md-outline-variant); }
-  .actions > * { width: 100%; }
-  .cvbar h2 { margin: 0 auto 0 0; }
-  /* Angosto: la lista de perfiles pasa arriba, en fila. */
-  @container main (max-width: 760px) {
-    .layout { grid-template-columns: 1fr; }
-    .list ul { flex-direction: row; flex-wrap: wrap; }
-    .list li { flex: 1 1 12rem; }
+  .page { display: flex; flex-direction: column; gap: 1rem; }
+  /* Pestañas de perfil: una ficha por perfil, con su inicial. */
+  .tabs { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .tab {
+    justify-content: flex-start; gap: 0.6rem; min-height: 56px; padding: 0.4rem 1rem 0.4rem 0.45rem;
+    border-radius: var(--radius-full); border: 1px solid var(--md-outline-variant);
+    background: var(--md-surface-container-low); color: var(--md-on-surface); font-weight: 400; text-align: left;
   }
+  .tab[aria-selected="true"] { background: var(--md-secondary-container); border-color: transparent; color: var(--md-on-secondary-container); }
+  .avatar {
+    display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 50%;
+    background: var(--md-primary); color: var(--md-on-primary); font-weight: 750; font-size: 1.0625rem;
+  }
+  .tabtext { display: flex; flex-direction: column; line-height: 1.2; }
+  .tabtext span { font-size: 0.875rem; color: var(--md-on-surface-variant); }
+  .tab[aria-selected="true"] .tabtext span { color: inherit; }
+  .detail { min-width: 0; display: flex; flex-direction: column; gap: 1rem; }
+  .detail > .card .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @container main (max-width: 640px) { .detail > .card .grid { grid-template-columns: 1fr; } }
+  /* Barra del CV fija arriba al desplazarse: «Guardar CV» siempre a mano. */
+  .cvbar {
+    position: sticky; top: 0; z-index: 5; margin: 0.5rem calc(-1 * clamp(1rem, 3vw, 2.5rem)) 0;
+    padding: 0.75rem clamp(1rem, 3vw, 2.5rem); background: color-mix(in srgb, var(--md-surface) 92%, transparent);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--md-outline-variant);
+  }
+  .cvbar h2 { margin: 0 auto 0 0; }
 </style>

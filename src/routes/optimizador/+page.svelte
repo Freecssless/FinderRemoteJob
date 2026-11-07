@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHead from "$lib/components/PageHead.svelte";
   import Icon from "$lib/components/Icon.svelte";
   import Meter from "$lib/components/Meter.svelte";
   import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
@@ -82,7 +83,7 @@
 </script>
 
 {#if !jobId}
-  <h1>Optimizador</h1>
+  <PageHead icon="edit_document" title="Optimizador" subtitle="Adapta tu CV a una vacante sin inventar nada" tone="tertiary" />
   <div class="empty">
     <span class="empty-icon"><Icon name="edit_document" size={32} /></span>
     <h2>Adapta tu CV a una vacante</h2>
@@ -93,13 +94,8 @@
   <div class="page">
     <header>
       <p class="small"><a class="back" href="/vacantes"><Icon name="arrow_back" size={18} /> Vacantes</a></p>
-      <h1>Adaptar CV{detail ? `: ${detail.job.title}` : ""}</h1>
-      {#if detail}
-        <p class="muted">
-          {[detail.job.company, detail.job.location].filter(Boolean).join(" · ")}
-          {#if profile}· perfil «{profile.name}»{/if}
-        </p>
-      {/if}
+      <PageHead icon="edit_document" tone="tertiary" title={detail ? detail.job.title : "Adaptar CV"}
+        subtitle={detail ? [detail.job.company, detail.job.location, profile ? `perfil «${profile.name}»` : ""].filter(Boolean).join(" · ") : undefined} />
     </header>
 
     {#if error}<p class="danger" role="alert">{error}</p>{/if}
@@ -260,7 +256,6 @@
   .templates { flex-basis: 100%; border: 0; padding: 0; margin: 0 0 0.5rem; display: flex; flex-direction: column; gap: 0.2rem; }
   .templates legend { font-weight: 600; margin-bottom: 0.2rem; }
   .page { display: flex; flex-direction: column; gap: 0.75rem; max-width: 960px; }
-  header h1 { margin-bottom: 0.25rem; }
   header p { margin: 0; }
   .scores h2 { margin: 0 0 0.25rem; }
   .ats { display: grid; grid-template-columns: max-content 1fr; align-items: center; gap: 0.75rem 1.25rem; margin: 0.5rem 0 1rem; max-width: 36rem; }

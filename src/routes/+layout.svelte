@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onNavigate } from "$app/navigation";
   import { page } from "$app/state";
-  import { api, type AppInfo } from "$lib/api";
+  import { onMount } from "svelte";
+  import { api, boardApi, jobsApi, queueApi, rememberedProfile, type AppInfo } from "$lib/api";
   import Icon from "$lib/components/Icon.svelte";
   import type { IconName } from "$lib/icons";
   import "../app.css";
@@ -9,9 +10,38 @@
   let { children } = $props();
   let info = $state<AppInfo | null>(null);
   // Se vuelve a pedir al navegar: los Ajustes pueden cambiar los modelos.
+  // Avisos del menú: vacantes nuevas (24 h), pendientes de postular y recordatorios vencidos.
+  let badges = $state<Record<string, number>>({});
   $effect(() => {
     void page.url.pathname;
     api.appInfo().then((i) => (info = i)).catch(() => {});
+    const pid = rememberedProfile();
+    if (!pid) return;
+    const day = Date.now() - 86_400_000;
+    Promise.all([
+      jobsApi.list(pid, "").then((r) => r.filter((j) => Date.parse(j.found_at) > day).length).catch(() => 0),
+      queueApi.list(pid).then((r) => r.length).catch(() => 0),
+      boardApi.dueReminders(pid).then((r) => r.length).catch(() => 0),
+    ]).then(([vacantes, cola, tablero]) => (badges = { "/vacantes": vacantes, "/cola": cola, "/tablero": tablero }));
+  });
+  const badgeLabel: Record<string, string> = { "/vacantes": "nuevas", "/cola": "por enviar", "/tablero": "recordatorios" };
+
+  // Onda de M3 al pulsar: nace donde tocas y se desvanece.
+  onMount(() => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const down = (e: PointerEvent) => {
+      const el = (e.target as Element).closest<HTMLElement>("button:not(:disabled), a.button, nav a, .tab");
+      if (!el || el.closest(".menu")) return;
+      const r = el.getBoundingClientRect();
+      const size = Math.max(r.width, r.height) * 2;
+      const dot = document.createElement("span");
+      dot.className = "ripple";
+      dot.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - r.left - size / 2}px;top:${e.clientY - r.top - size / 2}px`;
+      el.append(dot);
+      dot.addEventListener("animationend", () => dot.remove());
+    };
+    document.addEventListener("pointerdown", down);
+    return () => document.removeEventListener("pointerdown", down);
   });
 
   // Transición entre pantallas: el contenido se funde y la píldora de la navegación se desliza.
@@ -51,6 +81,11 @@
           {#if on}<span class="pill" aria-hidden="true"></span>{/if}
           <span class="ico"><Icon name={on ? (`${item.icon}-fill` as IconName) : item.icon} size={24} /></span>
           <span class="label">{item.label}</span>
+          {#if badges[item.href]}
+            <span class="badge" title="{badges[item.href]} {badgeLabel[item.href]}">
+              {badges[item.href] > 99 ? "99+" : badges[item.href]}<span class="sr-only"> {badgeLabel[item.href]}</span>
+            </span>
+          {/if}
         </a>
       {/each}
     </nav>
@@ -114,6 +149,13 @@
     view-transition-name: nav-pill;
   }
   .ico { display: grid; place-items: center; }
+  .badge {
+    margin-left: auto; min-width: 1.5rem; height: 1.5rem; padding: 0 0.45rem; border-radius: var(--radius-full);
+    display: grid; place-items: center; font-size: 0.875rem; font-weight: 750; font-variant-numeric: tabular-nums;
+    background: var(--md-tertiary-container); color: var(--md-on-tertiary-container);
+    animation: badge-pop 360ms var(--ease-decel) both;
+  }
+  @keyframes badge-pop { from { transform: scale(0.4); opacity: 0; } }
   nav a:focus-visible { outline-offset: -3px; border-radius: var(--radius-full); }
   footer { margin-top: auto; }
   .ai {
@@ -149,6 +191,7 @@
     .ico { width: 56px; height: 32px; border-radius: var(--radius-full); transition: background-color 150ms var(--ease); }
     .pill { inset: 0.25rem auto auto 50%; width: 56px; height: 32px; translate: -50% 0; }
     .label { text-align: center; }
+    .badge { position: absolute; top: -2px; left: calc(50% + 6px); margin: 0; height: 1.375rem; min-width: 1.375rem; padding: 0 0.35rem; }
     footer { width: 100%; display: flex; justify-content: center; }
     .ai { padding: 0.6rem; justify-content: center; }
     .ailabel { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }

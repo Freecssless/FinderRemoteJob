@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Icon from "$lib/components/Icon.svelte";
+  import PageHead from "$lib/components/PageHead.svelte";
   import Select from "$lib/components/Select.svelte";
   import { revealItemInDir } from "@tauri-apps/plugin-opener";
   import { backupApi, jobsApi, settingsApi, type LlmSettings } from "$lib/api";
@@ -183,9 +185,11 @@
 {/snippet}
 
 <div class="page">
-  <h1>Ajustes</h1>
+  <PageHead icon="settings" title="Ajustes" subtitle="Qué IA usar y copias de seguridad" tone="secondary" />
   {#if error}<p class="danger" role="alert">{error}</p>{/if}
 
+  <div class="cols">
+    <div class="col">
   {#if s}
     <section class="card">
       <h2>¿Qué IA adapta tus CV?</h2>
@@ -247,6 +251,41 @@
       {/if}
     </section>
 
+  {:else if !error}
+    <p class="muted">Cargando…</p>
+  {/if}
+    </div>
+    <div class="col">
+  <section class="card">
+    <h2>Copia de seguridad</h2>
+    <p class="muted small">
+      Guarda en un solo archivo tus perfiles, CV, vacantes, postulaciones y los CV generados.
+      Las claves de IA no se incluyen.
+    </p>
+    {#if backupError}<p class="danger small" role="alert">{backupError}</p>{/if}
+    <div class="row">
+      <button class="primary" onclick={makeBackup} disabled={backupBusy}>Hacer copia ahora</button>
+      {#if backupPath}
+        <span class="ok small" role="status">Guardada en {backupPath}</span>
+        <button class="link small" onclick={() => revealItemInDir(backupPath)}>Mostrar en la carpeta</button>
+      {/if}
+    </div>
+    <label class="filebtn">
+      <input type="file" accept=".zip" onchange={(e) => { restoreFile = e.currentTarget.files?.[0] ?? null; e.currentTarget.value = ""; }} disabled={backupBusy} />
+      <span><Icon name="history" size={20} /> Restaurar una copia…</span>
+    </label>
+    {#if restoreFile}
+      <p class="notice small">
+        Tus datos actuales se reemplazarán por los de «{restoreFile.name}» (los actuales se guardan aparte
+        por si acaso) y la app se reiniciará.
+      </p>
+      <div class="row">
+        <button class="danger" onclick={restore} disabled={backupBusy}>Sí, restaurar</button>
+        <button onclick={() => (restoreFile = null)} disabled={backupBusy}>Cancelar</button>
+      </div>
+    {/if}
+  </section>
+  {#if s}
     <details class="card advanced">
       <summary>Opciones avanzadas</summary>
 
@@ -295,43 +334,18 @@
 
       {#if s.env_file}<p class="muted small">Archivo .env: {s.env_file} (lo que fija manda sobre esta pantalla).</p>{/if}
     </details>
-  {:else if !error}
-    <p class="muted">Cargando…</p>
   {/if}
-
-  <section class="card">
-    <h2>Copia de seguridad</h2>
-    <p class="muted small">
-      Guarda en un solo archivo tus perfiles, CV, vacantes, postulaciones y los CV generados.
-      Las claves de IA no se incluyen.
-    </p>
-    {#if backupError}<p class="danger small" role="alert">{backupError}</p>{/if}
-    <div class="row">
-      <button class="primary" onclick={makeBackup} disabled={backupBusy}>Hacer copia ahora</button>
-      {#if backupPath}
-        <span class="ok small" role="status">Guardada en {backupPath}</span>
-        <button class="link small" onclick={() => revealItemInDir(backupPath)}>Mostrar en la carpeta</button>
-      {/if}
     </div>
-    <label>
-      Restaurar una copia
-      <input type="file" accept=".zip" onchange={(e) => (restoreFile = e.currentTarget.files?.[0] ?? null)} disabled={backupBusy} />
-    </label>
-    {#if restoreFile}
-      <p class="notice small">
-        Tus datos actuales se reemplazarán por los de «{restoreFile.name}» (los actuales se guardan aparte
-        por si acaso) y la app se reiniciará.
-      </p>
-      <div class="row">
-        <button class="danger" onclick={restore} disabled={backupBusy}>Sí, restaurar</button>
-        <button onclick={() => (restoreFile = null)} disabled={backupBusy}>Cancelar</button>
-      </div>
-    {/if}
-  </section>
+  </div>
+
 </div>
 
 <style>
-  .page { display: flex; flex-direction: column; gap: 0.75rem; max-width: 720px; }
+  .page { display: flex; flex-direction: column; gap: 1rem; }
+  /* Dos columnas en ventanas anchas: la IA a la izquierda; respaldo y avanzadas a la derecha. */
+  .cols { display: grid; grid-template-columns: 1fr; gap: 1rem; align-items: start; }
+  .col { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+  @container main (min-width: 880px) { .cols { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); } }
   section, .advanced { display: flex; flex-direction: column; gap: 0.6rem; }
   section h2, section p, .advanced p { margin: 0; }
   .advanced h3 { margin: 1.25rem 0 0.1rem; }
