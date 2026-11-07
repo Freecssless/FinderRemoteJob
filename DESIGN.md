@@ -420,6 +420,19 @@ Fila de 48px con radio de 12px y título a 650. La flecha `expand_more` va a la 
 - **Bordes:** el lado con más columnas se desvanece con `mask-image`.
 - **Tarjetas:** cursor de agarrar.
 
+### Fichas de entrada (habilidades)
+- **Ficha:** 36px de alto, radio de 8px y borde `outline-variant` sobre `surface-container-lowest`. Contiene el nombre a 600, los años en tinta secundaria y una X de 32px para quitarla.
+- **Edición:** al tocar el nombre, la ficha pasa a `secondary-container` y abre debajo un editor con nombre, nivel y años, sobre `surface-container`. Solo hay uno abierto a la vez.
+- **Agregar:** un campo al pie; Enter agrega, admite varias separadas por comas e ignora las repetidas.
+
+### Lista de respuestas
+Filas separadas por divisores `outline-variant`: la pregunta en tinta secundaria y la respuesta a 650 en una línea, con botones de icono para copiar y editar. Solo se abre a edición la fila elegida.
+
+### Paneles de pantalla
+Cada bloque de una pantalla va en su propio panel `surface-container-low` con radio de 16px y 16px de separación entre bloques.
+- **Vacantes:** barra de búsqueda y filtros, lista, y detalle. La búsqueda es un campo en píldora con lupa.
+- **Dentro de un panel:** las secciones se separan con un divisor (`.block`), nunca con tarjetas anidadas.
+
 ### Lists and Tables
 - **Elemento de lista seleccionable:** fila a lo ancho, 12px de radio, sin borde; hover con capa del 8%; activo en `secondary-container`.
 - **Tabla:** cifras tabulares, encabezados en label small `on-surface-variant`, divisores de 1px en `outline-variant`.

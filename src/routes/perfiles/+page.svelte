@@ -203,6 +203,7 @@
 <div class="layout">
   <section class="list">
     <h1>Perfiles</h1>
+    <div class="panel">
     <ul>
       {#each profiles as p (p.id)}
         <li>
@@ -213,8 +214,11 @@
         </li>
       {/each}
     </ul>
-    <button onclick={() => requestSwitch("new")} disabled={creating}><Icon name="add" /> Nuevo perfil</button>
-    <p class="small"><a href="/bienvenida">Crear un perfil paso a paso</a></p>
+    <div class="actions">
+      <a class="button tonal" href="/bienvenida"><Icon name="person_add" size={20} /> Crear paso a paso</a>
+      <button onclick={() => requestSwitch("new")} disabled={creating}><Icon name="add" /> Perfil vacío</button>
+    </div>
+    </div>
   </section>
 
   <section class="detail">
@@ -299,7 +303,11 @@
   .list ul { list-style: none; padding: 0; margin: 0 0 0.75rem; display: flex; flex-direction: column; gap: 0.25rem; }
   .item { flex-direction: column; gap: 0.1rem; }
   .detail { min-width: 0; max-width: 960px; }
-  .cvbar { margin: 1.5rem 0 0.75rem; }
+  .cvbar { margin: 2rem 0 1rem; padding-top: 1.5rem; border-top: 1px solid var(--md-outline-variant); }
+  .panel { background: var(--md-surface-container-low); border-radius: var(--radius-l); padding: 0.5rem; }
+  .panel ul { margin: 0 0 0.5rem; }
+  .actions { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.5rem; border-top: 1px solid var(--md-outline-variant); }
+  .actions > * { width: 100%; }
   .cvbar h2 { margin: 0 auto 0 0; }
   /* Angosto: la lista de perfiles pasa arriba, en fila. */
   @container main (max-width: 760px) {

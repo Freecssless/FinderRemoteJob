@@ -21,8 +21,21 @@
     });
   const addBullet = (i: number) =>
     cv.experience[i].bullets.push({ id: nextId("b", allBulletIds()), text: "", metrics: [] });
-  const addSkill = () =>
-    cv.skills.push({ id: nextId("sk", cv.skills.map((s) => s.id)), name: "", level: null, years: null });
+  // Habilidades como fichas: se agregan escribiendo y se editan de una en una.
+  let newSkill = $state("");
+  let editingSkill = $state<string | null>(null);
+  function addSkill(e: SubmitEvent) {
+    e.preventDefault();
+    for (const name of newSkill.split(",").map((s) => s.trim()).filter(Boolean)) {
+      if (cv.skills.some((s) => s.name.toLowerCase() === name.toLowerCase())) continue;
+      cv.skills.push({ id: nextId("sk", cv.skills.map((s) => s.id)), name, level: null, years: null });
+    }
+    newSkill = "";
+  }
+  function removeSkill(i: number) {
+    if (cv.skills[i].id === editingSkill) editingSkill = null;
+    cv.skills.splice(i, 1);
+  }
   const addEducation = () =>
     cv.education.push({
       id: nextId("edu", cv.education.map((e) => e.id)),
@@ -93,22 +106,39 @@
 {/each}
 <button onclick={addExperience}><Icon name="add" /> Experiencia</button>
 
-<h2>Habilidades</h2>
+<h2>Habilidades <span class="count">{cv.skills.length}</span></h2>
 <section class="card">
-  {#each cv.skills as s, i (s.id)}
-    <div class="row nowrap">
-      <input bind:value={s.name} placeholder="Habilidad" aria-label="Habilidad" />
-      <input value={s.level ?? ""} oninput={(e) => (s.level = opt(e.currentTarget.value))} placeholder="Nivel" aria-label="Nivel" class="narrow" />
-      <input
-        type="number" min="0" step="0.5" class="narrow"
-        value={s.years ?? ""}
-        oninput={(e) => (s.years = e.currentTarget.value === "" ? null : Number(e.currentTarget.value))}
-        placeholder="Años" aria-label="Años"
-      />
-      <button class="link danger" onclick={() => cv.skills.splice(i, 1)}>Quitar</button>
-    </div>
+  {#if cv.skills.length}
+    <ul class="skills" aria-label="Habilidades">
+      {#each cv.skills as s, i (s.id)}
+        <li class="skill" class:sel={editingSkill === s.id}>
+          <button class="skillname" aria-expanded={editingSkill === s.id}
+            onclick={() => (editingSkill = editingSkill === s.id ? null : s.id)}
+            title="Editar nivel y años">
+            {s.name || "Sin nombre"}{#if s.years}<span class="yrs">{s.years} {s.years === 1 ? "año" : "años"}</span>{/if}
+          </button>
+          <button class="skillx" aria-label="Quitar {s.name}" onclick={() => removeSkill(i)}><Icon name="close" size={18} /></button>
+        </li>
+      {/each}
+    </ul>
+  {/if}
+  {#each cv.skills as s (s.id)}
+    {#if editingSkill === s.id}
+      <div class="skilledit">
+        <label>Habilidad<input bind:value={s.name} /></label>
+        <label>Nivel<input value={s.level ?? ""} oninput={(e) => (s.level = opt(e.currentTarget.value))} placeholder="Opcional" /></label>
+        <label>Años
+          <input type="number" min="0" step="0.5" value={s.years ?? ""} placeholder="Opcional"
+            oninput={(e) => (s.years = e.currentTarget.value === "" ? null : Number(e.currentTarget.value))} />
+        </label>
+        <button class="tonal" onclick={() => (editingSkill = null)}><Icon name="check" size={20} /> Listo</button>
+      </div>
+    {/if}
   {/each}
-  <button onclick={addSkill}><Icon name="add" /> Habilidad</button>
+  <form class="addskill" onsubmit={addSkill}>
+    <input bind:value={newSkill} placeholder="Escribe una habilidad y pulsa Enter (o varias separadas por comas)" aria-label="Nueva habilidad" />
+    <button type="submit" disabled={!newSkill.trim()}><Icon name="add" /> Agregar</button>
+  </form>
 </section>
 
 <h2>Educación</h2>
@@ -151,6 +181,31 @@
 </section>
 
 <style>
+  .count {
+    display: inline-grid; place-items: center; min-width: 1.75rem; padding: 0 0.45rem; margin-left: 0.4rem;
+    border-radius: var(--radius-full); background: var(--md-surface-container-highest);
+    color: var(--md-on-surface-variant); font-size: 0.875rem; font-weight: 700; vertical-align: middle;
+  }
+  .skills { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; padding: 0; margin: 0 0 1rem; }
+  /* Ficha de entrada (M3): nombre que abre el editor y una X para quitar. */
+  .skill {
+    display: inline-flex; align-items: center; height: 36px; border-radius: var(--radius-s);
+    border: 1px solid var(--md-outline-variant); background: var(--md-surface-container-lowest);
+    transition: background-color 150ms var(--ease), border-color 150ms var(--ease);
+  }
+  .skill.sel { background: var(--md-secondary-container); border-color: transparent; }
+  .skill button { min-height: 0; height: 100%; border: 0; border-radius: inherit; background: transparent; font-weight: 600; font-size: 0.9375rem; color: var(--md-on-surface); }
+  .skill.sel button { color: var(--md-on-secondary-container); }
+  .skillname { padding: 0 0.4rem 0 0.75rem; gap: 0.4rem; }
+  .yrs { font-weight: 400; color: var(--md-on-surface-variant); }
+  .skillx { width: 32px; padding: 0; color: var(--md-on-surface-variant) !important; }
+  .skilledit {
+    display: grid; grid-template-columns: 2fr 1.5fr 1fr auto; align-items: end; gap: 0.75rem;
+    padding: 1rem; margin-bottom: 1rem; border-radius: var(--radius-m); background: var(--md-surface-container);
+    animation: rise-in 220ms var(--ease-decel) both;
+  }
+  @container main (max-width: 700px) { .skilledit { grid-template-columns: 1fr 1fr; } }
+  .addskill { display: flex; gap: 0.75rem; }
   .item { margin-bottom: 0.75rem; }
   .nowrap { flex-wrap: nowrap; margin-bottom: 0.5rem; }
   .narrow { max-width: 7rem; }

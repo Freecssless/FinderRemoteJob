@@ -219,6 +219,19 @@
 - La ficha de compatibilidad muestra «Similitud con tu CV» cuando existe.
 - `finder_infra::semantic` (`ensure`, `Vectors`), `Db::embeddings` y `Db::put_embedding`.
 
+### Pantallas mejor seccionadas
+- **Perfiles:**
+  - La lista va en su propio panel.
+  - «Crear paso a paso» es un botón tonal junto a «Perfil vacío».
+  - El CV maestro queda separado del formulario del perfil por un divisor.
+- **Habilidades:** son fichas compactas. Se agregan escribiendo y pulsando Enter (varias separadas por comas, sin repetir). Se editan tocándolas, una a la vez, y se quitan con su X.
+- **Respuestas frecuentes (Postular):** filas compactas con botones para copiar y editar; solo la que editas se abre como formulario.
+- **Vacantes:** tres bloques separados.
+  - La barra de búsqueda (campo con lupa, fuente, filtro y «Buscar también en») va en su propio panel.
+  - La lista, en otro.
+  - El detalle, en otro, con sus secciones divididas por líneas en vez de tarjetas dentro de tarjetas.
+  - Sin vacante elegida, el detalle invita a elegir una.
+
 ### Desplegables, Kanban y menos texto
 - **Menús desplegables propios** (`Select.svelte`) en lugar de `<select>`: en Linux la lista salía con el estilo de GTK. Ahora siguen Material 3, con animación, marca en la opción elegida y uso completo con teclado.
 - **Paneles expandibles** («Filtros», «Opciones avanzadas», «Plazos», informe de búsqueda): fila con flecha que gira, capa de estado y entrada suave.

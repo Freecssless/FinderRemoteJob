@@ -244,6 +244,15 @@
     </div>
   {/if}
 
+  <section class="toolbar" aria-label="Buscar y filtrar">
+  <div class="filters row">
+    <span class="searchbox"><Icon name="search" size={22} /><input type="search" placeholder="Buscar en título, empresa o descripción" bind:value={query}
+      onkeydown={(e) => e.key === "Enter" && reload()} aria-label="Buscar vacantes" /></span>
+    <button onclick={reload} disabled={busy !== ""}>Buscar</button>
+    <div class="sourcesel"><Select bind:value={source} label="Fuente"
+      options={[{ value: "", label: "Todas las fuentes" }, ...Object.entries(SOURCE_LABELS).map(([id, label]) => ({ value: id, label }))]} /></div>
+    <label class="inline small"><input type="checkbox" bind:checked={hideWeak} /> Ocultar las que no encajan</label>
+  </div>
   {#if portals.length}
     <p class="small muted portals">
       Buscar también en:
@@ -252,18 +261,10 @@
       {/each}
     </p>
   {/if}
-
-  <div class="filters row">
-    <input type="search" placeholder="Buscar en título, empresa o descripción" bind:value={query}
-      onkeydown={(e) => e.key === "Enter" && reload()} aria-label="Buscar vacantes" />
-    <button onclick={reload} disabled={busy !== ""}>Buscar</button>
-    <div class="sourcesel"><Select bind:value={source} label="Fuente"
-      options={[{ value: "", label: "Todas las fuentes" }, ...Object.entries(SOURCE_LABELS).map(([id, label]) => ({ value: id, label }))]} /></div>
-    <label class="inline small"><input type="checkbox" bind:checked={hideWeak} /> Ocultar las que no encajan</label>
-  </div>
+  </section>
 
   <div class="split" class:showing={selectedId}>
-    <section class="list" aria-label="Lista de vacantes">
+    <section class="list panel" aria-label="Lista de vacantes">
       <div class="listhead">
         <p class="muted small">
           {busy === "list" ? "Cargando…" : `${visible.length} vacantes`}{hiddenCount ? ` · ${hiddenCount} ocultas` : ""}
@@ -308,7 +309,7 @@
       </ul>
     </section>
 
-    <section class="detail" aria-label="Detalle de la vacante">
+    <section class="detail panel" aria-label="Detalle de la vacante">
       {#if detail}
         {@const job = detail.job}
         {@const s = detail.score}
@@ -342,7 +343,7 @@
         </div>
 
         {#if s}
-          <div class="card">
+          <div class="block">
             <div class="compat">
               <Meter value={s.total} label="Compatibilidad" />
               <h3>Qué tanto encaja contigo</h3>
@@ -369,7 +370,7 @@
 
         {#if job.requirements}
           {@const req = job.requirements}
-          <div class="card outlined">
+          <div class="block">
             <h3>Requisitos</h3>
             <p class="small">
               <strong>Requeridos:</strong> {req.terms.filter((t) => t.required).map((t) => t.surface).join(", ") || "—"}<br />
@@ -383,26 +384,41 @@
           </div>
         {/if}
 
-        <div class="card outlined">
+        <div class="block">
           <h3>Anuncio</h3>
           <div class="description">{job.description}</div>
         </div>
       </div>
         {/key}
       {:else}
-        <p class="muted">Elige una vacante para ver su detalle.</p>
+        <div class="pick">
+          <Icon name="work" size={32} />
+          <p class="muted">Elige una vacante de la lista para ver si encaja contigo.</p>
+        </div>
       {/if}
     </section>
   </div>
 </div>
 
 <style>
-  .page { display: flex; flex-direction: column; gap: 0.75rem; }
+  .page { display: flex; flex-direction: column; gap: 1rem; }
   header h1 { margin: 0 auto 0 0; }
   header label.inline :global(.select) { width: auto; min-width: 12rem; }
   .sourcesel { min-width: 13rem; }
-  .filters input[type="search"] { flex: 1 1 18rem; width: auto; }
-  .portals { margin: 0; }
+  /* Bloques separados: barra de búsqueda, lista y detalle, cada uno en su panel. */
+  .toolbar { display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem 1.25rem; border-radius: var(--radius-l); background: var(--md-surface-container-low); }
+  .portals { margin: 0; padding-top: 0.75rem; border-top: 1px solid var(--md-outline-variant); }
+  .searchbox { position: relative; flex: 1 1 18rem; display: flex; align-items: center; }
+  .searchbox :global(.icon) { position: absolute; left: 0.85rem; color: var(--md-on-surface-variant); pointer-events: none; }
+  .searchbox input { padding-left: 2.75rem; border-radius: var(--radius-full); background: var(--md-surface-container-lowest); }
+  .panel { border-radius: var(--radius-l); background: var(--md-surface-container-low); }
+  .list.panel { padding: 0.5rem; }
+  .list .listhead { padding: 0.35rem 0.5rem 0.5rem; }
+  .detail.panel { padding: 1.25rem 1.5rem; }
+  .block { padding: 1.25rem 0 0.25rem; border-top: 1px solid var(--md-outline-variant); }
+  .block h3 { margin-top: 0; }
+  .pick { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 3rem 1rem; text-align: center; color: var(--md-on-surface-variant); }
+  .pick p { margin: 0; }
   .plain { list-style: none; margin: 0; padding: 0; }
   .split { display: grid; grid-template-columns: minmax(280px, 2fr) 3fr; gap: 1.25rem; align-items: start; }
   .detailbody { display: flex; flex-direction: column; gap: 0.75rem; }
@@ -413,7 +429,7 @@
     .split { grid-template-columns: 1fr; }
     .split.showing .list, .split:not(.showing) .detail { display: none; }
     .backlist { display: inline-flex; }
-    .detail { position: static; max-height: none; }
+    .split .detail { position: static; max-height: none; overflow: visible; }
   }
   .list { min-width: 0; }
   .list .plain { display: flex; flex-direction: column; gap: 0.25rem; }

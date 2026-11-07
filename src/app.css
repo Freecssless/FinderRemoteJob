@@ -227,6 +227,9 @@ a.button {
   font-size: 0.9375rem; font-weight: 650; text-decoration: none;
   border: 1px solid var(--md-outline); color: var(--md-primary);
 }
+a.button.tonal { background: var(--md-secondary-container); border-color: transparent; color: var(--md-on-secondary-container); }
+a.button.tonal:hover { background: color-mix(in srgb, var(--md-on-secondary-container) 8%, var(--md-secondary-container)); box-shadow: var(--elev-1); }
+a.button { transition: background-color 150ms var(--ease), box-shadow 150ms var(--ease); }
 a.button.primary { background: var(--md-primary); border-color: var(--md-primary); color: var(--md-on-primary); }
 a.button.primary:hover { background: color-mix(in srgb, var(--md-on-primary) 8%, var(--md-primary)); box-shadow: var(--elev-1); }
 

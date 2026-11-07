@@ -19,6 +19,7 @@
   let error = $state("");
   let msg = $state("");
   let faqMsg = $state("");
+  let editingFaq = $state<number | null>(null);
 
   async function init() {
     try {
@@ -161,31 +162,43 @@
           {#if faqMsg}<p class="small" role="status">{faqMsg}</p>{/if}
 
           {#if faq.from_cv.length}
-            <h3 class="small">De tu CV maestro</h3>
-            <ul class="plain">
+            <h3>De tu CV</h3>
+            <ul class="qalist">
               {#each faq.from_cv as f}
-                <li class="row">
-                  <span>{f.question}: <strong>{f.answer}</strong></span>
-                  <button class="link small" onclick={() => copy(f.answer)} aria-label="Copiar {f.question}">Copiar</button>
+                <li class="qa">
+                  <span class="qtext"><span class="q">{f.question}</span><span class="a">{f.answer}</span></span>
+                  <button class="icon-btn" onclick={() => copy(f.answer)} aria-label="Copiar respuesta: {f.question}" title="Copiar"><Icon name="content_copy" size={20} /></button>
                 </li>
               {/each}
             </ul>
           {/if}
 
-          <h3 class="small">Tuyas</h3>
-          {#each custom as f, i}
-            <div class="qa">
-              <input bind:value={f.question} placeholder="Pregunta" aria-label="Pregunta {i + 1}" />
-              <textarea bind:value={f.answer} rows="2" placeholder="Tu respuesta" aria-label="Respuesta {i + 1}"></textarea>
-              <div class="row">
-                <button class="link small" onclick={() => copy(f.answer)} disabled={!f.answer.trim()}>Copiar</button>
-                <button class="link small" onclick={() => custom.splice(i, 1)}>Quitar</button>
-              </div>
-            </div>
-          {/each}
+          <h3>Tuyas</h3>
+          <ul class="qalist">
+            {#each custom as f, i}
+              {#if editingFaq === i}
+                <li class="qaedit">
+                  <label>Pregunta<input bind:value={f.question} placeholder="Salario esperado" /></label>
+                  <label>Respuesta<textarea bind:value={f.answer} rows="2"></textarea></label>
+                  <div class="row">
+                    <button class="tonal" onclick={() => (editingFaq = null)}><Icon name="check" size={20} /> Listo</button>
+                    <button class="link danger" onclick={() => { custom.splice(i, 1); editingFaq = null; }}>Quitar</button>
+                  </div>
+                </li>
+              {:else}
+                <li class="qa">
+                  <span class="qtext"><span class="q">{f.question || "Sin pregunta"}</span><span class="a">{f.answer || "—"}</span></span>
+                  <button class="icon-btn" onclick={() => copy(f.answer)} disabled={!f.answer.trim()} aria-label="Copiar respuesta: {f.question}" title="Copiar"><Icon name="content_copy" size={20} /></button>
+                  <button class="icon-btn" onclick={() => (editingFaq = i)} aria-label="Editar: {f.question}" title="Editar"><Icon name="edit" size={20} /></button>
+                </li>
+              {/if}
+            {:else}
+              <li class="muted small">Agrega las preguntas que te repiten los formularios.</li>
+            {/each}
+          </ul>
           <div class="row">
-            <button onclick={() => custom.push({ question: "", answer: "" })}>Agregar pregunta</button>
-            <button class="primary" onclick={saveFaq}>Guardar respuestas</button>
+            <button onclick={() => { custom.push({ question: "", answer: "" }); editingFaq = custom.length - 1; }}><Icon name="add" /> Pregunta</button>
+            <button class="primary" onclick={saveFaq}>Guardar</button>
           </div>
         </section>
       {/if}
@@ -194,17 +207,21 @@
 </div>
 
 <style>
-  .page { display: flex; flex-direction: column; gap: 0.75rem; }
+  .page { display: flex; flex-direction: column; gap: 1rem; }
   .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 360px); gap: 1rem; align-items: start; }
   @container main (max-width: 820px) { .cols { grid-template-columns: 1fr; } }
   section h2, section p { margin: 0 0 0.5rem; }
   .queue { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.6rem; }
   .queue p { margin: 0.3rem 0 0.5rem; }
   .faq { display: flex; flex-direction: column; gap: 0.5rem; }
-  .faq h3 { margin: 0.4rem 0 0; }
-  .plain { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.3rem; }
-  .plain .row { justify-content: space-between; }
-  .qa { display: flex; flex-direction: column; gap: 0.3rem; border-top: 1px solid var(--border); padding-top: 0.5rem; }
+  .faq h3 { margin: 0.75rem 0 0; font-size: 0.9375rem; color: var(--md-on-surface-variant); }
+  .qalist { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; }
+  .qa { display: flex; align-items: center; gap: 0.25rem; padding: 0.5rem 0; border-bottom: 1px solid var(--md-outline-variant); }
+  .qa:last-child { border-bottom: 0; }
+  .qtext { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .q { font-size: 0.9375rem; color: var(--md-on-surface-variant); }
+  .a { font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .qaedit { display: flex; flex-direction: column; gap: 0.6rem; padding: 0.9rem; margin: 0.25rem 0; border-radius: var(--radius-m); background: var(--md-surface-container); animation: rise-in 220ms var(--ease-decel) both; }
   .chips { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 0.4rem 0 0.6rem; }
   .chips:empty { display: none; }
   .chip {
