@@ -93,6 +93,8 @@ Las vacantes automáticas vienen de Remote OK, Remotive, We Work Remotely, Get o
 ## Licencias de terceros
 
 - Fuente Liberation Sans: SIL Open Font License 1.1 (`crates/infra/assets/fonts/LICENSE-LiberationSans.txt`).
+- Fuente de la interfaz Atkinson Hyperlegible Next (Braille Institute): SIL Open Font License 1.1, vía `@fontsource-variable/atkinson-hyperlegible-next`.
+- Iconos Material Symbols Rounded (Google): Apache License 2.0, copiados como trazos SVG en `src/lib/icons.ts`.
 
 ## Portales sin API oficial
 

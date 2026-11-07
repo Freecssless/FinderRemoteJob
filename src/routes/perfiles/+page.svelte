@@ -1,6 +1,7 @@
 <script lang="ts">
   import { api, emptyCv, rememberedProfile, rememberProfile, REMOTE_LABELS, type CvMaster, type Profile, type RemotePref } from "$lib/api";
   import CvEditor from "$lib/components/CvEditor.svelte";
+  import Icon from "$lib/components/Icon.svelte";
 
   let profiles = $state<Profile[]>([]);
   let selectedId = $state<string | null>(null);
@@ -204,14 +205,14 @@
     <ul>
       {#each profiles as p (p.id)}
         <li>
-          <button class="item" class:active={p.id === selectedId} onclick={() => requestSwitch(p.id)}>
+          <button class="list-item item" class:active={p.id === selectedId} onclick={() => requestSwitch(p.id)}>
             <strong>{p.name}</strong>
             <span class="muted small">{REMOTE_LABELS[p.remote_pref]}</span>
           </button>
         </li>
       {/each}
     </ul>
-    <button onclick={() => requestSwitch("new")} disabled={creating}>+ Nuevo perfil</button>
+    <button onclick={() => requestSwitch("new")} disabled={creating}><Icon name="add" /> Nuevo perfil</button>
     <p class="small"><a href="/bienvenida">Crear un perfil paso a paso</a></p>
   </section>
 
@@ -298,20 +299,8 @@
 <style>
   .layout { display: grid; grid-template-columns: 240px 1fr; gap: 1.5rem; align-items: start; }
   .list ul { list-style: none; padding: 0; margin: 0 0 0.75rem; display: flex; flex-direction: column; gap: 0.25rem; }
-  .item {
-    width: 100%; text-align: left; display: flex; flex-direction: column; gap: 0.1rem;
-    border-color: transparent; background: none;
-  }
-  .item.active { background: var(--accent-soft); border-color: var(--accent); }
+  .item { flex-direction: column; gap: 0.1rem; }
   .detail { min-width: 0; max-width: 960px; }
   .cvbar { margin: 1.5rem 0 0.75rem; }
   .cvbar h2 { margin: 0 auto 0 0; }
-  .filebtn { flex-direction: row; cursor: pointer; }
-  .filebtn input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-  .filebtn span {
-    padding: 0.4rem 0.8rem; border: 1px solid var(--border); border-radius: 6px;
-    background: var(--surface); color: var(--text);
-  }
-  .filebtn:hover span { background: var(--hover); }
-  .filebtn:focus-within span { outline: 2px solid var(--accent); outline-offset: 1px; }
 </style>

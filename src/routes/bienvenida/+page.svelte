@@ -217,8 +217,4 @@
   .card h2 { margin: 0; }
   code { display: block; margin: 0.3rem 0; padding: 0.3rem 0.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; user-select: all; }
   .link { border: none; background: none; padding: 0; color: var(--accent); text-decoration: underline; cursor: pointer; }
-  .filebtn { flex-direction: row; cursor: pointer; }
-  .filebtn input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-  .filebtn span { padding: 0.4rem 0.8rem; border: 1px solid var(--accent); border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
-  .filebtn:focus-within span { outline: 2px solid var(--accent); outline-offset: 1px; }
 </style>

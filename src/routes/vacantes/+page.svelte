@@ -2,9 +2,11 @@
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { goto } from "$app/navigation";
   import {
-    api, boardApi, jobsApi, rememberedProfile, rememberProfile, scoreClass, SOURCE_LABELS,
+    api, boardApi, jobsApi, rememberedProfile, rememberProfile, SOURCE_LABELS,
     type JobDetail, type JobRow, type Profile, type SyncSummary,
   } from "$lib/api";
+  import Icon from "$lib/components/Icon.svelte";
+  import Meter from "$lib/components/Meter.svelte";
 
   let profiles = $state<Profile[]>([]);
   let profileId = $state<string | null>(null);
@@ -169,6 +171,8 @@
   }
 
   const date = (iso: string | null) => (iso ? iso.slice(0, 10) : "");
+  // `found_at` viene en UTC: «nueva» = encontrada en las últimas 24 horas.
+  const isNew = (iso: string) => Date.now() - Date.parse(iso) < 86_400_000;
 
   init();
 </script>
@@ -186,9 +190,6 @@
       {busy === "sync" ? "Buscando en las fuentes…" : "Buscar vacantes nuevas"}
     </button>
     <button onclick={() => (showImport = !showImport)} aria-expanded={showImport}>Importar vacante</button>
-    <button onclick={embedAll} disabled={!profileId || busy !== ""} title="Compara el significado de tu CV con cada vacante (IA local, modelo de embeddings)">
-      {busy === "embed" ? "Calculando similitud…" : "Calcular similitud semántica"}
-    </button>
   </header>
   {#if embedMsg}<p class="ok small" role="status">{embedMsg}</p>{/if}
 
@@ -214,9 +215,9 @@
 
   {#if showImport}
     <div class="card">
-      <div class="row" role="tablist">
-        <button role="tab" aria-selected={importMode === "url"} class:primary={importMode === "url"} onclick={() => (importMode = "url")}>Desde un enlace</button>
-        <button role="tab" aria-selected={importMode === "text"} class:primary={importMode === "text"} onclick={() => (importMode = "text")}>Pegar el texto</button>
+      <div class="segmented" role="tablist">
+        <button role="tab" aria-selected={importMode === "url"} onclick={() => (importMode = "url")}>Desde un enlace</button>
+        <button role="tab" aria-selected={importMode === "text"} onclick={() => (importMode = "text")}>Pegar el texto</button>
       </div>
       {#if importMode === "url"}
         <p class="muted small">Se hace una sola petición, como tu navegador. LinkedIn y otros portales suelen bloquearla: en ese caso pega el texto.</p>
@@ -259,21 +260,28 @@
 
   <div class="split">
     <section class="list" aria-label="Lista de vacantes">
-      <p class="muted small">
-        {busy === "list" ? "Cargando…" : `${visible.length} vacantes`}{hiddenCount ? ` · ${hiddenCount} ocultas` : ""}
-      </p>
+      <div class="listhead">
+        <p class="muted small">
+          {busy === "list" ? "Cargando…" : `${visible.length} vacantes`}{hiddenCount ? ` · ${hiddenCount} ocultas` : ""}
+        </p>
+        <button class="link" onclick={embedAll} disabled={!profileId || busy !== ""}
+          title="Usa la IA de tu computadora para comparar el sentido de tu CV con cada vacante, no solo las palabras.">
+          {busy === "embed" ? "Comparando…" : "Comparar mejor con IA"}
+        </button>
+      </div>
       {#if !rows.length && busy === ""}
         <p class="muted">Aún no hay vacantes. Pulsa «Buscar vacantes nuevas» o importa una.</p>
       {/if}
       <ul class="plain">
         {#each visible as r (r.id)}
           <li>
-            <button class="job" class:active={r.id === selectedId} onclick={() => select(r.id)}>
+            <button class="list-item job" class:active={r.id === selectedId} onclick={() => select(r.id)}>
               {#if r.score}
-                <span class="score {scoreClass(r.score.total)}" title="Compatibilidad">{r.score.total}</span>
+                <Meter value={r.score.total} label="Compatibilidad" />
               {/if}
               <span class="jobtext">
                 <strong>{r.title}</strong>
+                {#if isNew(r.found_at)}<span class="new">Nueva</span>{/if}
                 <span class="muted small">
                   {[r.company, r.location, SOURCE_LABELS[r.source_id] ?? r.source_id].filter(Boolean).join(" · ")}
                 </span>
@@ -290,7 +298,7 @@
       {#if detail}
         {@const job = detail.job}
         {@const s = detail.score}
-        <div class="card">
+        <div class="jobhead">
           <h2 style="margin-top:0">{job.title}</h2>
           <p class="muted">
             {[job.company, job.location, job.remote_type].filter(Boolean).join(" · ")}<br />
@@ -304,7 +312,7 @@
             <button class="primary" onclick={() => goto(`/optimizador?job=${job.id}`)} disabled={!s}
               title={s ? "" : "El perfil necesita CV maestro"}>Adaptar mi CV</button>
             <button onclick={addToBoard} disabled={!s || busy !== ""}>
-              {added === job.id ? "En el tablero ✓" : "Agregar al tablero"}
+              {#if added === job.id}<Icon name="check_circle" /> En el tablero{:else}<Icon name="add" /> Agregar al tablero{/if}
             </button>
             {#if job.url}<button onclick={() => openUrl(job.url)}>Abrir anuncio</button>{/if}
             <button onclick={analyze} disabled={busy !== ""}>
@@ -319,18 +327,23 @@
 
         {#if s}
           <div class="card">
-            <h3>Compatibilidad: <span class="score {scoreClass(s.total)}">{s.total}</span> / 100</h3>
-            <dl class="breakdown small">
-              <dt>Habilidades</dt><dd>{s.breakdown.skills.toFixed(0)} / 45</dd>
+            <div class="compat">
+              <Meter value={s.total} label="Compatibilidad" />
+              <h3>Qué tanto encaja contigo</h3>
+            </div>
+            <dl class="breakdown">
+              <dt>Habilidades</dt><dd><Meter layout="row" value={s.breakdown.skills} max={45} label="Habilidades" /></dd>
               {#if s.breakdown.semantic !== null}
-                <dt>Similitud con tu CV</dt><dd>{s.breakdown.semantic.toFixed(0)} / 15</dd>
+                <dt>Parecido con tu CV</dt><dd><Meter layout="row" value={s.breakdown.semantic} max={15} label="Parecido con tu CV" /></dd>
               {/if}
-              <dt>Puesto</dt><dd>{s.breakdown.title.toFixed(0)} / 10</dd>
-              <dt>Seniority</dt><dd>{s.breakdown.seniority.toFixed(0)} / 5</dd>
-              <dt>Años ({s.years_experience.toFixed(1)})</dt><dd>{s.breakdown.years.toFixed(0)} / 10</dd>
-              <dt>Remoto, región e idiomas</dt><dd>{s.breakdown.logistics.toFixed(0)} / 15</dd>
+              <dt>Puesto</dt><dd><Meter layout="row" value={s.breakdown.title} max={10} label="Puesto" /></dd>
+              <dt>Nivel de experiencia</dt><dd><Meter layout="row" value={s.breakdown.seniority} max={5} label="Nivel de experiencia" /></dd>
+              <dt>Años ({s.years_experience.toFixed(1)})</dt><dd><Meter layout="row" value={s.breakdown.years} max={10} label="Años de experiencia" /></dd>
+              <dt>Remoto, región e idiomas</dt><dd><Meter layout="row" value={s.breakdown.logistics} max={15} label="Remoto, región e idiomas" /></dd>
             </dl>
-            <p class="muted small">Sin similitud semántica, sus 15 puntos se reparten entre los demás componentes.</p>
+            {#if s.breakdown.semantic === null}
+              <p class="muted small">Sin la comparación con IA, sus 15 puntos se reparten entre las demás partes.</p>
+            {/if}
             {#if s.blockers.length}
               <p class="danger"><strong>Bloqueos:</strong> {s.blockers.join("; ")}</p>
             {/if}
@@ -342,7 +355,7 @@
 
         {#if job.requirements}
           {@const req = job.requirements}
-          <div class="card">
+          <div class="card outlined">
             <h3>Requisitos</h3>
             <p class="small">
               <strong>Requeridos:</strong> {req.terms.filter((t) => t.required).map((t) => t.surface).join(", ") || "—"}<br />
@@ -356,7 +369,7 @@
           </div>
         {/if}
 
-        <div class="card">
+        <div class="card outlined">
           <h3>Anuncio</h3>
           <div class="description">{job.description}</div>
         </div>
@@ -378,15 +391,21 @@
   .split { display: grid; grid-template-columns: minmax(280px, 2fr) 3fr; gap: 1rem; align-items: start; }
   .list { min-width: 0; }
   .list .plain { display: flex; flex-direction: column; gap: 0.25rem; }
-  .job {
-    width: 100%; display: flex; gap: 0.6rem; align-items: flex-start; text-align: left;
-    border-color: transparent; background: var(--surface);
-  }
-  .job.active { border-color: var(--accent); background: var(--accent-soft); }
+  .job { gap: 0.85rem; }
   .jobtext { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
   .detail { display: flex; flex-direction: column; gap: 0.75rem; min-width: 0; position: sticky; top: 0; max-height: calc(100vh - 3rem); overflow: auto; }
-  .breakdown { display: grid; grid-template-columns: auto auto; gap: 0.2rem 1rem; margin: 0 0 0.5rem; justify-content: start; }
-  .breakdown dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .listhead { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+  .listhead p { margin: 0; }
+  .new {
+    align-self: flex-start; padding: 0.1rem 0.55rem; border-radius: var(--radius-s);
+    background: var(--md-tertiary-container); color: var(--md-on-tertiary-container);
+    font-size: 0.875rem; font-weight: 700;
+  }
+  .jobhead { padding: 0.25rem 0.25rem 0.5rem; }
+  .compat { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+  .compat h3 { margin: 0; }
+  .breakdown { display: grid; grid-template-columns: max-content 1fr; align-items: center; gap: 0.6rem 1.25rem; margin: 0 0 0.75rem; }
+  .breakdown dt { color: var(--md-on-surface-variant); }
+  .breakdown dd { margin: 0; }
   .description { white-space: pre-wrap; overflow-wrap: anywhere; }
-  [role="tab"][aria-selected="false"] { background: var(--surface); }
 </style>

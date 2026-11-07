@@ -17,3 +17,7 @@ config.local.toml
 
 # Tauri
 /src-tauri/gen/schemas
+
+# Impeccable: capturas de revisión y caché local
+.impeccable/review/
+.impeccable/hook.cache.json

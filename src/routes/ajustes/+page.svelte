@@ -217,9 +217,9 @@
         <p class="small">Crea tu clave en <strong>console.anthropic.com</strong> → «API Keys» y pégala aquí.</p>
         {@render apiKey("ANTHROPIC_API_KEY", "Clave de Claude")}
       {:else if writer === "openai"}
-        <div class="row" role="group" aria-label="Proveedor">
+        <div class="segmented" role="group" aria-label="Proveedor">
           {#each Object.entries(PRESETS) as [id, p]}
-            <button class:primary={preset === id} aria-pressed={preset === id} onclick={() => choosePreset(id as Preset)}>{p.label}</button>
+            <button aria-pressed={preset === id} onclick={() => choosePreset(id as Preset)}>{p.label}</button>
           {/each}
         </div>
         {#if preset}
@@ -335,8 +335,10 @@
   .advanced summary { cursor: pointer; font-weight: 600; }
   .advanced[open] summary { margin-bottom: 0.4rem; }
   .choice { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.4rem; }
-  .option { display: flex; flex-direction: row; gap: 0.6rem; align-items: flex-start; padding: 0.6rem; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
-  .option.on { border-color: var(--accent); background: var(--accent-soft); }
+  .option { display: flex; flex-direction: row; gap: 0.85rem; align-items: flex-start; padding: 0.9rem 1rem; border: 1px solid var(--md-outline-variant); border-radius: var(--radius-m); cursor: pointer; color: var(--md-on-surface); transition: background-color 150ms var(--ease); }
+  .option:hover { background: color-mix(in srgb, var(--md-on-surface) 6%, transparent); }
+  .option.on { border-color: var(--md-primary); background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+  .option:has(input:focus-visible) { outline: 3px solid var(--md-primary); outline-offset: 2px; }
   .option input { width: auto; margin-top: 0.2rem; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .link.small { align-self: flex-start; }

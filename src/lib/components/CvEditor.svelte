@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from "$lib/components/Icon.svelte";
   import type { CvMaster } from "$lib/api";
 
   let { cv = $bindable() }: { cv: CvMaster } = $props();
@@ -85,12 +86,12 @@
       </div>
     {/each}
     <div class="row">
-      <button onclick={() => addBullet(i)}>+ Logro</button>
+      <button onclick={() => addBullet(i)}><Icon name="add" /> Logro</button>
       <button class="danger" onclick={() => cv.experience.splice(i, 1)}>Quitar experiencia</button>
     </div>
   </section>
 {/each}
-<button onclick={addExperience}>+ Experiencia</button>
+<button onclick={addExperience}><Icon name="add" /> Experiencia</button>
 
 <h2>Habilidades</h2>
 <section class="card">
@@ -107,7 +108,7 @@
       <button class="link danger" onclick={() => cv.skills.splice(i, 1)}>Quitar</button>
     </div>
   {/each}
-  <button onclick={addSkill}>+ Habilidad</button>
+  <button onclick={addSkill}><Icon name="add" /> Habilidad</button>
 </section>
 
 <h2>Educación</h2>
@@ -122,7 +123,7 @@
     <button class="link danger" onclick={() => cv.education.splice(i, 1)}>Quitar</button>
   </section>
 {/each}
-<button onclick={addEducation}>+ Educación</button>
+<button onclick={addEducation}><Icon name="add" /> Educación</button>
 
 <h2>Certificaciones</h2>
 <section class="card">
@@ -134,7 +135,7 @@
       <button class="link danger" onclick={() => cv.certifications.splice(i, 1)}>Quitar</button>
     </div>
   {/each}
-  <button onclick={addCert}>+ Certificación</button>
+  <button onclick={addCert}><Icon name="add" /> Certificación</button>
 </section>
 
 <h2>Idiomas</h2>
@@ -146,7 +147,7 @@
       <button class="link danger" onclick={() => cv.languages.splice(i, 1)}>Quitar</button>
     </div>
   {/each}
-  <button onclick={addLanguage}>+ Idioma</button>
+  <button onclick={addLanguage}><Icon name="add" /> Idioma</button>
 </section>
 
 <style>

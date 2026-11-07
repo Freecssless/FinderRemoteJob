@@ -1,8 +1,9 @@
 <script lang="ts">
+  import Meter from "$lib/components/Meter.svelte";
   import { openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
   import { goto } from "$app/navigation";
   import {
-    api, boardApi, queueApi, rememberedProfile, rememberProfile, scoreClass, STATUS_LABELS,
+    api, boardApi, queueApi, rememberedProfile, rememberProfile, STATUS_LABELS,
     type Faq, type FaqView, type Profile, type QueueItem,
   } from "$lib/api";
 
@@ -132,7 +133,7 @@
           {#each items as it (it.job_id)}
             <li class="card">
               <div class="row head">
-                <span class="score {scoreClass(it.score)}" title="Compatibilidad">{it.score}</span>
+                <Meter value={it.score} label="Compatibilidad" />
                 <strong>{it.title}</strong>
                 {#if it.company}<span class="muted">— {it.company}</span>{/if}
               </div>
@@ -142,7 +143,7 @@
               </p>
               <div class="row">
                 {#if !it.pdf_path}
-                  <button onclick={() => goto(`/optimizador?job=${encodeURIComponent(it.job_id)}`)}>Adaptar CV</button>
+                  <button class="primary" onclick={() => goto(`/optimizador?job=${encodeURIComponent(it.job_id)}`)}>Adaptar CV</button>
                 {/if}
                 <button class:primary={!!it.pdf_path} onclick={() => openAndApply(it)}>Abrir y postular</button>
                 <button onclick={() => markApplied(it)}>Ya me postulé</button>

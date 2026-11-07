@@ -1,6 +1,8 @@
 <script lang="ts">
   import { page } from "$app/state";
   import { api, type AppInfo } from "$lib/api";
+  import Icon from "$lib/components/Icon.svelte";
+  import type { IconName } from "$lib/icons";
   import "../app.css";
 
   let { children } = $props();
@@ -11,36 +13,43 @@
     api.appInfo().then((i) => (info = i)).catch(() => {});
   });
 
-  const nav = [
-    { href: "/perfiles", label: "Perfiles", ready: true },
-    { href: "/vacantes", label: "Vacantes", ready: true },
-    { href: "/optimizador", label: "Optimizador", ready: true },
-    { href: "/cola", label: "Postular", ready: true },
-    { href: "/tablero", label: "Tablero", ready: true },
-    { href: "/ajustes", label: "Ajustes", ready: true },
+  const nav: { href: string; label: string; icon: IconName }[] = [
+    { href: "/perfiles", label: "Perfiles", icon: "person" },
+    { href: "/vacantes", label: "Vacantes", icon: "work" },
+    { href: "/optimizador", label: "Optimizador", icon: "edit_document" },
+    { href: "/cola", label: "Postular", icon: "send" },
+    { href: "/tablero", label: "Tablero", icon: "view_kanban" },
+    { href: "/ajustes", label: "Ajustes", icon: "settings" },
   ];
+  const current = (href: string) => page.url.pathname.startsWith(href);
 </script>
 
 <div class="shell">
   <aside>
-    <div class="brand">FinderRemoteJob</div>
+    <a class="brand" href="/perfiles">
+      <span class="mark" aria-hidden="true"><Icon name="travel_explore" size={22} /></span>
+      FinderRemoteJob
+    </a>
     <nav aria-label="Secciones">
       {#each nav as item}
-        {#if item.ready}
-          <a href={item.href} aria-current={page.url.pathname.startsWith(item.href) ? "page" : undefined}>
-            {item.label}
-          </a>
-        {:else}
-          <span class="soon" title="Próximamente">{item.label}</span>
-        {/if}
+        <a href={item.href} aria-current={current(item.href) ? "page" : undefined}>
+          <Icon name={current(item.href) ? (`${item.icon}-fill` as IconName) : item.icon} size={24} />
+          {item.label}
+        </a>
       {/each}
     </nav>
     {#if info}
-      <footer class="muted small">
+      <footer>
         {#if info.llm_error}
-          <a class="danger" href="/ajustes">La IA no está lista: revisa Ajustes</a>
+          <a class="ai bad" href="/ajustes">
+            <Icon name="error" size={20} />
+            <span>La IA no está lista: revisa Ajustes</span>
+          </a>
         {:else}
-          <div>IA: {info.writer_model ?? "—"}</div>
+          <div class="ai">
+            <Icon name="check_circle" size={20} />
+            <span>IA: {info.writer_model ?? "—"}</span>
+          </div>
         {/if}
       </footer>
     {/if}
@@ -49,17 +58,45 @@
 </div>
 
 <style>
-  .shell { display: grid; grid-template-columns: 200px 1fr; height: 100vh; }
+  .shell { display: grid; grid-template-columns: 248px 1fr; height: 100vh; }
   aside {
-    display: flex; flex-direction: column; gap: 1rem; padding: 1rem;
-    background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 1.25rem;
+    padding: 1.25rem 0.75rem 1rem;
+    background: var(--md-surface-container-low);
   }
-  .brand { font-weight: 700; }
+  .brand {
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0 0.75rem; min-height: 44px;
+    font-weight: 750; font-size: 1.0625rem; letter-spacing: -0.01em;
+    color: var(--md-on-surface); text-decoration: none;
+  }
+  .mark {
+    display: grid; place-items: center; width: 36px; height: 36px; border-radius: var(--radius-m);
+    background: var(--md-primary); color: var(--md-on-primary);
+  }
   nav { display: flex; flex-direction: column; gap: 0.25rem; }
-  nav a, nav span { padding: 0.4rem 0.6rem; border-radius: 6px; text-decoration: none; color: var(--text); }
-  nav a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-  nav a:hover { background: var(--hover); }
-  .soon { color: var(--muted); cursor: default; }
-  footer { margin-top: auto; display: flex; flex-direction: column; gap: 0.2rem; overflow-wrap: anywhere; }
-  main { overflow: auto; padding: 1.5rem; }
+  nav a {
+    display: flex; align-items: center; gap: 0.85rem;
+    min-height: 52px; padding: 0 1rem;
+    border-radius: var(--radius-full);
+    color: var(--md-on-surface-variant); text-decoration: none;
+    font-weight: 600; font-size: 1rem;
+    transition: background-color 150ms var(--ease);
+  }
+  nav a:hover { background: color-mix(in srgb, var(--md-on-surface) 8%, transparent); color: var(--md-on-surface); }
+  nav a[aria-current="page"] {
+    background: var(--md-secondary-container); color: var(--md-on-secondary-container); font-weight: 750;
+  }
+  nav a:focus-visible { outline-offset: -3px; border-radius: var(--radius-full); }
+  footer { margin-top: auto; }
+  .ai {
+    display: flex; align-items: flex-start; gap: 0.5rem;
+    padding: 0.75rem 1rem; border-radius: var(--radius-m);
+    font-size: 0.875rem; line-height: 1.3rem; color: var(--md-on-surface-variant);
+    overflow-wrap: anywhere;
+  }
+  .ai :global(.icon) { color: var(--md-success); margin-top: 1px; }
+  .ai.bad { background: var(--md-error-container); color: var(--md-on-error-container); text-decoration: none; font-weight: 600; }
+  .ai.bad :global(.icon) { color: inherit; }
+  main { overflow: auto; padding: 2rem 2.5rem 3rem; }
 </style>

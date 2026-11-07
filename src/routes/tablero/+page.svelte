@@ -1,8 +1,10 @@
 <script lang="ts">
+  import Icon from "$lib/components/Icon.svelte";
+  import Meter from "$lib/components/Meter.svelte";
   import { openPath, openUrl } from "@tauri-apps/plugin-opener";
   import { goto } from "$app/navigation";
   import {
-    api, boardApi, rememberedProfile, statsApi, rememberProfile, scoreClass, REMINDER_LABELS, SOURCE_LABELS, STATUSES, TEMPLATE_LABELS,
+    api, boardApi, rememberedProfile, statsApi, rememberProfile, REMINDER_LABELS, SOURCE_LABELS, STATUSES, TEMPLATE_LABELS,
     STATUS_LABELS, type ApplicationDetail, type Stats, type BoardRow, type Profile, type Reminder, type ReminderDays,
     type Status,
   } from "$lib/api";
@@ -205,9 +207,9 @@
           {#each profiles as p}<option value={p.id}>{p.name}</option>{/each}
         </select>
       </label>
-      <div class="views" role="group" aria-label="Vista">
-        <button class:primary={view === "kanban"} aria-pressed={view === "kanban"} onclick={() => (view = "kanban")}>Kanban</button>
-        <button class:primary={view === "lista"} aria-pressed={view === "lista"} onclick={() => (view = "lista")}>Lista</button>
+      <div class="segmented" role="group" aria-label="Vista">
+        <button aria-pressed={view === "kanban"} onclick={() => (view = "kanban")}>Kanban</button>
+        <button aria-pressed={view === "lista"} onclick={() => (view = "lista")}>Lista</button>
       </div>
       <input class="search" type="search" placeholder="Buscar puesto o empresa" bind:value={query} aria-label="Buscar" />
     </header>
@@ -215,14 +217,14 @@
     {#if error}<p class="danger" role="alert">{error}</p>{/if}
 
     {#if stats && stats.funnel.applied}
-      <p class="summary small">
-        Postuladas: <strong>{stats.funnel.applied}</strong> · Entrevistas: <strong>{stats.funnel.interview}</strong> ·
-        Ofertas: <strong>{stats.funnel.offer}</strong>
+      <ul class="summary" aria-label="Resumen">
+        <li><strong>{stats.funnel.applied}</strong> {stats.funnel.applied === 1 ? "postulada" : "postuladas"}</li>
+        <li><strong>{stats.funnel.interview}</strong> {stats.funnel.interview === 1 ? "entrevista" : "entrevistas"}</li>
+        <li><strong>{stats.funnel.offer}</strong> {stats.funnel.offer === 1 ? "oferta" : "ofertas"}</li>
         {#if stats.response_rate !== null}
-          · Te respondieron el <strong>{Math.round(stats.response_rate)} %</strong>
-          <span class="muted">(de las postuladas hace 14 días o más)</span>
+          <li title="De las postuladas hace 14 días o más">Te respondieron el <strong>{Math.round(stats.response_rate)} %</strong></li>
         {/if}
-      </p>
+      </ul>
     {/if}
 
     {#if loading}
@@ -255,7 +257,9 @@
           </ul>
         </section>
       {/if}
-      <div class="filters row small">
+      <details class="filterbox" open={filtered}>
+        <summary>Filtros{filtered ? " (activos)" : ""}</summary>
+      <div class="filters row">
         {#if view === "lista"}
           <label>Estado
             <select bind:value={filters.status}>
@@ -277,6 +281,7 @@
         </label>
         {#if filtered}<button class="link" onclick={() => (filters = { ...NO_FILTERS })}>Quitar filtros</button>{/if}
       </div>
+      </details>
       <p class="muted small">
         {#if view === "kanban"}
           Arrastra una tarjeta a otra columna para cambiar su estado, o cámbialo en su ficha.
@@ -308,7 +313,7 @@
                     <td>{STATUS_LABELS[a.status]}</td>
                     <td>{rowDate(r)}</td>
                     <td class="num">
-                      {#if a.match_score !== null}<span class="score {scoreClass(a.match_score)}">{a.match_score}</span>{:else}—{/if}
+                      {#if a.match_score !== null}<Meter value={a.match_score} label="Compatibilidad" />{:else}—{/if}
                     </td>
                   </tr>
                 {/each}
@@ -344,7 +349,7 @@
                 <span class="top">
                   <strong>{r.job_title}</strong>
                   {#if a.match_score !== null}
-                    <span class="score {scoreClass(a.match_score)}" title="Compatibilidad">{a.match_score}</span>
+                    <Meter value={a.match_score} label="Compatibilidad" />
                   {/if}
                 </span>
                 <span class="muted small">{[r.company, SOURCE_LABELS[r.source_id] ?? r.source_id].filter(Boolean).join(" · ")}</span>
@@ -380,11 +385,11 @@
     <aside class="detail card" aria-label="Ficha de la postulación">
       <div class="row head">
         <h2>{selected.job_title}</h2>
-        <button class="link" onclick={close} aria-label="Cerrar ficha">✕</button>
+        <button class="link" onclick={close} aria-label="Cerrar ficha"><Icon name="close" size={24} /></button>
       </div>
       <p class="muted small">
         {[selected.company, SOURCE_LABELS[selected.source_id] ?? selected.source_id].filter(Boolean).join(" · ")}
-        {#if a.match_score !== null}· compatibilidad <span class="score {scoreClass(a.match_score)}">{a.match_score}</span>{/if}
+        {#if a.match_score !== null}<span class="detailscore">Compatibilidad <Meter value={a.match_score} label="Compatibilidad" /></span>{/if}
       </p>
       <div class="row">
         {#if selected.url}<button onclick={() => openUrl(selected.url)}>Abrir anuncio</button>{/if}
@@ -410,7 +415,7 @@
       {:else if detail.cv}
         {@const cv = detail.cv}
         <p class="small">
-          {TEMPLATE_LABELS[cv.variant] ?? cv.variant} · {day(cv.created_at)} · ATS {cv.ats_before ?? "?"} → <strong>{cv.ats_after ?? "?"}</strong>
+          {TEMPLATE_LABELS[cv.variant] ?? cv.variant} · {day(cv.created_at)} · filtros automáticos {cv.ats_before ?? "?"} → <strong>{cv.ats_after ?? "?"}</strong>
         </p>
         {#if cv.missing.length}<p class="muted small">Le falta: {cv.missing.join(", ")}</p>{/if}
         <div class="row">
@@ -459,38 +464,55 @@
 </div>
 
 <style>
-  .summary { margin: 0; }
-  .page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; height: calc(100vh - 3rem); }
+  .summary { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; margin: 0 0 1rem; padding: 0; }
+  .summary li {
+    padding: 0.35rem 0.9rem; border-radius: var(--radius-full);
+    background: var(--md-surface-container); color: var(--md-on-surface-variant);
+  }
+  .summary strong { color: var(--md-on-surface); font-size: 1.0625rem; }
+  .filterbox { margin-bottom: 0.5rem; }
+  .filterbox .filters { margin-top: 0.5rem; }
+  .detailscore { display: inline-flex; align-items: center; gap: 0.5rem; }
+  .page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; min-height: calc(100vh - 5rem); }
   .page.with-detail { grid-template-columns: minmax(0, 1fr) 340px; }
   .main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-  header { margin-bottom: 0.5rem; }
+  header { margin-bottom: 1rem; }
   header h1 { margin: 0 1rem 0 0; }
   header label.inline select { width: auto; }
   .search { max-width: 260px; margin-left: auto; }
-  .views { display: flex; gap: 0.25rem; }
   .filters { align-items: end; margin-bottom: 0.25rem; }
   .filters label { width: auto; }
   .filters select, .filters input[type="number"] { width: auto; max-width: 11rem; }
   .list { flex: 1; min-height: 0; overflow: auto; }
   .list table { width: 100%; border-collapse: collapse; }
   .list th, .list td { padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--border); text-align: left; }
-  .list thead th { font-size: 0.8rem; color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--bg); }
+  .list thead th { font-size: 0.875rem; color: var(--muted); font-weight: 650; position: sticky; top: 0; background: var(--bg); }
   .list tbody th { font-weight: 500; }
   .list tbody th button { text-align: left; }
   .list tr.active { background: var(--accent-soft); }
   .list .num { text-align: right; }
-  .board { display: flex; gap: 0.75rem; overflow-x: auto; flex: 1; min-height: 0; padding-bottom: 0.5rem; }
+  /* Columnas que caben enteras (4, o 2 en ventanas angostas); el desplazamiento se detiene en el borde de una columna. */
+  .board {
+    display: flex; gap: 0.75rem; overflow-x: auto; flex: 1; min-height: 360px; padding-bottom: 0.5rem;
+    scroll-snap-type: x mandatory; container-type: inline-size;
+  }
+  .board > .col { flex: 0 0 calc((100cqi - 2.25rem) / 4); scroll-snap-align: start; }
+  @container (max-width: 780px) { .board > .col { flex-basis: calc((100cqi - 0.75rem) / 2); } }
   .col {
     flex: 0 0 220px; display: flex; flex-direction: column; gap: 0.5rem;
-    background: var(--hover); border: 1px dashed transparent; border-radius: 8px; padding: 0.5rem; overflow-y: auto;
+    background: var(--md-surface-container); border: 2px dashed transparent; border-radius: var(--radius-l); padding: 0.6rem; overflow-y: auto;
   }
-  .col.target { border-color: var(--accent); background: var(--accent-soft); }
-  .col h2 { font-size: 0.85rem; margin: 0.1rem 0.2rem 0.2rem; display: flex; justify-content: space-between; }
+  .col.target { border-color: var(--md-primary); background: var(--md-primary-container); }
+  .col h2 { font-size: 0.9375rem; margin: 0.2rem 0.4rem 0.3rem; display: flex; justify-content: space-between; color: var(--md-on-surface-variant); }
   .cardbtn {
-    display: flex; flex-direction: column; gap: 0.2rem; text-align: left; width: 100%;
-    background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.6rem;
+    display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 0.25rem;
+    text-align: left; width: 100%; min-height: 0; padding: 0.7rem 0.8rem;
+    background: var(--md-surface-container-lowest); color: var(--md-on-surface);
+    border: 0; border-radius: var(--radius-m); box-shadow: var(--elev-1);
+    font-size: 1rem; font-weight: 400; letter-spacing: 0;
   }
-  .cardbtn.active { border-color: var(--accent); }
+  .cardbtn:hover:not(:disabled) { background: var(--md-surface-container-lowest); box-shadow: var(--elev-2); }
+  .cardbtn.active { outline: 2px solid var(--md-primary); outline-offset: 0; }
   .cardbtn.dragging { opacity: 0.5; }
   .top { display: flex; justify-content: space-between; gap: 0.4rem; align-items: start; }
   .detail { display: flex; flex-direction: column; gap: 0.6rem; overflow-y: auto; min-height: 0; }
@@ -501,7 +523,7 @@
   .dates { display: grid; grid-template-columns: auto 1fr; gap: 0.15rem 0.75rem; margin: 0; }
   .dates dt { color: var(--muted); }
   .dates dd { margin: 0; }
-  .next { display: grid; grid-template-columns: 1fr 9.5rem; gap: 0.5rem; }
+  .next { display: grid; grid-template-columns: 1fr; gap: 0.5rem; }
   .history { margin: 0; padding-left: 1.2rem; }
   .due { margin-bottom: 0.75rem; }
   .due h2 { font-size: 0.9rem; margin: 0 0 0.4rem; }

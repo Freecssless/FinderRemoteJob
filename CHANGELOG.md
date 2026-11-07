@@ -219,6 +219,16 @@
 - La ficha de compatibilidad muestra «Similitud con tu CV» cuando existe.
 - `finder_infra::semantic` (`ensure`, `Vectors`), `Db::embeddings` y `Db::put_embedding`.
 
+### Interfaz con Material Design 3
+- Rediseño de toda la interfaz con Material Design 3 y una identidad propia: principal **azul talavera** (#1F50A0) y acento **cempasúchil**, reservado para la compatibilidad alta y las vacantes nuevas. Los tonos para claro y oscuro salen de `@material/material-color-utilities`, y el tema sigue al del sistema.
+- Tipografía Atkinson Hyperlegible Next, incluida en la app y pensada para leerse bien con baja visión: 16px de base y 15px para el texto secundario. Los controles miden 40–44px.
+- Cajón de navegación con iconos Material Symbols, en el mismo lugar y orden de siempre. También hay botones en píldora, campos con contorno, botones segmentados, estados vacíos que indican el siguiente paso y foco visible con teclado.
+- **Medidor de compatibilidad** compartido (`Meter.svelte`): una píldora tonal con barra lineal. Aparece en Vacantes (lista y desglose), Postular, Tablero y Optimizador (CV actual → CV adaptado).
+- Vacantes: etiqueta «Nueva» para lo encontrado en las últimas 24 horas. «Calcular similitud semántica» pasa a «Comparar mejor con IA», junto al conteo.
+- Tablero: resumen en fichas («3 postuladas · 1 entrevista…»), filtros plegables y columnas que caben enteras.
+- Lenguaje más claro: «Nivel de experiencia» en lugar de «Seniority», y «filtros automáticos» en lugar de «ATS», con una explicación breve.
+- `PRODUCT.md` y `DESIGN.md` documentan el producto y el sistema visual.
+
 ### Instaladores
 - `tauri.conf.json`: instaladores `.deb`, `.rpm`, AppImage, NSIS (`.exe`, español/inglés, sin permisos de administrador) y `.msi`, con descripción y categoría.
 - `.github/workflows/release.yml`: genera los de Windows y Linux en GitHub al subir una etiqueta `v*`, como borrador de versión.

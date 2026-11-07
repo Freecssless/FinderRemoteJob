@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Icon from "$lib/components/Icon.svelte";
+  import Meter from "$lib/components/Meter.svelte";
   import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
   import { page } from "$app/state";
   import {
@@ -81,11 +83,16 @@
 
 {#if !jobId}
   <h1>Optimizador</h1>
-  <p class="muted">Elige una vacante en <a href="/vacantes">Vacantes</a> y pulsa «Adaptar mi CV».</p>
+  <div class="empty">
+    <span class="empty-icon"><Icon name="edit_document" size={32} /></span>
+    <h2>Adapta tu CV a una vacante</h2>
+    <p class="muted">Elige una vacante en Vacantes y pulsa «Adaptar mi CV». Aquí verás qué cambia y cuánto mejora.</p>
+    <a class="button primary" href="/vacantes"><Icon name="work" size={20} /> Ir a Vacantes</a>
+  </div>
 {:else}
   <div class="page">
     <header>
-      <p class="small"><a href="/vacantes">← Vacantes</a></p>
+      <p class="small"><a class="back" href="/vacantes"><Icon name="arrow_back" size={18} /> Vacantes</a></p>
       <h1>Adaptar CV{detail ? `: ${detail.job.title}` : ""}</h1>
       {#if detail}
         <p class="muted">
@@ -117,18 +124,19 @@
     {:else}
       {@const opt = view.opt}
       <div class="card scores">
-        <div>
-          <span class="muted small">ATS antes</span>
-          <strong class="big">{opt.prepared.ats_before.total}</strong>
+        <h2>Qué tan bien lo leen los filtros automáticos</h2>
+        <p class="muted small">Muchas empresas usan un programa (ATS) que revisa tu CV antes que una persona.</p>
+        <dl class="ats">
+          <dt>Tu CV actual</dt>
+          <dd><Meter layout="row" value={opt.prepared.ats_before.total} label="Tu CV actual" /></dd>
+          <dt>CV adaptado{saved ? " (guardado)" : ""}</dt>
+          <dd><Meter layout="row" value={saved?.ats_after ?? opt.ats_after.total} label="CV adaptado" /></dd>
+        </dl>
+        <div class="row">
+          <button onclick={run} disabled={busy !== ""}>
+            {busy === "run" ? "Generando…" : "Generar otra propuesta"}
+          </button>
         </div>
-        <span class="arrow" aria-hidden="true">→</span>
-        <div>
-          <span class="muted small">ATS después{saved ? " (guardado)" : ", con lo que aprobó el guardián"}</span>
-          <strong class="big">{saved?.ats_after ?? opt.ats_after.total}</strong>
-        </div>
-        <button onclick={run} disabled={busy !== ""} class="regen">
-          {busy === "run" ? "Generando…" : "Generar otra propuesta"}
-        </button>
       </div>
       {#if changed && !saved}
         <p class="muted small">Cambiaste decisiones: el puntaje final se recalcula al guardar.</p>
@@ -230,7 +238,7 @@
 
       {#if saved}
         <div class="card" role="status">
-          <p class="ok"><strong>CV guardado.</strong> ATS {saved.ats_before ?? "?"} → {saved.ats_after ?? "?"}</p>
+          <p class="ok"><strong>CV guardado.</strong> Filtros automáticos: {saved.ats_before ?? "?"} → {saved.ats_after ?? "?"}</p>
           {#if saved.missing.length}
             <p class="small muted">Siguen faltando: {saved.missing.join(", ")}</p>
           {/if}
@@ -249,17 +257,17 @@
 {/if}
 
 <style>
-  .rejected { border-left: 3px solid var(--danger); padding-left: 0.6rem; }
+  .rejected { background: var(--md-error-container); color: var(--md-on-error-container); }
   .templates { flex-basis: 100%; border: 0; padding: 0; margin: 0 0 0.5rem; display: flex; flex-direction: column; gap: 0.2rem; }
   .templates legend { font-weight: 600; margin-bottom: 0.2rem; }
   .page { display: flex; flex-direction: column; gap: 0.75rem; max-width: 960px; }
   header h1 { margin-bottom: 0.25rem; }
   header p { margin: 0; }
-  .scores { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
-  .scores > div { display: flex; flex-direction: column; }
-  .big { font-size: 2rem; font-variant-numeric: tabular-nums; }
-  .arrow { font-size: 1.5rem; color: var(--muted); }
-  .regen { margin-left: auto; }
+  .scores h2 { margin: 0 0 0.25rem; }
+  .ats { display: grid; grid-template-columns: max-content 1fr; align-items: center; gap: 0.75rem 1.25rem; margin: 0.5rem 0 1rem; max-width: 36rem; }
+  .ats dt { font-weight: 600; }
+  .ats dd { margin: 0; }
+  .back { display: inline-flex; align-items: center; gap: 0.3rem; min-height: 40px; font-weight: 600; }
   .exp { margin: 0.75rem 0 0; }
   .change.rejected { border-color: var(--danger); }
   .diff { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.5rem; }

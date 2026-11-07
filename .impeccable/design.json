@@ -1,0 +1,419 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-06T00:00:00Z",
+  "title": "Design System: FinderRemoteJob",
+  "extensions": {
+    "colorMeta": {
+      "talavera": {
+        "role": "primary",
+        "displayName": "Azul talavera",
+        "tonalRamp": [
+          "#002e6b",
+          "#0a4393",
+          "#1f50a0",
+          "#aec6ff",
+          "#d8e2ff"
+        ]
+      },
+      "talavera-dark": {
+        "role": "primary",
+        "displayName": "Azul talavera (oscuro)",
+        "tonalRamp": [
+          "#002e6b",
+          "#0a4393",
+          "#1f50a0",
+          "#aec6ff",
+          "#d8e2ff"
+        ]
+      },
+      "talavera-container": {
+        "role": "primary",
+        "displayName": "Talavera suave",
+        "tonalRamp": [
+          "#002e6b",
+          "#0a4393",
+          "#1f50a0",
+          "#aec6ff",
+          "#d8e2ff"
+        ]
+      },
+      "secondary-container": {
+        "role": "secondary",
+        "displayName": "Azul pizarra tonal",
+        "tonalRamp": [
+          "#3f4759",
+          "#dbe2f9"
+        ]
+      },
+      "cempasuchil": {
+        "role": "tertiary",
+        "displayName": "Cempasúchil",
+        "tonalRamp": [
+          "#2d1600",
+          "#4a2800",
+          "#6a3b00",
+          "#8c5000",
+          "#ffb873",
+          "#ffdcbf"
+        ]
+      },
+      "cempasuchil-container": {
+        "role": "tertiary",
+        "displayName": "Cempasúchil suave",
+        "tonalRamp": [
+          "#2d1600",
+          "#4a2800",
+          "#6a3b00",
+          "#8c5000",
+          "#ffb873",
+          "#ffdcbf"
+        ]
+      },
+      "error": {
+        "role": "error",
+        "displayName": "Error",
+        "tonalRamp": [
+          "#690005",
+          "#93000a",
+          "#ba1a1a",
+          "#ffb4ab",
+          "#ffdad6"
+        ]
+      },
+      "success": {
+        "role": "success",
+        "displayName": "Éxito",
+        "tonalRamp": [
+          "#00210f",
+          "#00522c",
+          "#196c40",
+          "#88d7a1",
+          "#a4f4bc"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Papel azulado",
+        "tonalRamp": [
+          "#0c0e13",
+          "#111318",
+          "#1a1b21",
+          "#1e1f25",
+          "#282a2f",
+          "#33353a",
+          "#434751",
+          "#737783",
+          "#8d909d",
+          "#c3c6d3",
+          "#e2e2e9",
+          "#e8e7ef",
+          "#ededf5",
+          "#f3f3fa",
+          "#faf9ff",
+          "#ffffff"
+        ]
+      },
+      "on-surface": {
+        "role": "neutral",
+        "displayName": "Tinta",
+        "tonalRamp": [
+          "#0c0e13",
+          "#111318",
+          "#1a1b21",
+          "#1e1f25",
+          "#282a2f",
+          "#33353a",
+          "#434751",
+          "#737783",
+          "#8d909d",
+          "#c3c6d3",
+          "#e2e2e9",
+          "#e8e7ef",
+          "#ededf5",
+          "#f3f3fa",
+          "#faf9ff",
+          "#ffffff"
+        ]
+      },
+      "on-surface-variant": {
+        "role": "neutral",
+        "displayName": "Tinta secundaria",
+        "tonalRamp": [
+          "#0c0e13",
+          "#111318",
+          "#1a1b21",
+          "#1e1f25",
+          "#282a2f",
+          "#33353a",
+          "#434751",
+          "#737783",
+          "#8d909d",
+          "#c3c6d3",
+          "#e2e2e9",
+          "#e8e7ef",
+          "#ededf5",
+          "#f3f3fa",
+          "#faf9ff",
+          "#ffffff"
+        ]
+      },
+      "outline": {
+        "role": "neutral",
+        "displayName": "Contorno",
+        "tonalRamp": [
+          "#0c0e13",
+          "#111318",
+          "#1a1b21",
+          "#1e1f25",
+          "#282a2f",
+          "#33353a",
+          "#434751",
+          "#737783",
+          "#8d909d",
+          "#c3c6d3",
+          "#e2e2e9",
+          "#e8e7ef",
+          "#ededf5",
+          "#f3f3fa",
+          "#faf9ff",
+          "#ffffff"
+        ]
+      },
+      "outline-variant": {
+        "role": "neutral",
+        "displayName": "Contorno suave",
+        "tonalRamp": [
+          "#0c0e13",
+          "#111318",
+          "#1a1b21",
+          "#1e1f25",
+          "#282a2f",
+          "#33353a",
+          "#434751",
+          "#737783",
+          "#8d909d",
+          "#c3c6d3",
+          "#e2e2e9",
+          "#e8e7ef",
+          "#ededf5",
+          "#f3f3fa",
+          "#faf9ff",
+          "#ffffff"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Título de cada pantalla, uno por pantalla."
+      },
+      "title-large": {
+        "displayName": "Title large",
+        "purpose": "Secciones y título del detalle."
+      },
+      "title-medium": {
+        "displayName": "Title medium",
+        "purpose": "Subsecciones y títulos de tarjeta."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Texto corrido; base de 16px."
+      },
+      "body-small": {
+        "displayName": "Body small",
+        "purpose": "Texto secundario; mínimo para lectura."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Botones y segmentos."
+      },
+      "label-small": {
+        "displayName": "Label small",
+        "purpose": "Encabezados de tabla, insignias, pie del cajón."
+      },
+      "nav": {
+        "displayName": "Navegación",
+        "purpose": "Destinos del cajón; 750 en el activo."
+      },
+      "score": {
+        "displayName": "Puntaje",
+        "purpose": "Número del medidor, cifras tabulares."
+      }
+    },
+    "shadows": [
+      {
+        "name": "elev-1",
+        "value": "0 1px 2px rgb(var(--md-shadow) / 0.3), 0 1px 3px 1px rgb(var(--md-shadow) / 0.15)",
+        "purpose": "Hover de botones rellenos y tonales; reposo de tarjetas del Kanban."
+      },
+      {
+        "name": "elev-2",
+        "value": "0 1px 2px rgb(var(--md-shadow) / 0.3), 0 2px 6px 2px rgb(var(--md-shadow) / 0.15)",
+        "purpose": "Hover de tarjetas del Kanban."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(0.2, 0, 0, 1)",
+        "purpose": "Transiciones de estado de 150ms (color, borde, sombra)."
+      },
+      {
+        "name": "duration-state",
+        "value": "150ms",
+        "purpose": "Hover, active y foco."
+      },
+      {
+        "name": "meter-grow",
+        "value": "width 500ms cubic-bezier(0.05, 0.7, 0.1, 1)",
+        "purpose": "La barra del medidor crece desde 0 al montarse; único movimiento de entrada."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "0ms",
+        "purpose": "Con prefers-reduced-motion: reduce, toda transición y animación dura 0ms."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "board-2-col",
+        "value": "780px (container query del tablero)"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botón relleno",
+      "kind": "button",
+      "refersTo": "button-filled",
+      "description": "Acción principal, una por bloque.",
+      "html": "<button class=\"ds-btn-filled\">Buscar vacantes nuevas</button>",
+      "css": ".ds-btn-filled{display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;min-height:44px;padding:0 1.4rem;border-radius:999px;font-family:var(--font, 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif);font-size:0.9375rem;font-weight:650;letter-spacing:0.01em;cursor:pointer;transition:background-color 150ms cubic-bezier(0.2,0,0,1),box-shadow 150ms cubic-bezier(0.2,0,0,1);background:var(--md-primary,#1f50a0);color:var(--md-on-primary,#fff);border:1px solid var(--md-primary,#1f50a0);} .ds-btn-filled:hover{background:color-mix(in srgb,var(--md-on-primary,#fff) 8%,var(--md-primary,#1f50a0));box-shadow:0 1px 2px rgb(26 27 33 / 0.3), 0 1px 3px 1px rgb(26 27 33 / 0.15);} .ds-btn-filled:active{box-shadow:none;} .ds-btn-filled:focus-visible{outline:3px solid var(--md-primary,#1f50a0);outline-offset:2px;}"
+    },
+    {
+      "name": "Botón delineado",
+      "kind": "button",
+      "refersTo": "button-outlined",
+      "description": "Botón por defecto para acciones secundarias.",
+      "html": "<button class=\"ds-btn-outlined\">Importar vacante</button>",
+      "css": ".ds-btn-outlined{display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;min-height:44px;padding:0 1.4rem;border-radius:999px;font-family:var(--font, 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif);font-size:0.9375rem;font-weight:650;letter-spacing:0.01em;cursor:pointer;transition:background-color 150ms cubic-bezier(0.2,0,0,1),box-shadow 150ms cubic-bezier(0.2,0,0,1);background:transparent;color:var(--md-primary,#1f50a0);border:1px solid var(--md-outline,#737783);} .ds-btn-outlined:hover{background:color-mix(in srgb,var(--md-primary,#1f50a0) 8%,transparent);} .ds-btn-outlined:active{background:color-mix(in srgb,var(--md-primary,#1f50a0) 12%,transparent);} .ds-btn-outlined:focus-visible{outline:3px solid var(--md-primary,#1f50a0);outline-offset:2px;}"
+    },
+    {
+      "name": "Botón tonal",
+      "kind": "button",
+      "refersTo": "button-tonal",
+      "description": "Acción de apoyo con peso medio; también el botón de elegir archivo.",
+      "html": "<button class=\"ds-btn-tonal\">Elegir archivo</button>",
+      "css": ".ds-btn-tonal{display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;min-height:44px;padding:0 1.4rem;border-radius:999px;font-family:var(--font, 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif);font-size:0.9375rem;font-weight:650;letter-spacing:0.01em;cursor:pointer;transition:background-color 150ms cubic-bezier(0.2,0,0,1),box-shadow 150ms cubic-bezier(0.2,0,0,1);background:var(--md-secondary-container,#dbe2f9);color:var(--md-on-secondary-container,#3f4759);border:1px solid transparent;} .ds-btn-tonal:hover{background:color-mix(in srgb,var(--md-on-secondary-container,#3f4759) 8%,var(--md-secondary-container,#dbe2f9));box-shadow:0 1px 2px rgb(26 27 33 / 0.3), 0 1px 3px 1px rgb(26 27 33 / 0.15);} .ds-btn-tonal:focus-visible{outline:3px solid var(--md-primary,#1f50a0);outline-offset:2px;}"
+    },
+    {
+      "name": "Campo con contorno",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Campo de texto con etiqueta encima.",
+      "html": "<label class=\"ds-label\">Puesto buscado<input class=\"ds-field\" placeholder=\"Ej.: editor de video\"></label>",
+      "css": ".ds-label{display:flex;flex-direction:column;gap:0.35rem;font-family:var(--font, 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif);font-size:0.9375rem;font-weight:500;color:var(--md-on-surface-variant,#434751);} .ds-field{font:400 1rem/1.5 var(--font, 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif);min-height:48px;padding:0.65rem 0.9rem;border:1px solid var(--md-outline,#737783);border-radius:4px;background:transparent;color:var(--md-on-surface,#1a1b21);transition:border-color 150ms cubic-bezier(0.2,0,0,1),box-shadow 150ms cubic-bezier(0.2,0,0,1);} .ds-field:hover{border-color:var(--md-on-surface,#1a1b21);} .ds-field:focus-visible{outline:none;border-color:var(--md-primary,#1f50a0);box-shadow:inset 0 0 0 1px var(--md-primary,#1f50a0);}"
+    },
+    {
+      "name": "Cajón de navegación",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Destinos en píldora; el activo en secondary-container con icono relleno.",
+      "html": "<nav class=\"ds-nav\"><a href=\"#\"><svg width=\"24\" height=\"24\" viewBox=\"0 -960 960 960\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M372-523q-42-42-42-108t42-108q42-42 108-42t108 42q42 42 42 108t-42 108q-42 42-108 42t-108-42ZM160-220v-34q0-38 19-65t49-41q67-30 128.5-45T480-420q62 0 123 15.5T731-360q31 14 50 41t19 65v34q0 25-17.5 42.5T740-160H220q-25 0-42.5-17.5T160-220Zm60 0h520v-34q0-16-9.5-30.5T707-306q-64-31-117-42.5T480-360q-57 0-111 11.5T252-306q-14 7-23 21.5t-9 30.5v34Zm324.5-346.5Q570-592 570-631t-25.5-64.5Q519-721 480-721t-64.5 25.5Q390-670 390-631t25.5 64.5Q441-541 480-541t64.5-25.5ZM480-631Zm0 411Z\"/></svg>Perfiles</a><a href=\"#\" aria-current=\"page\"><svg width=\"24\" height=\"24\" viewBox=\"0 -960 960 960\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M140-120q-24 0-42-18t-18-42v-480q0-24 18-42t42-18h180v-100q0-24 18-42t42-18h200q24 0 42 18t18 42v100h180q24 0 42 18t18 42v480q0 24-18 42t-42 18H140Zm240-600h200v-100H380v100Z\"/></svg>Vacantes</a></nav>",
+      "css": ".ds-nav{display:flex;flex-direction:column;gap:0.25rem;width:248px;padding:0.75rem;background:var(--md-surface-container-low,#f3f3fa);font-family:var(--font, 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif);} .ds-nav a{display:flex;align-items:center;gap:0.85rem;min-height:52px;padding:0 1rem;border-radius:999px;color:var(--md-on-surface-variant,#434751);text-decoration:none;font-weight:600;font-size:1rem;transition:background-color 150ms cubic-bezier(0.2,0,0,1);} .ds-nav a:hover{background:color-mix(in srgb,var(--md-on-surface,#1a1b21) 8%,transparent);color:var(--md-on-surface,#1a1b21);} .ds-nav a[aria-current=page]{background:var(--md-secondary-container,#dbe2f9);color:var(--md-on-secondary-container,#3f4759);font-weight:750;} .ds-nav a:focus-visible{outline:3px solid var(--md-primary,#1f50a0);outline-offset:-3px;}"
+    },
+    {
+      "name": "Medidor de compatibilidad",
+      "kind": "custom",
+      "refersTo": "meter-high",
+      "description": "Firma: píldora tonal con el puntaje y barra lineal M3; cempasúchil ≥70, talavera ≥45, neutro debajo.",
+      "html": "<span class=\"ds-meter ds-high\" role=\"meter\" aria-label=\"Compatibilidad\" aria-valuenow=\"86\" aria-valuemin=\"0\" aria-valuemax=\"100\"><span class=\"ds-num\">86</span><span class=\"ds-track\"><span class=\"ds-fill\" style=\"width:86%\"></span></span></span> <span class=\"ds-meter ds-mid\" role=\"meter\" aria-label=\"Compatibilidad\" aria-valuenow=\"58\" aria-valuemin=\"0\" aria-valuemax=\"100\"><span class=\"ds-num\">58</span><span class=\"ds-track\"><span class=\"ds-fill\" style=\"width:58%\"></span></span></span>",
+      "css": ".ds-meter{display:inline-flex;flex-direction:column;gap:4px;width:3.25rem;font-family:var(--font, 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif);font-variant-numeric:tabular-nums;vertical-align:top;} .ds-num{display:grid;place-items:center;height:32px;border-radius:999px;font-weight:750;font-size:1rem;} .ds-track{position:relative;display:block;height:4px;border-radius:999px;background:var(--md-surface-container-highest,#e2e2e9);overflow:hidden;} .ds-fill{position:absolute;inset:0 auto 0 0;border-radius:inherit;transition:width 500ms cubic-bezier(0.05,0.7,0.1,1);} .ds-high .ds-num{background:var(--md-tertiary-container,#ffdcbf);color:var(--md-on-tertiary-container,#2d1600);} .ds-high .ds-fill{background:var(--md-tertiary,#8c5000);} .ds-mid .ds-num{background:var(--md-primary-container,#d8e2ff);color:var(--md-on-primary-container,#002e6b);} .ds-mid .ds-fill{background:var(--md-primary,#1f50a0);}"
+    },
+    {
+      "name": "Elemento de lista seleccionable",
+      "kind": "custom",
+      "refersTo": "list-item-active",
+      "description": "Fila de vacante o perfil; activa en secondary-container, con etiqueta «Nueva».",
+      "html": "<button class=\"ds-item ds-active\"><strong>Editor de video senior</strong><span class=\"ds-new\">Nueva</span><span class=\"ds-meta\">Platzi · Remoto · LATAM</span></button>",
+      "css": ".ds-item{display:flex;flex-direction:column;align-items:flex-start;gap:0.2rem;width:320px;padding:0.75rem 1rem;border:0;border-radius:12px;background:transparent;color:var(--md-on-surface,#1a1b21);font:400 1rem/1.5 var(--font, 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif);text-align:left;cursor:pointer;transition:background-color 150ms cubic-bezier(0.2,0,0,1);} .ds-item:hover{background:color-mix(in srgb,var(--md-on-surface,#1a1b21) 8%,transparent);} .ds-item.ds-active{background:var(--md-secondary-container,#dbe2f9);color:var(--md-on-secondary-container,#3f4759);} .ds-item:focus-visible{outline:3px solid var(--md-primary,#1f50a0);outline-offset:2px;} .ds-new{padding:0.1rem 0.55rem;border-radius:8px;background:var(--md-tertiary-container,#ffdcbf);color:var(--md-on-tertiary-container,#2d1600);font-size:0.875rem;font-weight:700;} .ds-meta{font-size:0.9375rem;color:var(--md-on-surface-variant,#434751);}"
+    },
+    {
+      "name": "Segmentado",
+      "kind": "chip",
+      "refersTo": "segmented-selected",
+      "description": "Kanban / Lista; segmento elegido tonal con marca de verificación.",
+      "html": "<div class=\"ds-seg\"><button aria-pressed=\"true\">Kanban</button><button aria-pressed=\"false\">Lista</button></div>",
+      "css": ".ds-seg{display:inline-flex;} .ds-seg button{display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;min-height:44px;padding:0 1.4rem;border-radius:999px;font-family:var(--font, 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif);font-size:0.9375rem;font-weight:650;letter-spacing:0.01em;cursor:pointer;transition:background-color 150ms cubic-bezier(0.2,0,0,1),box-shadow 150ms cubic-bezier(0.2,0,0,1);padding:0 1.1rem;background:transparent;color:var(--md-on-surface,#1a1b21);border:1px solid var(--md-outline,#737783);border-radius:0;margin-left:-1px;} .ds-seg button:first-child{border-radius:999px 0 0 999px;margin-left:0;} .ds-seg button:last-child{border-radius:0 999px 999px 0;} .ds-seg button:hover{background:color-mix(in srgb,var(--md-primary,#1f50a0) 8%,transparent);} .ds-seg button[aria-pressed=true]{background:var(--md-secondary-container,#dbe2f9);color:var(--md-on-secondary-container,#3f4759);} .ds-seg button[aria-pressed=true]::before{content:'';width:18px;height:18px;background:currentColor;-webkit-mask:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='m382-354 339-339q12-12 28-12t28 12q12 12 12 28.5T777-636L410-268q-12 12-28 12t-28-12L182-440q-12-12-11.5-28.5T183-497q12-12 28.5-12t28.5 12l142 143Z'/%3E%3C/svg%3E\") center/contain no-repeat;mask:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='m382-354 339-339q12-12 28-12t28 12q12 12 12 28.5T777-636L410-268q-12 12-28 12t-28-12L182-440q-12-12-11.5-28.5T183-497q12-12 28.5-12t28.5 12l142 143Z'/%3E%3C/svg%3E\") center/contain no-repeat;} .ds-seg button:focus-visible{outline:3px solid var(--md-primary,#1f50a0);outline-offset:2px;}"
+    },
+    {
+      "name": "Tarjeta y aviso",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Contenedor tonal de 16px y aviso en secondary-container.",
+      "html": "<div class=\"ds-card\"><h3>Qué tanto encaja contigo</h3><p class=\"ds-notice\">La IA local puede tardar unos minutos.</p></div>",
+      "css": ".ds-card{background:var(--md-surface-container-low,#f3f3fa);border-radius:16px;padding:1.25rem 1.5rem;font-family:var(--font, 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif);color:var(--md-on-surface,#1a1b21);max-width:28rem;} .ds-card h3{margin:0 0 0.5rem;font-size:1.0625rem;font-weight:700;} .ds-notice{margin:0;background:var(--md-secondary-container,#dbe2f9);color:var(--md-on-secondary-container,#3f4759);border-radius:12px;padding:0.85rem 1.1rem;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "La loza poblana en la mesa de trabajo",
+    "overview": "Material Design 3, fijado por el usuario, llevado a una identidad propia. El azul talavera de la loza poblana sustituye al morado de referencia de M3; el cempasúchil aparece solo cuando algo encaja mucho o es nuevo. Las superficies son los neutros de M3 con un ligero tinte azul, apiladas por tono, no por sombra. Es una app de escritorio tranquila para sesiones cortas: el usuario debe saber de un vistazo en qué pantalla está y cuál es el siguiente paso.\n\nLa densidad es media-baja a propósito: texto base de 16px, controles de 40 a 52px de alto, tipografía Atkinson Hyperlegible Next, pensada para la legibilidad. El tema claro u oscuro lo decide el sistema (`prefers-color-scheme`); los dos temas comparten roles y cambian solo los tonos. Todo recurso (fuente, iconos) va incluido en la app, porque la CSP solo permite recursos locales.\n\nLo que se rechaza, confirmado en la dirección: el M3 de fábrica (morado de referencia, Roboto, tarjetas grises idénticas).",
+    "keyCharacteristics": [
+      "Principal azul talavera de la paleta tonal de su propia semilla (#1D4E9E): T35 en claro, T80 en oscuro.",
+      "Cempasúchil reservado para la compatibilidad alta y la etiqueta «Nueva».",
+      "Formas de píldora en botones, navegación y medidor; contorno de 4px en campos.",
+      "Profundidad por tono de superficie; dos sombras suaves solo para estado y para tarjetas que se arrastran.",
+      "Un solo momento de movimiento: la barra del medidor crece desde cero.",
+      "Iconos Material Symbols Rounded 400 en SVG en línea, con variante rellena para el destino activo."
+    ],
+    "rules": [
+      {
+        "name": "The Cempasúchil Rule",
+        "body": "El terciario existe para decir «esto encaja mucho» o «esto es nuevo». Nunca se usa en botones, navegación, encabezados ni decoración.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tonal Selection Rule",
+        "body": "Lo seleccionado se marca con `secondary-container`, no con el principal. El talavera relleno es para la acción, no para el estado.",
+        "section": "colors"
+      },
+      {
+        "name": "The Paired Theme Rule",
+        "body": "Todo color se escribe con su variable `--md-*`, que tiene valor claro y oscuro. Ningún hex suelto en las pantallas.",
+        "section": "colors"
+      },
+      {
+        "name": "The 15px Floor Rule",
+        "body": "El texto que se lee no baja de 15px. Los 14px quedan para etiquetas cortas (encabezados de tabla, insignias, estado de la IA).",
+        "section": "typography"
+      },
+      {
+        "name": "The No Uppercase Rule",
+        "body": "Sin mayúsculas sostenidas ni tracking amplio: las etiquetas se escriben en tipo oración, como el resto de la interfaz.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tone-Not-Shadow Rule",
+        "body": "Un contenedor se separa del fondo cambiando de tono de superficie. Las sombras están reservadas para el hover y para lo que se arrastra.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do usar las variables `--md-*` para todo color, para que el tema oscuro funcione solo.",
+      "Do mostrar cualquier puntaje de compatibilidad con el medidor (chip en listas, fila en desgloses), nunca como número suelto.",
+      "Do marcar lo seleccionado con `secondary-container` y lo accionable principal con el botón relleno talavera, uno por bloque.",
+      "Do mantener los controles en 40px de alto o más (botones 44px, campos 48px, destinos 52px) y el foco visible (3px talavera, offset 2px).",
+      "Do limitar las transiciones a 150ms con `cubic-bezier(0.2, 0, 0, 1)` sobre color, borde y sombra, y respetar `prefers-reduced-motion`.",
+      "Do incluir fuentes e iconos dentro de la app: los iconos nuevos se añaden a `icons.ts` desde `@material-symbols/svg-400`.",
+      "Do acompañar cada estado vacío del botón del siguiente paso."
+    ],
+    "donts": [
+      "Don't usar cempasúchil fuera del medidor alto y de la etiqueta «Nueva».",
+      "Don't volver al M3 de fábrica: nada de morado de referencia, Roboto ni tarjetas grises idénticas.",
+      "Don't usar sombras para separar contenedores en reposo; solo las tarjetas que se arrastran las llevan.",
+      "Don't añadir animaciones de entrada además de la barra del medidor.",
+      "Don't cargar recursos externos (CDN de fuentes o iconos): la CSP los bloquea.",
+      "Don't bajar el texto de lectura de 15px ni usar mayúsculas sostenidas."
+    ]
+  }
+}
