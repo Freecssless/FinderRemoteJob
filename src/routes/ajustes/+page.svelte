@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { jobsApi, settingsApi, type LlmSettings } from "$lib/api";
+  import { revealItemInDir } from "@tauri-apps/plugin-opener";
+  import { backupApi, jobsApi, settingsApi, type LlmSettings } from "$lib/api";
 
   const NO_KEYS = { ANTHROPIC_API_KEY: "", FRJ_OPENAI_API_KEY: "" };
   /** Proveedores con la dirección y el modelo ya puestos (compatibles con la API de OpenAI). */
@@ -120,6 +121,36 @@
       boardsMsg = "Guardado. Se consultan al buscar vacantes nuevas.";
     } catch (e) {
       boardsError = String(e);
+    }
+  }
+
+  // Copia de seguridad
+  let backupPath = $state("");
+  let backupBusy = $state(false);
+  let backupError = $state("");
+  let restoreFile = $state<File | null>(null);
+
+  async function makeBackup() {
+    backupBusy = true;
+    backupError = "";
+    try {
+      backupPath = await backupApi.create();
+    } catch (e) {
+      backupError = String(e);
+    } finally {
+      backupBusy = false;
+    }
+  }
+
+  async function restore() {
+    if (!restoreFile) return;
+    backupBusy = true;
+    backupError = "";
+    try {
+      await backupApi.restore(restoreFile); // si sale bien, la app se reinicia
+    } catch (e) {
+      backupError = String(e);
+      backupBusy = false;
     }
   }
 
@@ -264,6 +295,36 @@
   {:else if !error}
     <p class="muted">Cargando…</p>
   {/if}
+
+  <section class="card">
+    <h2>Copia de seguridad</h2>
+    <p class="muted small">
+      Guarda en un solo archivo tus perfiles, CV, vacantes, postulaciones y los CV generados.
+      Las claves de IA no se incluyen.
+    </p>
+    {#if backupError}<p class="danger small" role="alert">{backupError}</p>{/if}
+    <div class="row">
+      <button class="primary" onclick={makeBackup} disabled={backupBusy}>Hacer copia ahora</button>
+      {#if backupPath}
+        <span class="ok small" role="status">Guardada en {backupPath}</span>
+        <button class="link small" onclick={() => revealItemInDir(backupPath)}>Mostrar en la carpeta</button>
+      {/if}
+    </div>
+    <label>
+      Restaurar una copia
+      <input type="file" accept=".zip" onchange={(e) => (restoreFile = e.currentTarget.files?.[0] ?? null)} disabled={backupBusy} />
+    </label>
+    {#if restoreFile}
+      <p class="notice small">
+        Tus datos actuales se reemplazarán por los de «{restoreFile.name}» (los actuales se guardan aparte
+        por si acaso) y la app se reiniciará.
+      </p>
+      <div class="row">
+        <button class="danger" onclick={restore} disabled={backupBusy}>Sí, restaurar</button>
+        <button onclick={() => (restoreFile = null)} disabled={backupBusy}>Cancelar</button>
+      </div>
+    {/if}
+  </section>
 </div>
 
 <style>

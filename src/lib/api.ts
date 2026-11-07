@@ -456,3 +456,12 @@ export const queueApi = {
   faq: (profileId: string) => invoke<FaqView>("get_faq", { profileId }),
   saveFaq: (profileId: string, items: Faq[]) => invoke<void>("save_faq", { profileId, items }),
 };
+
+// Respaldo (src-tauri/src/backup.rs)
+export const backupApi = {
+  /** Devuelve la ruta del .zip creado. */
+  create: () => invoke<string>("create_backup"),
+  /** Reinicia la app si todo va bien. */
+  restore: async (file: File) =>
+    invoke<void>("restore_backup", { bytes: Array.from(new Uint8Array(await file.arrayBuffer())) }),
+};

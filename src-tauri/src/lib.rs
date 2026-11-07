@@ -1,5 +1,6 @@
 //! Puente Tauri: comandos delgados sobre `finder-infra`. Aquí no hay lógica de dominio.
 
+mod backup;
 mod board;
 mod envfile;
 mod jobs;
@@ -92,7 +93,11 @@ async fn ollama_status(state: State<'_, AppState>) -> CmdResult<OllamaStatus> {
     let local = state.llm()?.local;
     let Backend::Ollama { base_url } = &local.backend else {
         // La IA local apunta a otro servidor: no hay nada de Ollama que comprobar.
-        return Ok(OllamaStatus { running: true, model: local.model, installed: true });
+        return Ok(OllamaStatus {
+            running: true,
+            model: local.model,
+            installed: true,
+        });
     };
     let models = ollama::installed_models(&state.http, base_url).await;
     Ok(OllamaStatus {
@@ -198,7 +203,19 @@ pub fn run() {
             let data_dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data_dir)?;
             let db_path = data_dir.join("finder.db");
+            // shortcut: si falla, se reintenta en el próximo arranque y solo queda en el log.
+            let origin = backup::apply_pending(&data_dir).unwrap_or_else(|e| {
+                eprintln!("no se pudo restaurar el respaldo: {e}");
+                None
+            });
             let db = tauri::async_runtime::block_on(Db::open(&db_path))?;
+            let here = data_dir.display().to_string();
+            if let Some(old) = origin.filter(|o| *o != here) {
+                let sep = std::path::MAIN_SEPARATOR;
+                tauri::async_runtime::block_on(
+                    db.rebase_cv_paths(&format!("{old}{sep}"), &format!("{here}{sep}")),
+                )?;
+            }
 
             let env_file = envfile::find(&app.path().app_config_dir()?);
             let file_vars = env_file
@@ -231,6 +248,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             app_info,
             ollama_status,
+            backup::create_backup,
+            backup::restore_backup,
             list_profiles,
             create_profile,
             update_profile,

@@ -687,6 +687,31 @@ impl Db {
         )
     }
 
+    /// Copia consistente de toda la base en `dest` (que no debe existir), sin cerrar la app.
+    pub async fn backup_to(&self, dest: &Path) -> Result<()> {
+        sqlx::query("VACUUM INTO ?")
+            .bind(dest.to_string_lossy().as_ref())
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    /// Tras restaurar un respaldo de otra carpeta: las rutas de los CV generados apuntan a la nueva.
+    pub async fn rebase_cv_paths(&self, old_dir: &str, new_dir: &str) -> Result<()> {
+        sqlx::query(
+            "UPDATE cv_versions SET
+               pdf_path = CASE WHEN substr(pdf_path, 1, length(?1)) = ?1
+                          THEN ?2 || substr(pdf_path, length(?1) + 1) ELSE pdf_path END,
+               docx_path = CASE WHEN substr(docx_path, 1, length(?1)) = ?1
+                           THEN ?2 || substr(docx_path, length(?1) + 1) ELSE docx_path END",
+        )
+        .bind(old_dir)
+        .bind(new_dir)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
     /// Guarda un ajuste; `None` lo borra.
     pub async fn set_setting(&self, key: &str, value: Option<&str>) -> Result<()> {
         match value {
@@ -1347,7 +1372,14 @@ mod tests {
             std::slice::from_ref(&v)
         );
         let app = db.get_application(&app_id).await?.ok_or("falta")?;
-        assert_eq!(app.cv_version_id, Some(v.id));
+        assert_eq!(app.cv_version_id, Some(v.id.clone()));
+
+        // Restaurar en otra carpeta: solo cambian las rutas que empiezan con la vieja.
+        db.rebase_cv_paths("/tmp", "/home/ana/datos").await?;
+        db.rebase_cv_paths("/otra", "/nada").await?;
+        let moved = db.get_cv_version(&v.id).await?.ok_or("falta")?;
+        assert_eq!(moved.pdf_path.as_deref(), Some("/home/ana/datos/cv.pdf"));
+        assert_eq!(moved.docx_path, None);
 
         // Borrar el perfil borra sus versiones y postulaciones, pero no la vacante.
         db.delete_profile(&p.id).await?;
@@ -1368,7 +1400,10 @@ mod tests {
         }
         let db = Db::open(&path).await?;
         assert_eq!(db.list_profiles().await?.len(), 1);
+        let copy = dir.join("copia.db");
+        db.backup_to(&copy).await?;
         drop(db);
+        assert_eq!(Db::open(&copy).await?.list_profiles().await?.len(), 1);
         std::fs::remove_dir_all(&dir)?;
         Ok(())
     }

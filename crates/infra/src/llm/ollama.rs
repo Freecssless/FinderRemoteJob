@@ -40,7 +40,13 @@ pub async fn installed_models(http: &Client, base_url: &str) -> Result<Vec<Strin
 
 /// Ollama nombra `qwen3` como `qwen3:latest`.
 pub fn has_model(installed: &[String], model: &str) -> bool {
-    let full = |m: &str| if m.contains(':') { m.to_string() } else { format!("{m}:latest") };
+    let full = |m: &str| {
+        if m.contains(':') {
+            m.to_string()
+        } else {
+            format!("{m}:latest")
+        }
+    };
     installed.iter().any(|m| full(m) == full(model))
 }
 

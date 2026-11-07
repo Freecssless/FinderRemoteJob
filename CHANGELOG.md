@@ -219,6 +219,10 @@
 - La ficha de compatibilidad muestra «Similitud con tu CV» cuando existe.
 - `finder_infra::semantic` (`ensure`, `Vectors`), `Db::embeddings` y `Db::put_embedding`.
 
+### Copia de seguridad
+- Ajustes → «Copia de seguridad»: «Hacer copia ahora» crea `Documentos/FinderRemoteJob-respaldo-AAAA-MM-DD.zip` con la base (copia consistente con `VACUUM INTO`, sin cerrar la app) y la carpeta `cvs/`. Las claves de API no se incluyen (siguen en el llavero).
+- «Restaurar una copia» valida el archivo, lo deja pendiente y reinicia la app; al arrancar se cambia la base antes de abrirla. Lo anterior queda como `finder.db.antes-de-restaurar` y `cvs.antes-de-restaurar`. Si el respaldo viene de otra carpeta, se corrigen las rutas de los CV generados.
+
 ### Asistente de bienvenida
 - Primer uso (sin perfiles): la app abre `/bienvenida` con cuatro pasos: crear el perfil, importar el CV, escribir los puestos buscados y buscar vacantes. También se abre desde Perfiles → «Crear un perfil paso a paso».
 - Antes de importar el CV comprueba si Ollama está abierto y si el modelo local está descargado (comando `ollama_status`, vía `/api/tags`), y explica cómo instalarlo.

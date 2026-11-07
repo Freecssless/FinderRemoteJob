@@ -75,6 +75,10 @@ Prueba en vivo de la IA (requiere Ollama corriendo):
 cargo test -p finder-infra llm -- --ignored --nocapture
 ```
 
+## Copia de seguridad
+
+Ajustes → «Copia de seguridad» guarda un `.zip` en Documentos con la base y los CV generados (sin las claves de API, que siguen en el llavero). «Restaurar una copia» reemplaza los datos y reinicia la app. Lo anterior queda como `finder.db.antes-de-restaurar` y `cvs.antes-de-restaurar` en la carpeta de datos.
+
 ## Fuentes de vacantes y atribución
 
 Las vacantes automáticas vienen de Remote OK, Remotive, We Work Remotely, Get on Board, Jobicy y Himalayas, y de las empresas que sigas en Greenhouse, Lever o Ashby (Ajustes → Opciones avanzadas). Sus términos piden mencionar la fuente y enlazar al anuncio original; la app guarda ambos datos en cada vacante. Además, respeta un tiempo mínimo entre consultas (Remotive: 6 horas).
