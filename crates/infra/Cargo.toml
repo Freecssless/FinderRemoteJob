@@ -14,6 +14,7 @@ quick-xml = { version = "0.42", features = ["serialize"] }
 scraper = "0.29"
 pdf-extract = "0.12"
 docx-rs = "0.4"
+zip = { version = "9", default-features = false, features = ["deflate"] } # medir el DOCX antes de abrirlo (anti-bombas)
 typst-as-lib = { version = "0.17", default-features = false }
 typst = "0.15"
 typst-pdf = "0.15"

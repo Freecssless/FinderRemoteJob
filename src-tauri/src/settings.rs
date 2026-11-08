@@ -16,8 +16,10 @@ use crate::{AppState, CmdResult, err};
 const KEYRING_SERVICE: &str = "FinderRemoteJob";
 const PREFIX: &str = "llm.";
 /// Valores normales (se guardan en la base de datos).
-const PLAIN: [&str; 8] = [
+const PLAIN: [&str; 9] = [
     "FRJ_WRITER",
+    // A qué proveedor externo aceptó el usuario mandar sus textos ("anthropic" o la URL).
+    "FRJ_AI_CONSENT",
     "FRJ_LOCAL_URL",
     "FRJ_LOCAL_MODEL",
     "FRJ_EMBED_MODEL",
@@ -193,6 +195,30 @@ pub async fn delete_api_key(state: State<'_, AppState>, key: String) -> CmdResul
     }
 }
 
+/// «Borrar todos mis datos»: quita del llavero todas las claves de API.
+pub(crate) fn delete_all_keys() -> CmdResult<()> {
+    for k in SECRETS {
+        match entry(k).and_then(|e| e.delete_credential()) {
+            Ok(()) | Err(keyring::Error::NoEntry) => {}
+            Err(e) => return Err(format!("No se pudo borrar la clave {k} del llavero: {e}")),
+        }
+    }
+    Ok(())
+}
+
+/// Tras restaurar un respaldo: olvida a quién y a qué dirección se mandan los datos.
+pub(crate) async fn reset_after_restore(db: &Db) -> finder_infra::db::Result<()> {
+    for k in [
+        "FRJ_WRITER",
+        "FRJ_LOCAL_URL",
+        "FRJ_OPENAI_URL",
+        "FRJ_AI_CONSENT",
+    ] {
+        db.set_setting(&format!("{PREFIX}{k}"), None).await?;
+    }
+    Ok(())
+}
+
 async fn reload(state: &AppState) -> CmdResult<SettingsView> {
     let config = load(&state.db, &state.file_vars).await;
     *state.llm.write().map_err(err)? = config;
@@ -211,5 +237,29 @@ mod tests {
         e.delete_credential()?;
         assert!(matches!(e.get_password(), Err(keyring::Error::NoEntry)));
         Ok(())
+    }
+
+    #[test]
+    fn restaurar_olvida_a_donde_van_los_datos() -> Result<(), Box<dyn std::error::Error>> {
+        tauri::async_runtime::block_on(async {
+            let db = finder_infra::db::Db::open_in_memory().await?;
+            db.set_setting("llm.FRJ_WRITER", Some("openai")).await?;
+            db.set_setting("llm.FRJ_OPENAI_URL", Some("https://atacante.example/v1"))
+                .await?;
+            db.set_setting(
+                "llm.FRJ_LOCAL_URL",
+                Some("http://atacante.example:11434/v1"),
+            )
+            .await?;
+            db.set_setting("llm.FRJ_LOCAL_MODEL", Some("qwen3:8b"))
+                .await?;
+            super::reset_after_restore(&db).await?;
+            let left = db.settings_with_prefix("llm.").await?;
+            assert_eq!(
+                left,
+                vec![("FRJ_LOCAL_MODEL".to_string(), "qwen3:8b".to_string())]
+            );
+            Ok(())
+        })
     }
 }

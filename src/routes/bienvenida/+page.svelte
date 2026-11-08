@@ -3,6 +3,7 @@
   import Select from "$lib/components/Select.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { listen } from "@tauri-apps/api/event";
+  import { PRIVACY_URL, TERMS_URL, legalApi } from "$lib/legal";
   import { goto } from "$app/navigation";
   import { api, jobsApi, REMOTE_LABELS, type CvMaster, type Profile, type RemotePref } from "$lib/api";
 
@@ -40,8 +41,11 @@
     }
   }
 
+  let agreed = $state(false);
+
   const createProfile = () =>
     run(async () => {
+      await legalApi.accept();
       profile = await api.createProfile({ name: name.trim(), target_titles: [], remote_pref: remote, locations: [] });
       chooseProfile(profile.id);
       void refreshProfiles();
@@ -142,8 +146,16 @@
         <Select bind:value={remote} label="Tipo de trabajo"
           options={Object.entries(REMOTE_LABELS).map(([value, label]) => ({ value: value as RemotePref, label }))} />
       </label>
+      <label class="inline consent">
+        <input type="checkbox" bind:checked={agreed} />
+        <span>
+          Leí y acepto la <button class="link" onclick={() => openUrl(PRIVACY_URL)}>política de privacidad</button>
+          y los <button class="link" onclick={() => openUrl(TERMS_URL)}>términos de uso</button>.
+          <span class="muted small">Tus datos se guardan en tu computadora; resumen en «Privacidad y ayuda».</span>
+        </span>
+      </label>
       <div class="row">
-        <button class="primary" onclick={createProfile} disabled={busy || !name.trim()}>Siguiente</button>
+        <button class="primary" onclick={createProfile} disabled={busy || !name.trim() || !agreed}>Siguiente</button>
       </div>
     {:else if step === 1}
       <h2>Tu CV</h2>
@@ -256,5 +268,7 @@
   .card { display: flex; flex-direction: column; gap: 0.75rem; }
   .card h2 { margin: 0; }
   progress { width: 100%; accent-color: var(--accent); }
-  .link { border: none; background: none; padding: 0; color: var(--accent); text-decoration: underline; cursor: pointer; }
+  .consent { align-items: flex-start; }
+  .consent input { flex: none; margin-top: 0.15rem; }
+  .link { border: none; background: none; padding: 0; min-height: 0; overflow: visible; vertical-align: baseline; color: var(--accent); text-decoration: underline; cursor: pointer; }
 </style>

@@ -96,11 +96,14 @@ export const api = {
   getCv: (profileId: string) => invoke<CvMaster | null>("get_cv", { profileId }),
   saveCv: (profileId: string, cv: CvMaster, sourceText: string | null) =>
     invoke<void>("save_cv", { profileId, cv, sourceText }),
-  importCv: async (file: File) =>
-    invoke<ImportPreview>("import_cv", {
+  importCv: async (file: File) => {
+    // El backend también lo valida; aquí evita congelar la ventana copiando un archivo enorme.
+    if (file.size > 20 * 1024 * 1024) throw "El archivo pesa más de 20 MB: no parece un CV.";
+    return invoke<ImportPreview>("import_cv", {
       fileName: file.name,
       bytes: Array.from(new Uint8Array(await file.arrayBuffer())),
-    }),
+    });
+  },
 };
 
 // ---------------------------------------------------------------------------

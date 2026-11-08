@@ -1,0 +1,27 @@
+name: Reportar un fallo
+description: La app hizo algo que no debía, se cerró o mostró un error.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por reportar. **Este reporte es público:** no pegues tu CV, tu correo, tu teléfono ni claves de API.
+        Desde la app («Privacidad y ayuda» → «Reportar un fallo») el reporte sale ya rellenado con la versión y los últimos errores.
+  - type: textarea
+    id: que
+    attributes:
+      label: ¿Qué estabas haciendo y qué pasó?
+      placeholder: "Por ejemplo: importé mi CV en PDF y salió «el archivo está dañado»."
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versión de la app y sistema
+      placeholder: "FinderRemoteJob 0.1.0 · windows x86_64"
+  - type: textarea
+    id: registro
+    attributes:
+      label: Últimos errores registrados (opcional)
+      description: Están en «Privacidad y ayuda» → «Ver registro de errores». Revisa que no contengan datos personales.
+      render: text

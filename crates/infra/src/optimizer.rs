@@ -372,11 +372,18 @@ pub async fn update_saved(
         v.ats_after = Some(ats.total);
         v.missing = ats.missing.iter().map(|t| t.surface.clone()).collect();
     }
+    // La ruta guardada solo se reutiliza si está dentro de `out_dir`: viene de la base, y un
+    // respaldo manipulado podría apuntarla a cualquier archivo del usuario.
     let target = |old: &Option<String>, ext: &str| -> PathBuf {
-        old.as_ref().map(PathBuf::from).unwrap_or_else(|| {
-            let id = v.id.get(..8).unwrap_or(&v.id);
-            out_dir.join(format!("{}_{id}.{ext}", doc.file_stem("CV", None)))
-        })
+        let inside =
+            |p: &PathBuf| p.parent() == Some(out_dir) && p.extension().is_some_and(|e| e == ext);
+        old.as_ref()
+            .map(PathBuf::from)
+            .filter(inside)
+            .unwrap_or_else(|| {
+                let id = v.id.get(..8).unwrap_or(&v.id);
+                out_dir.join(format!("{}_{id}.{ext}", doc.file_stem("CV", None)))
+            })
     };
     let (pdf_path, docx_path) = (target(&v.pdf_path, "pdf"), target(&v.docx_path, "docx"));
     std::fs::create_dir_all(out_dir)?;
@@ -821,6 +828,21 @@ mod tests {
         let stored = db.get_cv_version(&v.id).await?.ok_or("falta")?;
         assert!(stored.content_json.contains("videos de viajes"));
         assert_eq!(stored.variant, "tecnica");
+
+        // Una ruta guardada fuera de `cvs/` (respaldo manipulado) no se sobrescribe.
+        let victim = dir.join("victima.txt");
+        std::fs::write(&victim, b"no tocar")?;
+        let mut evil = stored.clone();
+        evil.pdf_path = Some(victim.display().to_string());
+        evil.docx_path = Some(format!("{}/../fuera.docx", dir.join("cvs").display()));
+        let doc: CvDocument = serde_json::from_str(&stored.content_json)?;
+        let fixed = update_saved(&db, &dict, &evil, doc, None, &dir.join("cvs")).await?;
+        assert_eq!(std::fs::read(&victim)?, b"no tocar");
+        assert!(!dir.join("fuera.docx").exists());
+        for p in [&fixed.pdf_path, &fixed.docx_path] {
+            let p = PathBuf::from(p.as_deref().ok_or("sin ruta")?);
+            assert_eq!(p.parent(), Some(dir.join("cvs").as_path()));
+        }
         std::fs::remove_dir_all(&dir)?;
         Ok(())
     }

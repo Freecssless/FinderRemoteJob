@@ -138,9 +138,9 @@ impl LlmConfig {
             },
             "openai" => Endpoint {
                 backend: Backend::OpenAiCompat {
-                    base_url: get("FRJ_OPENAI_URL").ok_or_else(|| {
+                    base_url: secure_url(get("FRJ_OPENAI_URL").ok_or_else(|| {
                         LlmError::Config("FRJ_WRITER=openai requiere FRJ_OPENAI_URL".into())
-                    })?,
+                    })?)?,
                     api_key: get("FRJ_OPENAI_API_KEY"),
                 },
                 model: get("FRJ_OPENAI_MODEL").ok_or_else(|| {
@@ -256,6 +256,25 @@ pub(crate) fn parse_json_text(text: &str) -> Result<Value> {
 }
 
 /// Mensaje de error legible a partir del cuerpo de una respuesta fallida.
+/// Un proveedor externo recibe tu clave y tu CV: solo por HTTPS. `http://` se admite para un
+/// servidor en esta misma computadora (no sale a la red).
+fn secure_url(url: String) -> Result<String> {
+    let u = url.trim().to_ascii_lowercase();
+    let local = ["http://localhost", "http://127.0.0.1", "http://[::1]"]
+        .iter()
+        .any(|p| {
+            u.strip_prefix(p)
+                .is_some_and(|r| r.is_empty() || r.starts_with([':', '/']))
+        });
+    if u.starts_with("https://") || local {
+        Ok(url)
+    } else {
+        Err(LlmError::Config(format!(
+            "la dirección de la IA debe empezar con https:// (para no mandar tu clave sin cifrar): {url}"
+        )))
+    }
+}
+
 pub(crate) async fn api_error(resp: reqwest::Response) -> LlmError {
     let status = resp.status();
     let body = resp.text().await.unwrap_or_default();
@@ -318,6 +337,34 @@ mod tests {
             cfg(&[("FRJ_WRITER", "gpt")]),
             Err(LlmError::Config(_))
         ));
+        // La clave y el CV solo viajan cifrados (salvo a un servidor en esta computadora).
+        let openai = |url: &str| {
+            cfg(&[
+                ("FRJ_WRITER", "openai"),
+                ("FRJ_OPENAI_URL", url),
+                ("FRJ_OPENAI_MODEL", "m"),
+            ])
+        };
+        for ok in [
+            "https://api.openai.com/v1",
+            "http://localhost:8080/v1",
+            "http://127.0.0.1",
+            "http://[::1]:1/v1",
+        ] {
+            assert!(openai(ok).is_ok(), "{ok}");
+        }
+        for bad in [
+            "http://api.openai.com/v1",
+            "http://localhost.evil.com/v1",
+            "http://[2001:db8::1]/v1",
+            "ftp://x",
+            "api.openai.com",
+        ] {
+            assert!(
+                matches!(openai(bad), Err(LlmError::Config(m)) if m.contains("https://")),
+                "{bad}"
+            );
+        }
         // Variables vacías = no definidas.
         assert!(cfg(&[("ANTHROPIC_API_KEY", "  ")]).is_ok_and(|c| c.writer == c.local));
     }

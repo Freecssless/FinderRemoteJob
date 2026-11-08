@@ -1,0 +1,28 @@
+name: Reportar contenido, privacidad o derechos de autor
+description: Una vacante fraudulenta u ofensiva, un portal problemático, un tema de privacidad o de propiedad intelectual.
+labels: [reporte]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Este reporte es público:** no incluyas tu CV ni datos personales. Si el tema es delicado, describe lo mínimo
+        y pide un medio privado de contacto.
+  - type: dropdown
+    id: tipo
+    attributes:
+      label: Tipo de reporte
+      options:
+        - Vacante fraudulenta, engañosa u ofensiva
+        - Un portal de empleo (fuente) que no debería usarse
+        - Privacidad
+        - Derechos de autor o licencias
+        - Otro
+    validations:
+      required: true
+  - type: textarea
+    id: detalle
+    attributes:
+      label: Detalle
+      description: Para una vacante, incluye el portal y el enlace del anuncio.
+    validations:
+      required: true

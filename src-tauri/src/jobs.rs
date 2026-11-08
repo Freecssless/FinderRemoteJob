@@ -356,6 +356,10 @@ pub async fn import_job_text(
     if title.trim().is_empty() || text.trim().is_empty() {
         return Err("Escribe al menos el puesto y el texto del anuncio.".into());
     }
+    // Un anuncio largo ronda los 20 000 caracteres.
+    if title.chars().count() > 300 || text.chars().count() > 200_000 {
+        return Err("El texto es demasiado largo para ser un anuncio.".into());
+    }
     let blank_to_none = |s: Option<String>| s.filter(|s| !s.trim().is_empty());
     let raw = manual::from_text(
         title.trim(),

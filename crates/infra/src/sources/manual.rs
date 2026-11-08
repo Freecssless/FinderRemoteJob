@@ -54,7 +54,7 @@ pub async fn fetch_url(client: &Client, url: &str) -> Result<RawJob> {
     }
     // Si hubo redirección, se guarda la URL final.
     let final_url = resp.url().to_string();
-    parse_page(&final_url, &resp.text().await?)
+    parse_page(&final_url, &super::read_limited(resp).await?)
 }
 
 /// Guarda la vacante importada (sin duplicar si ya existía).

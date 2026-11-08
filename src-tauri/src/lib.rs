@@ -6,6 +6,7 @@ mod envfile;
 mod jobs;
 mod optimizer;
 mod queue;
+mod registro;
 mod reminders;
 mod settings;
 mod weights;
@@ -143,7 +144,11 @@ async fn install_ollama(app: tauri::AppHandle) -> CmdResult<()> {
     if !cfg!(windows) {
         return Err("La instalación automática solo está disponible en Windows.".into());
     }
-    let dest = std::env::temp_dir().join("OllamaSetup.exe");
+    // Carpeta propia de la app, no la temporal compartida: otro programa no puede cambiar el
+    // instalador entre la descarga y la ejecución.
+    let dir = app.path().app_cache_dir().map_err(err)?;
+    std::fs::create_dir_all(&dir).map_err(err)?;
+    let dest = dir.join("OllamaSetup.exe");
     finder_infra::llm::ollama::download(
         "https://ollama.com/download/OllamaSetup.exe",
         &dest,
@@ -228,7 +233,19 @@ async fn update_profile(state: State<'_, AppState>, profile: Profile) -> CmdResu
 
 #[tauri::command]
 async fn delete_profile(state: State<'_, AppState>, id: String) -> CmdResult<()> {
+    // Los PDF/DOCX generados para el perfil también son su CV: se borran con él (solo los de `cvs/`).
+    let versions = state.db.list_cv_versions(&id, None).await.map_err(err)?;
     state.db.delete_profile(&id).await.map_err(err)?;
+    let cvs = state.data_dir.join("cvs");
+    for path in versions
+        .iter()
+        .flat_map(|v| [&v.pdf_path, &v.docx_path])
+        .flatten()
+        .map(std::path::PathBuf::from)
+        .filter(|p| p.parent() == Some(cvs.as_path()))
+    {
+        let _ = std::fs::remove_file(path);
+    }
     queue::delete_faq(&state, &id).await
 }
 
@@ -263,6 +280,26 @@ async fn save_cv(
 
 /// Lee un PDF/DOCX y lo transcribe con la IA **local** (el CV completo no sale de tu equipo).
 /// No guarda nada: el resultado va al formulario de revisión.
+/// Un CV pesa unos cientos de KB; más de 20 MB no es un CV. El contenido debe ser del tipo que
+/// dice la extensión (un `.pdf` que en realidad es otra cosa se rechaza antes de abrirlo).
+const MAX_CV_BYTES: usize = 20 << 20;
+
+fn check_upload(bytes: &[u8], kind: CvFileKind) -> CmdResult<()> {
+    if bytes.len() > MAX_CV_BYTES {
+        return Err("El archivo pesa más de 20 MB: no parece un CV.".into());
+    }
+    let magic: &[u8] = match kind {
+        CvFileKind::Pdf => b"%PDF-",
+        CvFileKind::Docx => b"PK\x03\x04",
+    };
+    // Algunos PDF traen basura antes de la cabecera; el estándar la admite en los primeros 1024 bytes.
+    let head = &bytes[..bytes.len().min(1024)];
+    if !head.windows(magic.len()).any(|w| w == magic) {
+        return Err("El archivo no es un PDF o DOCX válido (¿cambiaste la extensión?).".into());
+    }
+    Ok(())
+}
+
 #[tauri::command]
 async fn import_cv(
     state: State<'_, AppState>,
@@ -271,6 +308,7 @@ async fn import_cv(
 ) -> CmdResult<ImportPreview> {
     let kind = CvFileKind::from_name(&file_name)
         .ok_or("Solo se pueden importar archivos .pdf o .docx.")?;
+    check_upload(&bytes, kind)?;
     let config = state.llm()?;
     let client = LlmClient::new(config.local.clone()).map_err(err)?;
     let text = extract_text(&bytes, kind).map_err(err)?;
@@ -295,19 +333,38 @@ pub fn run() {
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data_dir)?;
+            // Tu CV y tus postulaciones: solo tu usuario puede entrar a la carpeta (en Windows ya
+            // lo garantiza AppData).
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                std::fs::set_permissions(&data_dir, std::fs::Permissions::from_mode(0o700))?;
+            }
+            if let Err(e) = registro::apply_delete(&data_dir) {
+                return Err(format!("No se pudieron borrar tus datos: {e}").into());
+            }
+            registro::init(&data_dir);
             let db_path = data_dir.join("finder.db");
-            // shortcut: si falla, se reintenta en el próximo arranque y solo queda en el log.
+            // shortcut: si falla, se reintenta en el próximo arranque y solo queda en el registro.
             let origin = backup::apply_pending(&data_dir).unwrap_or_else(|e| {
-                eprintln!("no se pudo restaurar el respaldo: {e}");
+                registro::log(&format!("no se pudo restaurar el respaldo: {e}"));
                 None
             });
             let db = tauri::async_runtime::block_on(Db::open(&db_path))?;
             let here = data_dir.display().to_string();
-            if let Some(old) = origin.filter(|o| *o != here) {
+            if let Some(old) = &origin
+                && !old.is_empty()
+                && *old != here
+            {
                 let sep = std::path::MAIN_SEPARATOR;
                 tauri::async_runtime::block_on(
                     db.rebase_cv_paths(&format!("{old}{sep}"), &format!("{here}{sep}")),
                 )?;
+            }
+            if origin.is_some() {
+                // Un respaldo ajeno podría apuntar la IA a su servidor y recibir ahí tus claves
+                // (del llavero) y tu CV: tras restaurar se vuelve a la IA local por defecto.
+                tauri::async_runtime::block_on(settings::reset_after_restore(&db))?;
             }
 
             let env_file = envfile::find(&app.path().app_config_dir()?);
@@ -391,7 +448,30 @@ pub fn run() {
             queue::application_queue,
             queue::get_faq,
             queue::save_faq,
+            registro::log_frontend_error,
+            registro::error_report,
+            registro::delete_all_data,
+            registro::legal_accepted,
+            registro::accept_legal,
         ])
         .run(tauri::generate_context!())
         .expect("no se pudo iniciar la app de Tauri");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn subida_de_cv_valida_tamano_y_tipo() {
+        assert!(check_upload(b"%PDF-1.7 ...", CvFileKind::Pdf).is_ok());
+        assert!(check_upload(b"\n\n%PDF-1.4", CvFileKind::Pdf).is_ok());
+        assert!(check_upload(b"PK\x03\x04resto", CvFileKind::Docx).is_ok());
+        assert!(check_upload(b"MZ\x90\x00 un .exe", CvFileKind::Pdf).is_err());
+        assert!(check_upload(b"%PDF-1.7", CvFileKind::Docx).is_err());
+        assert!(check_upload(b"", CvFileKind::Pdf).is_err());
+        let mut big = b"%PDF-".to_vec();
+        big.resize(MAX_CV_BYTES + 1, b' ');
+        assert!(check_upload(&big, CvFileKind::Pdf).is_err());
+    }
 }

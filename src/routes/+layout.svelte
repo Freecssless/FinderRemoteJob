@@ -3,6 +3,8 @@
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import { api, type AppInfo } from "$lib/api";
+  import { LEGAL_VERSION, PRIVACY_URL, TERMS_URL, legalApi } from "$lib/legal";
+  import { openUrl } from "@tauri-apps/plugin-opener";
   import Select from "$lib/components/Select.svelte";
   import { chooseProfile, profileStore, refreshProfiles } from "$lib/profile.svelte";
   import Icon from "$lib/components/Icon.svelte";
@@ -15,6 +17,25 @@
   // Avisos del menú: vacantes nuevas (24 h), pendientes de postular y recordatorios vencidos.
   let badges = $state<Record<string, number>>({});
   onMount(() => void refreshProfiles().catch(() => {}));
+  // Política o términos nuevos (o nunca aceptados): se piden antes de seguir. La bienvenida los pide sola.
+  let legalPending = $state(false);
+  onMount(() => void legalApi.accepted().then((v) => (legalPending = v !== LEGAL_VERSION)).catch(() => {}));
+  async function acceptLegal() {
+    await legalApi.accept();
+    legalPending = false;
+  }
+
+  // Errores no atrapados de la interfaz: al registro local (para «Reportar un problema»).
+  onMount(() => {
+    const onError = (e: ErrorEvent) => legalApi.logError(`${e.message} (${e.filename}:${e.lineno})`);
+    const onReject = (e: PromiseRejectionEvent) => legalApi.logError(`promesa rechazada: ${String(e.reason)}`);
+    addEventListener("error", onError);
+    addEventListener("unhandledrejection", onReject);
+    return () => {
+      removeEventListener("error", onError);
+      removeEventListener("unhandledrejection", onReject);
+    };
+  });
   $effect(() => {
     void page.url.pathname;
     const pid = profileStore.id;
@@ -103,8 +124,8 @@
         </a>
       {/each}
     </nav>
-    {#if info}
-      <footer>
+    <footer>
+      {#if info}
         {#if info.llm_error}
           <a class="ai bad" href="/ajustes" title="La IA no está lista: revisa Ajustes">
             <Icon name="error" size={20} />
@@ -116,15 +137,34 @@
             <span class="ailabel">IA: {info.writer_model ?? "—"}</span>
           </div>
         {/if}
-      </footer>
-    {/if}
+      {/if}
+      <a class="ai help" href="/acerca" aria-current={current("/acerca") ? "page" : undefined} title="Privacidad y ayuda">
+        <Icon name="info" size={20} />
+        <span class="ailabel">Privacidad y ayuda</span>
+      </a>
+    </footer>
   </aside>
   <main>
-    <div class="content">{@render children()}</div>
+    <div class="content">
+      {#if legalPending && !page.url.pathname.startsWith("/bienvenida")}
+        <div class="notice legal" role="alert">
+          <p>
+            <strong>Antes de seguir:</strong> revisa la
+            <button class="link" onclick={() => openUrl(PRIVACY_URL)}>política de privacidad</button> y los
+            <button class="link" onclick={() => openUrl(TERMS_URL)}>términos de uso</button>
+            (resumen en <a href="/acerca">Privacidad y ayuda</a>). Tus datos siguen solo en tu computadora.
+          </p>
+          <button class="primary" onclick={acceptLegal}>Acepto</button>
+        </div>
+      {/if}
+      {@render children()}
+    </div>
   </main>
 </div>
 
 <style>
+  /* Enlace dentro de una frase: sin el relleno de botón. */
+  .legal .link { min-height: 0; padding: 0; border: 0; overflow: visible; vertical-align: baseline; text-decoration: underline; }
   .shell { display: grid; grid-template-columns: 256px 1fr; height: 100vh; }
   aside {
     display: flex; flex-direction: column; gap: 1.25rem;
@@ -185,6 +225,11 @@
   .ai :global(.icon) { color: var(--md-success); margin-top: 1px; }
   .ai.bad { background: var(--md-error-container); color: var(--md-on-error-container); text-decoration: none; font-weight: 600; }
   .ai.bad :global(.icon) { color: inherit; }
+  .legal { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .legal p { margin: 0; flex: 1 1 24rem; }
+  .ai.help { text-decoration: none; padding-block: 0.4rem; }
+  .ai.help :global(.icon) { color: inherit; }
+  .ai.help:hover, .ai.help[aria-current] { color: var(--md-on-surface); }
   main { overflow: auto; container: main / inline-size; scroll-behavior: smooth; }
   .content {
     max-width: 1440px; margin-inline: auto;

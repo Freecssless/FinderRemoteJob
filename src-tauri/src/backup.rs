@@ -46,7 +46,14 @@ pub async fn create_backup(app: AppHandle, state: State<'_, AppState>) -> CmdRes
 }
 
 fn write_zip(dest: &Path, db: &Path, data_dir: &Path) -> std::io::Result<()> {
-    let mut z = ZipWriter::new(fs::File::create(dest)?);
+    let file = fs::File::create(dest)?;
+    // El respaldo lleva tu CV: en Documentos, solo legible por tu usuario.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        file.set_permissions(fs::Permissions::from_mode(0o600))?;
+    }
+    let mut z = ZipWriter::new(file);
     let opts = SimpleFileOptions::default();
     z.start_file(DB, opts)?;
     std::io::copy(&mut fs::File::open(db)?, &mut z)?;
@@ -103,7 +110,8 @@ fn validate(bytes: &[u8]) -> CmdResult<()> {
 }
 
 /// Al arrancar, antes de abrir la base: aplica un respaldo pendiente. Lo actual queda como
-/// `finder.db.antes-de-restaurar` y `cvs.antes-de-restaurar`. Devuelve la carpeta de origen.
+/// `finder.db.antes-de-restaurar` y `cvs.antes-de-restaurar`. Si restauró, devuelve la carpeta de
+/// origen (vacía si el respaldo no la trae).
 pub(crate) fn apply_pending(data_dir: &Path) -> std::io::Result<Option<String>> {
     let pending = data_dir.join(PENDING);
     if !pending.exists() {
@@ -139,10 +147,10 @@ pub(crate) fn apply_pending(data_dir: &Path) -> std::io::Result<Option<String>> 
     }
     swap(DB)?;
     swap(CVS)?;
-    let origin = fs::read_to_string(staging.join(ORIGIN)).ok();
+    let origin = fs::read_to_string(staging.join(ORIGIN)).unwrap_or_default();
     fs::remove_dir_all(&staging)?;
     fs::remove_file(&pending)?;
-    Ok(origin)
+    Ok(Some(origin))
 }
 
 #[cfg(test)]
@@ -176,6 +184,45 @@ mod tests {
         assert!(b.join(format!("cvs{OLD}/viejo.pdf")).exists());
         assert!(!b.join(PENDING).exists());
         assert_eq!(apply_pending(&b)?, None);
+        fs::remove_dir_all(&root)?;
+        Ok(())
+    }
+
+    /// Un respaldo manipulado no debe escribir fuera de la carpeta de datos ni dejar enlaces
+    /// que apunten fuera de ella.
+    #[test]
+    fn respaldo_hostil_no_escapa() -> Result<(), Box<dyn std::error::Error>> {
+        let root = std::env::temp_dir().join(format!("finder-hostil-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        let data = root.join("datos");
+        let outside = root.join("fuera");
+        fs::create_dir_all(&data)?;
+        fs::create_dir_all(&outside)?;
+
+        let mut z = ZipWriter::new(Cursor::new(Vec::new()));
+        let o = SimpleFileOptions::default();
+        z.start_file(DB, o)?;
+        z.write_all(b"SQLite format 3\0resto")?;
+        z.start_file("../escapado.txt", o)?;
+        z.write_all(b"x")?;
+        z.start_file(format!("{}/absoluto.txt", outside.display()), o)?;
+        z.write_all(b"x")?;
+        z.add_symlink("cvs/enlace", outside.display().to_string(), o)?;
+        let bytes = z.finish()?.into_inner();
+        validate(&bytes)?;
+        fs::write(data.join(PENDING), &bytes)?;
+        let r = apply_pending(&data);
+
+        assert!(!root.join("escapado.txt").exists(), "escapó con ../");
+        assert!(
+            !outside.join("absoluto.txt").exists(),
+            "escapó con ruta absoluta"
+        );
+        let link = data.join("cvs/enlace");
+        assert!(
+            fs::symlink_metadata(&link).map_or(true, |m| !m.file_type().is_symlink()),
+            "dejó un enlace simbólico hacia fuera ({r:?})"
+        );
         fs::remove_dir_all(&root)?;
         Ok(())
     }

@@ -38,19 +38,17 @@ impl CvFileKind {
 
 /// Extrae el texto del archivo. Devuelve error si no hay texto útil.
 pub fn extract_text(bytes: &[u8], kind: CvFileKind) -> Result<String, CvFileError> {
+    // `pdf-extract` y `docx-rs` pueden entrar en pánico con archivos dañados o raros: se
+    // contiene aquí para que un archivo malo no tumbe la app.
+    const BROKEN: &str = "el archivo está dañado o usa un formato no soportado";
     let text = match kind {
-        CvFileKind::Pdf => {
-            // `pdf-extract` puede entrar en pánico con PDFs dañados o raros: se contiene aquí
-            // para que un archivo malo no tumbe la app.
-            catch_unwind(AssertUnwindSafe(|| {
-                pdf_extract::extract_text_from_mem(bytes)
-            }))
-            .map_err(|_| {
-                CvFileError::Pdf("el archivo está dañado o usa un formato no soportado".into())
-            })?
-            .map_err(|e| CvFileError::Pdf(e.to_string()))?
-        }
-        CvFileKind::Docx => docx_text(bytes)?,
+        CvFileKind::Pdf => catch_unwind(AssertUnwindSafe(|| {
+            pdf_extract::extract_text_from_mem(bytes)
+        }))
+        .map_err(|_| CvFileError::Pdf(BROKEN.into()))?
+        .map_err(|e| CvFileError::Pdf(e.to_string()))?,
+        CvFileKind::Docx => catch_unwind(AssertUnwindSafe(|| docx_text(bytes)))
+            .map_err(|_| CvFileError::Docx(BROKEN.into()))??,
     };
     let text = tidy(&text);
     if text.chars().filter(|c| c.is_alphanumeric()).count() < 20 {
@@ -59,7 +57,24 @@ pub fn extract_text(bytes: &[u8], kind: CvFileKind) -> Result<String, CvFileErro
     Ok(text)
 }
 
+/// Un CV real descomprimido ocupa pocos MB; más es un archivo trampa que se infla en memoria.
+const DOCX_MAX_UNZIPPED: u64 = 50 << 20;
+
 fn docx_text(bytes: &[u8]) -> Result<String, CvFileError> {
+    // shortcut: confía en los tamaños declarados en el zip (un archivo que miente pasa); bastan
+    // contra las bombas comunes. Leer con límite exigiría reimplementar el lector de docx-rs.
+    let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes))
+        .map_err(|e| CvFileError::Docx(e.to_string()))?;
+    // Tamaños del directorio central: están aunque el archivo use "data descriptors" (Google Docs).
+    let mut total = 0u64;
+    for i in 0..zip.len() {
+        total = total.saturating_add(zip.by_index_raw(i).map_or(0, |f| f.size()));
+    }
+    if total > DOCX_MAX_UNZIPPED {
+        return Err(CvFileError::Docx(
+            "el archivo es demasiado grande para ser un CV".into(),
+        ));
+    }
     let docx = docx_rs::read_docx(bytes).map_err(|e| CvFileError::Docx(e.to_string()))?;
     let mut out = String::new();
     for child in &docx.document.children {

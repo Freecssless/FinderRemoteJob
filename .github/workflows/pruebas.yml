@@ -1,0 +1,41 @@
+# Alerta de fallos: corre las pruebas en cada cambio. Si algo se rompe, GitHub avisa por correo a
+# quien subió el cambio (y el PR de Dependabot queda en rojo). Acciones fijadas a un commit exacto.
+name: Pruebas
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 12 * * 1" # cada lunes: detecta vulnerabilidades nuevas aunque no haya cambios
+
+permissions:
+  contents: read
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Dependencias del sistema
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libdbus-1-dev pkg-config
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          components: clippy
+      - uses: swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+      - run: npm ci
+      - run: npx svelte-check
+      - run: npm run build
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+      - name: Vulnerabilidades en dependencias
+        run: |
+          cargo install cargo-audit --locked
+          cargo audit
+          npm audit --omit=dev

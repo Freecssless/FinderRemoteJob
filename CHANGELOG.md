@@ -219,6 +219,37 @@
 - La ficha de compatibilidad muestra «Similitud con tu CV» cuando existe.
 - `finder_infra::semantic` (`ensure`, `Vectors`), `Db::embeddings` y `Db::put_embedding`.
 
+### Privacidad, términos, licencias y reporte de fallos
+- Documentos nuevos: `PRIVACIDAD.md` (inventario de datos, servicios externos, permisos, borrado), `TERMINOS.md` (uso permitido, responsabilidad, contenido del usuario, reportes) y `LICENCIAS-TERCEROS.md` (licencias de las 696 librerías Rust y las de JavaScript, fuentes e iconos; sin GPL/LGPL/AGPL). Licencia del proyecto en `LICENSE-MIT` y `LICENSE-APACHE` (© 2026 freecss).
+- Pantalla «Privacidad y ayuda» (`/acerca`, enlace al pie de la barra lateral): qué datos usa la app y a dónde van, servicios externos, permisos, «Reportar un problema» (issue de GitHub ya rellenado que el usuario revisa antes de enviar), «Ver registro de errores» y «Borrar todos mis datos» (confirmando con la palabra BORRAR).
+- Consentimiento: la bienvenida pide aceptar la política y los términos; si cambian (`LEGAL_VERSION` en `src/lib/legal.ts`) aparece un aviso para aceptarlos de nuevo. En Ajustes, antes de usar Claude, Gemini o ChatGPT hay que aceptar qué textos se envían y a qué empresa (`FRJ_AI_CONSENT`, por proveedor; se borra al restaurar un respaldo).
+- Registro de errores local (`registro.log`, máximo 512 KB): fallos internos (pánicos), errores de la interfaz y avisos que antes solo iban a la consola.
+- Borrar un perfil borra también sus PDF/DOCX generados.
+- Icono de la app y favicon propios (la marca «travel_explore» sobre el azul de la app), en lugar de los logos de Tauri y Svelte.
+- GitHub: plantillas de reporte (fallo; contenido, privacidad o derechos de autor) y workflow `pruebas.yml` que corre pruebas, Clippy y auditoría en cada cambio y cada lunes (GitHub avisa por correo si falla).
+
+### Endurecimiento (lista de seguridad web aplicada a una app de escritorio)
+- HTTPS obligatorio para el proveedor compatible con OpenAI (la clave y el CV no viajan sin cifrar); `http://` solo para localhost.
+- Carpeta de datos con permisos 700 en Linux/macOS y respaldo `.zip` con 600: otros usuarios del equipo no pueden leer tu CV.
+- Importar CV: máximo 20 MB y el contenido debe ser PDF o DOCX de verdad (cabecera), no solo la extensión. Anuncio pegado: máximo 300 caracteres de título y 200 000 de texto.
+- Respuestas de portales y enlaces: máximo 20 MB (un servidor que responde sin fin no llena la memoria).
+- CSP: `object-src`, `base-uri`, `form-action`, `frame-src` y `frame-ancestors` en `'none'`.
+- Dependabot semanal para Cargo, npm y GitHub Actions.
+
+### Análisis estático de seguridad (SAST)
+- Semgrep (reglas Rust, JS/TS, secretos, OWASP Top 10, security-audit, gitleaks, GitHub Actions) + Clippy con lints de pánico (`string_slice`, `indexing_slicing`, `expect_used`) + revisión manual de Svelte (Semgrep no lo analiza).
+- El workflow de instaladores fija cada acción a un commit exacto (una etiqueta movida no puede colar código en el instalador).
+- El instalador de Ollama se descarga en la carpeta de caché de la app, no en la temporal compartida.
+- Prueba nueva: 3000 textos Unicode al azar (acentos, emoji, ligaduras, RTL) por el análisis del CV y de vacantes sin pánicos.
+
+### Auditoría de seguridad y rendimiento antes de publicar
+- `cargo audit`: `zip` pasa a la versión 9 en nuestro código (la 8.6 tenía fallos al extraer enlaces simbólicos y permisos, usados por la restauración de respaldos). Los avisos restantes no son alcanzables y quedan justificados en `.cargo/audit.toml`. `npm audit --omit=dev`: 0 vulnerabilidades.
+- Un DOCX dañado ya no puede tumbar la app (el pánico de `docx-rs` se contiene, igual que con los PDF).
+- DOCX "bomba" (pocos MB que se inflan a cientos): se rechaza antes de abrirlo si descomprimido pasa de 50 MB.
+- Corregir un CV guardado solo reescribe archivos dentro de `cvs/`: una ruta manipulada en la base (respaldo ajeno) ya no puede sobrescribir otros archivos.
+- Tras restaurar un respaldo, la IA vuelve a la local por defecto (se olvidan proveedor y direcciones): un respaldo ajeno no puede desviar tus claves ni tu CV a otro servidor. Las claves siguen en el llavero.
+- Pruebas nuevas: `tests/seguridad.rs` (inyección Typst/XML/SQL/HTML, 600 archivos dañados al azar, bomba, DOCX con data descriptors), respaldo hostil (`../`, ruta absoluta, enlace simbólico) y `tests/rendimiento.rs` (benchmarks en release).
+
 ### Ollama y modelos sin terminal
 - Windows: en la bienvenida, «Instalar Ollama» baja el instalador oficial (`ollama.com/download/OllamaSetup.exe`, ~1,7 GB) con barra de avance y lo abre (comando `install_ollama`, `ollama::download`). En Linux y macOS sigue el enlace a ollama.com/download.
 - «Descargar los modelos» baja también el de similitud semántica (`bge-m3`) si falta. El evento `ollama-pull` ahora lleva (nombre, bajado, total).

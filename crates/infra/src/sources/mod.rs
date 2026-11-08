@@ -45,6 +45,8 @@ pub enum SourceError {
         source_id: &'static str,
         msg: String,
     },
+    #[error("la respuesta de {0} es demasiado grande")]
+    TooLarge(String),
     #[error(transparent)]
     Db(#[from] DbError),
 }
@@ -331,7 +333,26 @@ async fn get_text(client: &Client, url: &str) -> Result<String> {
             url: url.to_string(),
         });
     }
-    Ok(resp.text().await?)
+    read_limited(resp).await
+}
+
+/// Tope de una respuesta (las API de empleo más grandes mandan pocos MB): un servidor que
+/// responde sin fin no llena la memoria.
+const MAX_BODY: usize = 20 << 20;
+
+pub(crate) async fn read_limited(mut resp: reqwest::Response) -> Result<String> {
+    let url = resp.url().to_string();
+    if resp.content_length().is_some_and(|n| n > MAX_BODY as u64) {
+        return Err(SourceError::TooLarge(url));
+    }
+    let mut body = Vec::new();
+    while let Some(chunk) = resp.chunk().await? {
+        if body.len() + chunk.len() > MAX_BODY {
+            return Err(SourceError::TooLarge(url));
+        }
+        body.extend_from_slice(&chunk);
+    }
+    Ok(String::from_utf8_lossy(&body).into_owned())
 }
 
 /// Deserializa cada elemento por separado: si un anuncio viene mal formado se omite,

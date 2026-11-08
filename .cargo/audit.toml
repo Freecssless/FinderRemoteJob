@@ -1,0 +1,14 @@
+# Avisos revisados que no afectan a la app (revisar al actualizar docx-rs o typst).
+[advisories]
+ignore = [
+    # zip 8.6 solo llega por docx-rs (última versión, 0.4.22), que lee el DOCX con `by_name` y
+    # nunca llama a `extract`, donde están los cuatro fallos. Nuestro código usa zip 9.
+    "RUSTSEC-2026-0367",
+    "RUSTSEC-2026-0368",
+    "RUSTSEC-2026-0369",
+    "RUSTSEC-2026-0429",
+    # quick-xml 0.38 solo llega por typst → hayagriva (bibliografías CSL). La plantilla del CV es
+    # fija y no carga bibliografías ni XML: no hay forma de que le llegue un XML del usuario.
+    "RUSTSEC-2026-0194",
+    "RUSTSEC-2026-0195",
+]

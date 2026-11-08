@@ -2,7 +2,7 @@
   import Icon from "$lib/components/Icon.svelte";
   import PageHead from "$lib/components/PageHead.svelte";
   import Select from "$lib/components/Select.svelte";
-  import { revealItemInDir } from "@tauri-apps/plugin-opener";
+  import { openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
   import { backupApi, jobsApi, settingsApi, weightsApi, type LlmSettings, type Weights, type WeightsStatus } from "$lib/api";
   import Meter from "$lib/components/Meter.svelte";
 
@@ -15,6 +15,8 @@
       model: "gemini-3.8-flash",
       keyUrl: "aistudio.google.com/apikey",
       hint: "Tiene plan gratuito.",
+      company: "Google",
+      privacy: "https://policies.google.com/privacy",
     },
     openai: {
       label: "ChatGPT (OpenAI)",
@@ -22,12 +24,14 @@
       model: "gpt-6.1-terra",
       keyUrl: "platform.openai.com/api-keys",
       hint: "De pago por uso.",
+      company: "OpenAI",
+      privacy: "https://openai.com/policies/privacy-policy/",
     },
   } as const;
   type Preset = keyof typeof PRESETS;
   const FIELDS = [
     "FRJ_WRITER", "FRJ_LOCAL_URL", "FRJ_LOCAL_MODEL", "FRJ_EMBED_MODEL",
-    "FRJ_ANTHROPIC_MODEL", "FRJ_ANTHROPIC_EFFORT", "FRJ_OPENAI_URL", "FRJ_OPENAI_MODEL",
+    "FRJ_ANTHROPIC_MODEL", "FRJ_ANTHROPIC_EFFORT", "FRJ_OPENAI_URL", "FRJ_OPENAI_MODEL", "FRJ_AI_CONSENT",
   ];
   const EFFORTS = ["low", "medium", "high", "xhigh", "max"];
 
@@ -48,6 +52,18 @@
     (Object.keys(PRESETS) as Preset[]).find((p) => (values.FRJ_OPENAI_URL ?? "").startsWith(PRESETS[p].url)) ?? null,
   );
   const locked = (k: string) => s?.overridden.includes(k) ?? false;
+
+  // Consentimiento antes de mandar textos a una IA en internet: por proveedor (si cambia, se vuelve a pedir).
+  let agreeAi = $state(false);
+  const consentId = $derived(writer === "anthropic" ? "anthropic" : (values.FRJ_OPENAI_URL ?? "").trim());
+  const destination = $derived(
+    writer === "anthropic"
+      ? { company: "Anthropic", privacy: "https://www.anthropic.com/legal/privacy" }
+      : preset
+        ? PRESETS[preset]
+        : { company: consentId.replace(/^https?:\/\//, "").split("/")[0] || "ese proveedor", privacy: "" },
+  );
+  const needsConsent = $derived(writer !== "local" && !locked("FRJ_WRITER") && values.FRJ_AI_CONSENT !== consentId);
   const hasKey = (k: string) => !!keys[k]?.trim() || (s?.saved_keys.includes(k) ?? false) || locked(k);
 
   function show(v: LlmSettings) {
@@ -69,6 +85,7 @@
 
   /** Lo que falta para que la opción elegida funcione, en palabras simples. */
   function missing(): string {
+    if (needsConsent && !agreeAi) return `Marca la casilla para aceptar que tus textos se envíen a ${destination.company}.`;
     if (writer === "anthropic" && !hasKey("ANTHROPIC_API_KEY")) return "Pega tu clave de Claude.";
     if (writer === "openai") {
       if (!values.FRJ_OPENAI_URL?.trim() || !values.FRJ_OPENAI_MODEL?.trim()) return "Elige Gemini o ChatGPT.";
@@ -96,6 +113,7 @@
     }
     saving = true;
     try {
+      if (needsConsent && agreeAi) values.FRJ_AI_CONSENT = consentId;
       // Se envían todos los campos conocidos: uno vacío vuelve al valor por defecto.
       const all = Object.fromEntries(FIELDS.map((f) => [f, values[f] ?? ""]));
       show(await settingsApi.save(all, $state.snapshot(keys)));
@@ -259,6 +277,19 @@
         {@render apiKey("FRJ_OPENAI_API_KEY", "Clave")}
       {/if}
 
+      {#if needsConsent}
+        <label class="inline consent">
+          <input type="checkbox" bind:checked={agreeAi} />
+          <span class="small">
+            Acepto que, al adaptar un CV, se envíen a <strong>{destination.company}</strong> el texto de la
+            vacante, mi titular, mi experiencia (puestos, empresas, fechas y logros) y mis habilidades (nunca
+            mi nombre, correo, teléfono, ubicación, enlaces ni estudios),
+            y que los trate según su
+            {#if destination.privacy}<button class="link" onclick={() => openUrl(destination.privacy)}>política de privacidad</button>{:else}política de privacidad{/if}.
+          </span>
+        </label>
+      {/if}
+
       {#if s.keyring_error}
         <p class="danger small">No se pueden guardar claves: el llavero del sistema no responde ({s.keyring_error}).</p>
       {:else if writer !== "local"}
@@ -416,6 +447,10 @@
 </div>
 
 <style>
+  /* Enlace dentro de una frase: sin el relleno de botón. */
+  .consent .link { min-height: 0; padding: 0; border: 0; overflow: visible; vertical-align: baseline; text-decoration: underline; }
+  .consent { align-items: flex-start; }
+  .consent input { flex: none; margin-top: 0.15rem; }
   .page { display: flex; flex-direction: column; gap: 1rem; }
   .tune h2 { margin: 0; }
   /* Reparto actual del puntaje: llena la tarjeta con algo útil mientras no hay datos. */

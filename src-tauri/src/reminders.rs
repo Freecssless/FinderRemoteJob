@@ -66,7 +66,7 @@ async fn check(app: &AppHandle, notified: &mut HashSet<i64>) {
     let due = match state.db.list_due_reminders(None).await {
         Ok(d) => d,
         Err(e) => {
-            eprintln!("recordatorios: {e}");
+            crate::registro::log(&format!("recordatorios: {e}"));
             return;
         }
     };
@@ -80,7 +80,7 @@ async fn check(app: &AppHandle, notified: &mut HashSet<i64>) {
         ),
     };
     if let Err(e) = app.notification().builder().title(title).body(body).show() {
-        eprintln!("no se pudo mostrar la notificación: {e}");
+        crate::registro::log(&format!("no se pudo mostrar la notificación: {e}"));
     }
 }
 
