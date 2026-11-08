@@ -110,6 +110,22 @@ async fn ollama_status(state: State<'_, AppState>) -> CmdResult<OllamaStatus> {
     })
 }
 
+/// Descarga el modelo local en Ollama; el avance llega a la interfaz como evento `ollama-pull`.
+#[tauri::command]
+async fn pull_model(app: tauri::AppHandle, state: State<'_, AppState>) -> CmdResult<()> {
+    use finder_infra::llm::{Backend, ollama};
+    use tauri::Emitter;
+    let local = state.llm()?.local;
+    let Backend::Ollama { base_url } = &local.backend else {
+        return Err("La IA local no es Ollama: descarga el modelo en tu servidor.".into());
+    };
+    ollama::pull(base_url, &local.model, |done, total| {
+        let _ = app.emit("ollama-pull", (done, total));
+    })
+    .await
+    .map_err(err)
+}
+
 /// Avisos del menú: vacantes nuevas (24 h), pendientes de postular y recordatorios vencidos.
 #[derive(Debug, Serialize)]
 struct NavCounts {
@@ -294,6 +310,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             app_info,
             ollama_status,
+            pull_model,
             nav_counts,
             weights::weights_status,
             weights::apply_weights,

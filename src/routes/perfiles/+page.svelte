@@ -285,7 +285,7 @@
         {#if cvDirty}<button onclick={discardCv} disabled={busy !== ""}>Descartar cambios</button>{/if}
       </div>
       {#if busy === "import"}
-        <p class="muted small">Con un modelo local en CPU esto puede tardar varios minutos.</p>
+        <p class="muted small">Con un modelo local en CPU suele tardar menos de un minuto.</p>
       {/if}
       {#if warnings.length}
         <div class="notice" role="status">

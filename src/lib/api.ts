@@ -79,6 +79,8 @@ export const api = {
   navCounts: (profileId: string | null) =>
     invoke<{ new_jobs: number; queue: number; due: number }>("nav_counts", { profileId }),
   ollamaStatus: () => invoke<{ running: boolean; model: string; installed: boolean }>("ollama_status"),
+  /** El avance llega como evento `ollama-pull` con [bajado, total] en bytes. */
+  pullModel: () => invoke<void>("pull_model"),
   listProfiles: () => invoke<Profile[]>("list_profiles"),
   createProfile: (p: Omit<Profile, "id" | "created_at">) =>
     invoke<Profile>("create_profile", {

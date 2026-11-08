@@ -50,6 +50,45 @@ pub fn has_model(installed: &[String], model: &str) -> bool {
     installed.iter().any(|m| full(m) == full(model))
 }
 
+/// Descarga `model` en Ollama (`/api/pull`) y avisa el avance (bytes bajados, total).
+/// Usa su propio cliente: la descarga (~5 GB) dura más que cualquier tiempo límite razonable.
+pub async fn pull(base_url: &str, model: &str, mut progress: impl FnMut(u64, u64)) -> Result<()> {
+    let mut resp = Client::new()
+        .post(format!("{}/api/pull", root(base_url)))
+        .json(&json!({ "model": model, "stream": true }))
+        .send()
+        .await?;
+    if !resp.status().is_success() {
+        return Err(api_error(resp).await);
+    }
+    // Ollama manda una línea JSON por evento; un trozo de red puede cortar una línea a la mitad.
+    let mut buf = Vec::new();
+    while let Some(chunk) = resp.chunk().await? {
+        buf.extend_from_slice(&chunk);
+        while let Some(i) = buf.iter().position(|&b| b == b'\n') {
+            let line: Vec<u8> = buf.drain(..=i).collect();
+            pull_line(&line, &mut progress)?;
+        }
+    }
+    pull_line(&buf, &mut progress)
+}
+
+fn pull_line(line: &[u8], progress: &mut impl FnMut(u64, u64)) -> Result<()> {
+    let Ok(v) = serde_json::from_slice::<Value>(line) else {
+        return Ok(()); // línea vacía
+    };
+    if let Some(e) = v["error"].as_str() {
+        return Err(LlmError::Api {
+            status: reqwest::StatusCode::BAD_GATEWAY,
+            message: e.to_string(),
+        });
+    }
+    if let (Some(done), Some(total)) = (v["completed"].as_u64(), v["total"].as_u64()) {
+        progress(done, total);
+    }
+    Ok(())
+}
+
 /// Sin esto, el modelo sangra el JSON: los espacios y saltos de línea son ~35 % de lo que genera
 /// (y en CPU, generar es lo lento).
 const COMPACT: &str =
@@ -135,6 +174,29 @@ mod tests {
         );
         assert_eq!(b["options"]["num_ctx"], NUM_CTX);
         assert_eq!(b["format"]["type"], "object");
+    }
+
+    #[test]
+    fn avance_de_descarga() {
+        let mut seen = vec![];
+        let mut f = |d, t| seen.push((d, t));
+        assert!(pull_line(br#"{"status":"pulling manifest"}"#, &mut f).is_ok());
+        assert!(
+            pull_line(
+                br#"{"status":"pulling a1","completed":5,"total":10}"#,
+                &mut f
+            )
+            .is_ok()
+        );
+        assert!(pull_line(b"", &mut f).is_ok());
+        assert!(
+            pull_line(
+                br#"{"error":"pull model manifest: file does not exist"}"#,
+                &mut f
+            )
+            .is_err()
+        );
+        assert_eq!(seen, vec![(5, 10)]);
     }
 
     #[test]

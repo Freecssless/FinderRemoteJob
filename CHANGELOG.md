@@ -219,6 +219,10 @@
 - La ficha de compatibilidad muestra «Similitud con tu CV» cuando existe.
 - `finder_infra::semantic` (`ensure`, `Vectors`), `Db::embeddings` y `Db::put_embedding`.
 
+### Descarga del modelo desde la app
+- Bienvenida: si Ollama está abierto pero falta el modelo, el botón «Descargar el modelo» lo baja desde la app (`/api/pull` en streaming, comando `pull_model`, evento `ollama-pull`) con barra de avance. Ya no hace falta abrir una terminal. Instalar Ollama sigue siendo a mano (enlace a ollama.com/download).
+- Los avisos de espera al importar el CV dicen «suele tardar menos de un minuto» (antes «varios minutos»).
+
 ### Lectura del CV más rápida y precisa, y procesos más ágiles
 - **Importar el CV: de 79 s a 30 s** con qwen3:8b en CPU (CV realista de 3 empleos, medido con `banco_importacion`).
   - La IA ya no copia cada logro: devuelve los datos cortos y **qué líneas** son la descripción de cada empleo; el texto se copia del CV, literal (`core::cvparse`). Los logros se separan por viñetas (o por frases), se unen los renglones que cortó el PDF y se quitan las viñetas; si la IA corta el bloque una línea antes, se completa.

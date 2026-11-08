@@ -2,6 +2,7 @@
   import { chooseProfile, refreshProfiles } from "$lib/profile.svelte";
   import Select from "$lib/components/Select.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
+  import { listen } from "@tauri-apps/api/event";
   import { goto } from "$app/navigation";
   import { api, jobsApi, REMOTE_LABELS, type CvMaster, type Profile, type RemotePref } from "$lib/api";
 
@@ -45,6 +46,25 @@
       chooseProfile(profile.id);
       void refreshProfiles();
       step = 1;
+      await checkOllama();
+    });
+
+  // Descarga del modelo: fracción 0–1, o null si no está descargando.
+  let pulled = $state<number | null>(null);
+
+  const pullModel = () =>
+    run(async () => {
+      pulled = 0;
+      const stop = await listen<[number, number]>("ollama-pull", (e) => {
+        const [done, total] = e.payload;
+        if (total) pulled = done / total;
+      });
+      try {
+        await api.pullModel();
+      } finally {
+        stop();
+        pulled = null;
+      }
       await checkOllama();
     });
 
@@ -135,17 +155,25 @@
               <button class="link" onclick={() => openUrl("https://ollama.com/download")}>ollama.com/download</button>
               y ábrelo.
             </li>
+            <li>Vuelve aquí y pulsa «Comprobar de nuevo».</li>
+          {:else}
+            <li>
+              Ollama ya está abierto. Falta descargar el modelo de IA
+              <span class="muted small">(unos 5 GB; según tu internet, puede tardar un rato).</span>
+            </li>
           {/if}
-          <li>
-            Abre una terminal (en Windows: «Símbolo del sistema») y escribe:
-            <code>ollama pull {ollama.model}</code>
-            <span class="muted small">Descarga unos 5 GB; puede tardar un rato.</span>
-          </li>
-          <li>Vuelve aquí y pulsa «Comprobar de nuevo».</li>
         </ol>
+        {#if pulled !== null}
+          <progress max="1" value={pulled} aria-label="Descarga del modelo"></progress>
+          <p class="muted small">Descargando: {Math.floor(pulled * 100)} %. Puedes dejar la app abierta mientras tanto.</p>
+        {/if}
         <div class="row">
-          <button class="primary" onclick={checkOllama}>Comprobar de nuevo</button>
-          <button onclick={() => (step = 2)}>Saltar: escribiré mi CV a mano en Perfiles</button>
+          {#if ollama.running}
+            <button class="primary" onclick={pullModel} disabled={busy}>{busy ? "Descargando…" : "Descargar el modelo"}</button>
+          {:else}
+            <button class="primary" onclick={checkOllama}>Comprobar de nuevo</button>
+          {/if}
+          <button onclick={() => (step = 2)} disabled={busy}>Saltar: escribiré mi CV a mano en Perfiles</button>
         </div>
       {:else if !cv}
         <p>Elige tu CV en PDF o Word.</p>
@@ -153,7 +181,7 @@
           <input type="file" accept=".pdf,.docx" onchange={importFile} disabled={busy} />
           <span>{busy ? "Leyendo tu CV…" : "Elegir archivo"}</span>
         </label>
-        {#if busy}<p class="muted small">Puede tardar varios minutos. No cierres la app.</p>{/if}
+        {#if busy}<p class="muted small">Suele tardar menos de un minuto. No cierres la app.</p>{/if}
         <div class="row">
           <button onclick={() => (step = 2)} disabled={busy}>Saltar: lo haré después en Perfiles</button>
         </div>
@@ -214,6 +242,6 @@
   .steps li.current { border-color: var(--accent); color: var(--text); font-weight: 600; }
   .card { display: flex; flex-direction: column; gap: 0.75rem; }
   .card h2 { margin: 0; }
-  code { display: block; margin: 0.3rem 0; padding: 0.3rem 0.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; user-select: all; }
+  progress { width: 100%; accent-color: var(--accent); }
   .link { border: none; background: none; padding: 0; color: var(--accent); text-decoration: underline; cursor: pointer; }
 </style>
