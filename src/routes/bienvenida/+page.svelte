@@ -49,24 +49,30 @@
       await checkOllama();
     });
 
-  // Descarga del modelo: fracción 0–1, o null si no está descargando.
-  let pulled = $state<number | null>(null);
+  // Descarga en curso: qué se baja y fracción 0–1 (null si no hay ninguna).
+  let pulled = $state<{ name: string; frac: number } | null>(null);
+  const isWindows = navigator.userAgent.includes("Windows");
 
-  const pullModel = () =>
+  const download = (f: () => Promise<void>) =>
     run(async () => {
-      pulled = 0;
-      const stop = await listen<[number, number]>("ollama-pull", (e) => {
-        const [done, total] = e.payload;
-        if (total) pulled = done / total;
+      pulled = { name: "", frac: 0 };
+      const stop = await listen<[string, number, number]>("ollama-pull", (e) => {
+        const [name, done, total] = e.payload;
+        pulled = { name, frac: total ? done / total : 0 };
       });
       try {
-        await api.pullModel();
+        await f();
       } finally {
         stop();
         pulled = null;
       }
-      await checkOllama();
     });
+
+  const pullModel = () => download(async () => {
+    await api.pullModel();
+    await checkOllama();
+  });
+  const installOllama = () => download(api.installOllama);
 
   async function checkOllama() {
     ollama = null;
@@ -150,28 +156,35 @@
         </p>
         <ol>
           {#if !ollama.running}
-            <li>
-              Descarga e instala Ollama desde
-              <button class="link" onclick={() => openUrl("https://ollama.com/download")}>ollama.com/download</button>
-              y ábrelo.
-            </li>
-            <li>Vuelve aquí y pulsa «Comprobar de nuevo».</li>
+            {#if isWindows}
+              <li>Pulsa «Instalar Ollama»: la app lo descarga (unos 1,7 GB) y abre su instalador. Sigue sus pasos.</li>
+            {:else}
+              <li>
+                Descarga e instala Ollama desde
+                <button class="link" onclick={() => openUrl("https://ollama.com/download")}>ollama.com/download</button>
+                y ábrelo.
+              </li>
+            {/if}
+            <li>Cuando termine, vuelve aquí y pulsa «Comprobar de nuevo».</li>
           {:else}
             <li>
-              Ollama ya está abierto. Falta descargar el modelo de IA
-              <span class="muted small">(unos 5 GB; según tu internet, puede tardar un rato).</span>
+              Ollama ya está abierto. Falta descargar los modelos de IA
+              <span class="muted small">(unos 6 GB; según tu internet, puede tardar un rato).</span>
             </li>
           {/if}
         </ol>
         {#if pulled !== null}
-          <progress max="1" value={pulled} aria-label="Descarga del modelo"></progress>
-          <p class="muted small">Descargando: {Math.floor(pulled * 100)} %. Puedes dejar la app abierta mientras tanto.</p>
+          <progress max="1" value={pulled.frac} aria-label="Avance de la descarga"></progress>
+          <p class="muted small">Descargando{pulled.name ? ` ${pulled.name}` : ""}: {Math.floor(pulled.frac * 100)} %. No cierres la app.</p>
         {/if}
         <div class="row">
           {#if ollama.running}
-            <button class="primary" onclick={pullModel} disabled={busy}>{busy ? "Descargando…" : "Descargar el modelo"}</button>
+            <button class="primary" onclick={pullModel} disabled={busy}>{busy ? "Descargando…" : "Descargar los modelos"}</button>
           {:else}
-            <button class="primary" onclick={checkOllama}>Comprobar de nuevo</button>
+            {#if isWindows}
+              <button class="primary" onclick={installOllama} disabled={busy}>{busy ? "Descargando…" : "Instalar Ollama"}</button>
+            {/if}
+            <button class={isWindows ? "" : "primary"} onclick={checkOllama} disabled={busy}>Comprobar de nuevo</button>
           {/if}
           <button onclick={() => (step = 2)} disabled={busy}>Saltar: escribiré mi CV a mano en Perfiles</button>
         </div>

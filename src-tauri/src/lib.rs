@@ -110,20 +110,53 @@ async fn ollama_status(state: State<'_, AppState>) -> CmdResult<OllamaStatus> {
     })
 }
 
-/// Descarga el modelo local en Ollama; el avance llega a la interfaz como evento `ollama-pull`.
+/// Descarga en Ollama lo que falte: el modelo local y el de similitud semántica. El avance llega a
+/// la interfaz como evento `ollama-pull` con (nombre, bajado, total).
 #[tauri::command]
 async fn pull_model(app: tauri::AppHandle, state: State<'_, AppState>) -> CmdResult<()> {
     use finder_infra::llm::{Backend, ollama};
     use tauri::Emitter;
-    let local = state.llm()?.local;
-    let Backend::Ollama { base_url } = &local.backend else {
+    let config = state.llm()?;
+    let Backend::Ollama { base_url } = &config.local.backend else {
         return Err("La IA local no es Ollama: descarga el modelo en tu servidor.".into());
     };
-    ollama::pull(base_url, &local.model, |done, total| {
-        let _ = app.emit("ollama-pull", (done, total));
-    })
+    let have = ollama::installed_models(&state.http, base_url)
+        .await
+        .map_err(err)?;
+    for model in [&config.local.model, &config.embed_model] {
+        if ollama::has_model(&have, model) {
+            continue;
+        }
+        ollama::pull(base_url, model, |done, total| {
+            let _ = app.emit("ollama-pull", (model, done, total));
+        })
+        .await
+        .map_err(err)?;
+    }
+    Ok(())
+}
+
+/// Windows: baja el instalador oficial de Ollama y lo abre (el usuario termina la instalación).
+#[tauri::command]
+async fn install_ollama(app: tauri::AppHandle) -> CmdResult<()> {
+    use tauri::Emitter;
+    if !cfg!(windows) {
+        return Err("La instalación automática solo está disponible en Windows.".into());
+    }
+    let dest = std::env::temp_dir().join("OllamaSetup.exe");
+    finder_infra::llm::ollama::download(
+        "https://ollama.com/download/OllamaSetup.exe",
+        &dest,
+        |done, total| {
+            let _ = app.emit("ollama-pull", ("Ollama", done, total));
+        },
+    )
     .await
-    .map_err(err)
+    .map_err(err)?;
+    std::process::Command::new(&dest)
+        .spawn()
+        .map_err(|e| format!("No se pudo abrir el instalador de Ollama: {e}"))?;
+    Ok(())
 }
 
 /// Avisos del menú: vacantes nuevas (24 h), pendientes de postular y recordatorios vencidos.
@@ -311,6 +344,7 @@ pub fn run() {
             app_info,
             ollama_status,
             pull_model,
+            install_ollama,
             nav_counts,
             weights::weights_status,
             weights::apply_weights,

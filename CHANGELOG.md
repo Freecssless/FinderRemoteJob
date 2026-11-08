@@ -219,6 +219,11 @@
 - La ficha de compatibilidad muestra «Similitud con tu CV» cuando existe.
 - `finder_infra::semantic` (`ensure`, `Vectors`), `Db::embeddings` y `Db::put_embedding`.
 
+### Ollama y modelos sin terminal
+- Windows: en la bienvenida, «Instalar Ollama» baja el instalador oficial (`ollama.com/download/OllamaSetup.exe`, ~1,7 GB) con barra de avance y lo abre (comando `install_ollama`, `ollama::download`). En Linux y macOS sigue el enlace a ollama.com/download.
+- «Descargar los modelos» baja también el de similitud semántica (`bge-m3`) si falta. El evento `ollama-pull` ahora lleva (nombre, bajado, total).
+- Vacantes → «Comparar mejor con IA» descarga `bge-m3` primero si falta en Ollama.
+
 ### Descarga del modelo desde la app
 - Bienvenida: si Ollama está abierto pero falta el modelo, el botón «Descargar el modelo» lo baja desde la app (`/api/pull` en streaming, comando `pull_model`, evento `ollama-pull`) con barra de avance. Ya no hace falta abrir una terminal. Instalar Ollama sigue siendo a mano (enlace a ollama.com/download).
 - Los avisos de espera al importar el CV dicen «suele tardar menos de un minuto» (antes «varios minutos»).

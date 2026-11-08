@@ -73,6 +73,28 @@ pub async fn pull(base_url: &str, model: &str, mut progress: impl FnMut(u64, u64
     pull_line(&buf, &mut progress)
 }
 
+/// Descarga `url` a `dest` (el instalador de Ollama) y avisa el avance (bytes bajados, total).
+pub async fn download(
+    url: &str,
+    dest: &std::path::Path,
+    mut progress: impl FnMut(u64, u64),
+) -> Result<()> {
+    use std::io::Write;
+    let mut resp = Client::new().get(url).send().await?.error_for_status()?;
+    let total = resp.content_length().unwrap_or(0);
+    let io =
+        |e: std::io::Error| LlmError::Config(format!("no se pudo guardar {}: {e}", dest.display()));
+    // shortcut: escritura bloqueante por trozo (son de pocos KB a disco local); pasar a tokio::fs si se nota.
+    let mut file = std::fs::File::create(dest).map_err(io)?;
+    let mut done = 0;
+    while let Some(chunk) = resp.chunk().await? {
+        file.write_all(&chunk).map_err(io)?;
+        done += chunk.len() as u64;
+        progress(done, total);
+    }
+    file.flush().map_err(io)
+}
+
 fn pull_line(line: &[u8], progress: &mut impl FnMut(u64, u64)) -> Result<()> {
     let Ok(v) = serde_json::from_slice::<Value>(line) else {
         return Ok(()); // línea vacía

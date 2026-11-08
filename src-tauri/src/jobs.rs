@@ -207,8 +207,8 @@ async fn embed(state: &AppState, profile_id: &str, jobs: &[Job]) -> CmdResult<us
     .await
     .map_err(|e| {
         format!(
-            "No se pudo calcular la similitud semántica ({e}). ¿Está Ollama abierto y descargado el modelo «{}»? (ollama pull {})",
-            config.embed_model, config.embed_model
+            "No se pudo calcular la similitud semántica ({e}). ¿Está Ollama abierto y descargado el modelo «{}»?",
+            config.embed_model
         )
     })
 }
@@ -216,6 +216,18 @@ async fn embed(state: &AppState, profile_id: &str, jobs: &[Job]) -> CmdResult<us
 /// Similitud semántica de las vacantes recientes que aún no la tienen. Devuelve cuántas calculó.
 #[tauri::command]
 pub async fn embed_jobs(state: State<'_, AppState>, profile_id: String) -> CmdResult<usize> {
+    // Lo pidió el usuario: si falta el modelo de similitud en Ollama, se descarga primero (~1 GB).
+    let config = state.llm()?;
+    if let finder_infra::llm::Backend::Ollama { base_url } = &config.local.backend {
+        use finder_infra::llm::ollama;
+        if let Ok(have) = ollama::installed_models(&state.http, base_url).await
+            && !ollama::has_model(&have, &config.embed_model)
+        {
+            ollama::pull(base_url, &config.embed_model, |_, _| {})
+                .await
+                .map_err(err)?;
+        }
+    }
     let jobs = state.db.list_jobs(LIST_LIMIT).await.map_err(err)?;
     embed(&state, &profile_id, &jobs).await
 }
