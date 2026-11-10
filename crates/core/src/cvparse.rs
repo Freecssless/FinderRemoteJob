@@ -85,9 +85,18 @@ fn heading_kind(line: &str) -> Option<SectionKind> {
     if t.is_empty() || t.chars().count() > 40 {
         return None;
     }
-    let n = normalize(t);
-    let n = n.trim_matches(|c: char| !c.is_alphanumeric() && c != '&');
-    HEADINGS.iter().find(|(h, _)| *h == n).map(|(_, k)| *k)
+    let kind = |s: &str| {
+        let n = normalize(s);
+        let n = n.trim_matches(|c: char| !c.is_alphanumeric() && c != '&');
+        HEADINGS.iter().find(|(h, _)| *h == n).map(|(_, k)| *k)
+    };
+    // «Experiencia - Proyectos», «Experiencia y logros»: manda la primera parte.
+    kind(t).or_else(|| {
+        [" - ", " – ", " — ", " | ", " / ", " y ", " & "]
+            .iter()
+            .find_map(|sep| t.split_once(sep))
+            .and_then(|(first, _)| kind(first))
+    })
 }
 
 /// Rango de líneas (1 = primera línea del CV), ambos extremos incluidos.
@@ -478,6 +487,23 @@ mod tests {
     use super::*;
 
     const CV: &str = include_str!("../tests/fixtures/cv_realista.txt");
+
+    #[test]
+    fn reconoce_encabezados_compuestos() {
+        assert_eq!(
+            heading_kind("Experiencia - Proyectos"),
+            Some(SectionKind::Experience)
+        );
+        assert_eq!(
+            heading_kind("Experiencia y logros:"),
+            Some(SectionKind::Experience)
+        );
+        assert_eq!(heading_kind("Ventas - Proyectos"), None);
+        // Antes, «Experiencia - Proyectos» quedaba dentro de «Idiomas» y no llegaba a la IA.
+        let cv =
+            ParsedCv::new("Ana\nIdiomas\nInglés B1\nExperiencia - Proyectos\nDev — Acme\n● Hice X");
+        assert!(cv.for_llm().contains("Hice X"));
+    }
 
     #[test]
     fn lee_contacto_habilidades_e_idiomas_sin_ia() {

@@ -10,6 +10,7 @@ use super::{LlmError, Result, api_error, parse_json_text};
 
 /// Cabe el prompt del redactor (vacante + CV) y su respuesta.
 const NUM_CTX: u32 = 8192;
+const NUM_PREDICT: u32 = 4096;
 
 /// `FRJ_LOCAL_URL` apunta a la API compatible (`…/v1`); la nativa está en la raíz.
 fn root(base_url: &str) -> &str {
@@ -129,7 +130,9 @@ pub(crate) fn chat_body(model: &str, system: &str, user: &str, schema: &Value) -
         // El modelo se queda cargado entre tareas (importar, analizar vacantes, adaptar): cargarlo
         // de nuevo en CPU cuesta varios segundos cada vez.
         "keep_alive": "30m",
-        "options": { "temperature": 0.1, "num_ctx": NUM_CTX }
+        // Tope de respuesta: si el modelo entra en un bucle (repite «]}}» sin fin) se corta aquí en
+        // vez de seguir hasta el timeout. La mitad del contexto: sobra para un CV adaptado completo.
+        "options": { "temperature": 0.1, "num_ctx": NUM_CTX, "num_predict": NUM_PREDICT }
     })
 }
 
@@ -195,6 +198,7 @@ mod tests {
                 .is_some_and(|c| c.ends_with("sin saltos de línea ni sangría."))
         );
         assert_eq!(b["options"]["num_ctx"], NUM_CTX);
+        assert_eq!(b["options"]["num_predict"], NUM_PREDICT);
         assert_eq!(b["format"]["type"], "object");
     }
 
