@@ -1,101 +1,238 @@
-# FinderRemoteJob
+<p align="center">
+  <img src="src-tauri/icons/icon.svg" alt="" width="96" height="96">
+</p>
 
-Aplicación de escritorio (y, más adelante, móvil) para buscar empleo **remoto en México y LATAM**:
+<h1 align="center">FinderRemoteJob</h1>
 
-- Varios perfiles profesionales, cada uno con su CV maestro.
-- Búsqueda agregada en portales con API o RSS oficial.
-- Puntaje de compatibilidad entre CV y vacante.
-- Optimización de CV para ATS (palabras clave, puntaje antes y después, exportación a PDF y DOCX) **sin inventar información**.
-- Tablero de seguimiento de postulaciones.
+<p align="center"><strong>Encuentra empleo remoto, adapta tu CV sin inventar nada y lleva el control de tus postulaciones.</strong></p>
 
-El diseño completo está en [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) y el avance en [`CHANGELOG.md`](CHANGELOG.md).
+<p align="center">
+  <a href="https://github.com/Freecssless/FinderRemoteJob/actions/workflows/pruebas.yml"><img src="https://github.com/Freecssless/FinderRemoteJob/actions/workflows/pruebas.yml/badge.svg" alt="Pruebas"></a>
+  <a href="#licencia"><img src="https://img.shields.io/badge/licencia-MIT%20%7C%20Apache--2.0-blue" alt="Licencia MIT o Apache 2.0"></a>
+  <img src="https://img.shields.io/badge/plataformas-Windows%20%7C%20Linux-informational" alt="Windows y Linux">
+  <img src="https://img.shields.io/badge/IA-local%20y%20gratis-success" alt="IA local y gratis">
+  <img src="https://img.shields.io/badge/hecho%20con-Rust%20%2B%20Tauri%20%2B%20Svelte-orange" alt="Hecho con Rust, Tauri y Svelte">
+</p>
 
-## Estructura
+<p align="center">
+  <a href="#instalación">Instalar</a> ·
+  <a href="#cómo-se-usa">Cómo se usa</a> ·
+  <a href="#preguntas-frecuentes">Preguntas frecuentes</a> ·
+  <a href="PRIVACIDAD.md">Privacidad</a> ·
+  <a href="https://github.com/Freecssless/FinderRemoteJob/issues">Reportar un problema</a>
+</p>
+
+<br>
+
+<p align="center">
+  Mandar CVs y no recibir respuesta cansa.<br>
+  <strong>Casi siempre el CV no pasó el filtro automático (ATS).</strong>
+</p>
+
+<p align="center">
+  FinderRemoteJob junta vacantes remotas para México y Latinoamérica, te dice cuáles te quedan<br>
+  y adapta tu CV a cada una <strong>usando solo lo que tú ya hiciste</strong>.
+</p>
+
+<p align="center">
+  Todo pasa en tu computadora. <strong>Tú decides y tú le das «Enviar».</strong>
+</p>
+
+<br>
+
+## Qué hace por ti
+
+- **¿Dónde busco?** Junta vacantes remotas de varios portales en una sola lista, sin duplicados.
+- **¿Me conviene?** Le pone a cada vacante un puntaje de compatibilidad con tu CV, del 0 al 100.
+- **¿Pasará el filtro?** Mide tu CV como lo haría un ATS, te enseña qué palabras clave te faltan y te propone mejoras.
+- **¿Cómo lo mando?** Genera el CV adaptado en PDF y DOCX, listo para enviar.
+- **¿A quién le escribí?** Un tablero tipo Kanban guarda cada postulación, su estado y el CV que mandaste.
+- **¿Cuándo doy seguimiento?** Te avisa cuando toca escribir otra vez o cuando una vacante lleva días sin respuesta.
+
+## Lo que nunca hará
+
+> [!IMPORTANT]
+> - **Inventar datos.** Un «guardián» revisa cada propuesta y bloquea cifras, empresas o habilidades que no estén en tu CV.
+> - **Postularse por ti.** Te prepara todo, pero el botón de enviar siempre lo presionas tú.
+> - **Subir tus datos a un servidor nuestro.** No hay cuentas, ni servidor, ni telemetría.
+> - **Mandar tu nombre, correo o teléfono a una IA externa.** Si eliges una IA en internet, antes se le quitan tus datos personales y te pide permiso.
+
+## Funciones
+
+| | Función | Qué hace |
+|---|---|---|
+| 👤 | **Varios perfiles** | Un perfil por cada tipo de trabajo que buscas (ej. «Editor de video» y «Diseñador»), cada uno con su CV maestro. |
+| 📄 | **Importa tu CV** | Lee tu CV en PDF o DOCX y lo convierte en un formulario que puedes revisar y corregir. |
+| 🔎 | **Buscador de vacantes** | Remote OK, Remotive, We Work Remotely, Get on Board, Jobicy, Himalayas y empresas en Greenhouse, Lever o Ashby. |
+| 🎯 | **Compatibilidad** | Compara tus habilidades, experiencia, idiomas y preferencias con cada vacante, y te explica el puntaje. |
+| ✍️ | **Optimizador de CV** | Puntaje ATS antes y después, palabras clave que faltan y cambios que aceptas o rechazas uno por uno. |
+| 🖨️ | **PDF y DOCX** | Tres plantillas (Clásica, Compacta y Técnica) que los ATS leen bien. |
+| 📋 | **Tablero** | Kanban con arrastrar y soltar, historial de estados, notas y recordatorios. |
+
+<details>
+<summary><b>Y además…</b></summary>
+
+| Función | Qué hace |
+|---|---|
+| **Cola de postulación** | Te guía vacante por vacante y guarda tus respuestas frecuentes para copiarlas. |
+| **Importación manual** | Pega el enlace o el texto de cualquier vacante (LinkedIn, OCC, Computrabajo…) y la analiza igual. |
+| **Similitud semántica** | Entiende que «Premiere» y «edición de video» se relacionan, no solo palabras exactas. |
+| **Compatibilidad a tu medida** | Con 30 postulaciones con resultado, te sugiere qué pesar más según lo que sí te funcionó. |
+| **Copia de seguridad** | Guarda todo en un `.zip` y lo restaura con un clic. |
+| **Tema claro y oscuro** | Sigue el de tu sistema. Se usa con teclado y tiene una tipografía pensada para leer fácil. |
+
+</details>
+
+## Cómo funciona
+
+```mermaid
+flowchart LR
+    A["📄 Tu CV<br/>(PDF o DOCX)"] --> B["👤 Perfil<br/>CV maestro"]
+    C["🔎 Portales de<br/>empleo remoto"] --> D["📋 Vacantes<br/>con puntaje"]
+    B --> D
+    D --> E["✍️ Optimizador<br/>+ guardián"]
+    E --> F["🖨️ CV adaptado<br/>PDF / DOCX"]
+    F --> G["✅ Tú postulas"]
+    G --> H["📊 Tablero y<br/>recordatorios"]
+```
+
+## Instalación
+
+1. Ve a [**Releases**](https://github.com/Freecssless/FinderRemoteJob/releases) y descarga el instalador de tu sistema:
+
+   | Sistema | Archivo |
+   |---|---|
+   | Windows | `.exe` o `.msi` |
+   | Ubuntu / Debian | `.deb` |
+   | Fedora / openSUSE | `.rpm` |
+   | Cualquier Linux | `.AppImage` |
+
+2. Ábrelo e instala.
+3. La primera vez, el asistente de bienvenida te ayuda a instalar la **IA local gratuita** ([Ollama](https://ollama.com)) y a descargar sus modelos. En Windows lo hace desde la misma app.
+
+> [!NOTE]
+> Los instaladores no están firmados. Windows mostrará «Windows protegió su PC»: haz clic en **Más información → Ejecutar de todas formas**.
+
+## Cómo se usa
+
+1. **Crea tu perfil** e importa tu CV. Revisa lo que leyó y corrige lo que haga falta.
+2. **Ve a Vacantes** y pulsa «Buscar». Las verás ordenadas por compatibilidad.
+3. **Abre una vacante** que te guste y mándala al **Optimizador**.
+4. **Acepta o rechaza** cada cambio propuesto y descarga tu CV en PDF o DOCX.
+5. **Postúlate** en el portal y registra la postulación. Aparecerá en el **Tablero**.
+
+## Privacidad
+
+Tus datos viven solo en tu computadora, en una carpeta que solo tú puedes abrir.
+
+| Si usas… | Qué sale de tu equipo |
+|---|---|
+| **IA local (Ollama)**, la opción por defecto | Nada. Todo se procesa en tu computadora. |
+| **IA externa** (Claude, Gemini o ChatGPT, con tu propia clave) | Solo el texto de tu CV **sin** nombre, correo, teléfono ni educación, y solo si das permiso. |
+
+Las claves de API se guardan en el llavero de tu sistema, no en archivos. En **Privacidad y ayuda** puedes borrar todos tus datos con un botón. Todos los detalles están en la [política de privacidad](PRIVACIDAD.md).
+
+## Fuentes de vacantes
+
+Solo usamos portales con **API o RSS oficial**, y cada vacante enlaza a su anuncio original con su fuente, como piden sus términos.
+
+LinkedIn, Indeed, Glassdoor, OCC y Computrabajo **no** se consultan automáticamente: sus términos lo prohíben y podrías perder tu cuenta. Puedes pegar el enlace o el texto de esas vacantes a mano.
+
+## Preguntas frecuentes
+
+<details>
+<summary><b>¿Es gratis?</b></summary>
+
+Sí. La app es de código abierto y la IA local es gratuita. Solo pagarías si decides usar una IA externa con tu propia clave.
+</details>
+
+<details>
+<summary><b>¿Qué computadora necesito?</b></summary>
+
+Cualquiera con Windows o Linux sirve para la app. Para que la IA local vaya fluida se recomiendan unos 16 GB de RAM o una tarjeta gráfica con 8 GB o más; sin tarjeta gráfica puede tardar unos minutos en adaptar un CV. La primera vez descarga unos 8 GB (Ollama y sus modelos).
+</details>
+
+<details>
+<summary><b>¿La IA puede poner cosas falsas en mi CV?</b></summary>
+
+No debería: el guardián bloquea números, empresas y habilidades que no estén en tu CV maestro. Aun así, **lee siempre tu CV antes de enviarlo**, porque una reformulación puede cambiar el matiz de algo.
+</details>
+
+<details>
+<summary><b>¿Hay versión para celular o Mac?</b></summary>
+
+Todavía no. Android está planeado; Mac e iOS más adelante.
+</details>
+
+<details>
+<summary><b>Encontré un error, ¿qué hago?</b></summary>
+
+En la app, ve a **Privacidad y ayuda → Reportar un problema**, o abre un [issue](https://github.com/Freecssless/FinderRemoteJob/issues). Los reportes son públicos: no pegues tu CV ni datos personales.
+</details>
+
+## Para desarrolladores
+
+<details>
+<summary><b>Estructura del proyecto</b></summary>
 
 | Carpeta | Paquete | Qué contiene |
 |---|---|---|
-| `crates/core` | `finder-core` | Dominio puro: modelos, ATS, compatibilidad, guardián. **Sin IO**; se reutiliza en móvil |
-| `crates/infra` | `finder-infra` | SQLite, clientes LLM, fuentes de vacantes, PDF/DOCX |
+| `crates/core` | `finder-core` | Dominio puro: modelos, ATS, compatibilidad, guardián. **Sin IO**, para reusarlo en móvil |
+| `crates/infra` | `finder-infra` | SQLite, clientes de IA, fuentes de vacantes, PDF/DOCX |
 | `src-tauri` | `finder-app` | App de escritorio Tauri 2: comandos delgados sobre `finder-infra` |
 | `src` | — | Interfaz SvelteKit 5 + TypeScript (`adapter-static`) |
 
-## Requisitos
+El diseño completo está en [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) y los cambios en [`CHANGELOG.md`](CHANGELOG.md).
+</details>
 
-- Rust estable (1.85 o posterior, edición 2024): `rustup default stable`
-- Para la app de escritorio (módulo 10), en Arch/CachyOS:
-  ```bash
-  sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file openssl \
-    appmenu-gtk-module libappindicator-gtk3 librsvg xdotool nodejs npm
-  ```
-- [Ollama](https://ollama.com) para la IA local (ver "IA y claves de API").
+<details>
+<summary><b>Compilar y probar</b></summary>
 
-## Compilar y probar
+Requisitos: Rust estable 1.85 o posterior y Node.js. En Arch/CachyOS:
 
 ```bash
-cargo build
-cargo test
-cargo clippy --all-targets
+sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file openssl \
+  appmenu-gtk-module libappindicator-gtk3 librsvg xdotool nodejs npm
 ```
 
-### App de escritorio
-
 ```bash
+cargo test                    # pruebas de Rust
+cargo clippy --all-targets    # lint
 npm install
-npm run tauri dev     # desarrollo con recarga en caliente
-npm run check         # tipos de la interfaz
+npm run tauri dev             # app con recarga en caliente
+npm run check                 # tipos de la interfaz
 ```
 
-- La base de datos vive en `~/.local/share/com.finderremotejob.app/finder.db` (Linux).
-- El `.env` se busca en `~/.config/com.finderremotejob.app/.env` y, en desarrollo, en el directorio actual y sus padres (la raíz del repo). Una variable real del entorno gana sobre el archivo.
-- Si la ventana sale en blanco en Linux, prueba `WEBKIT_DISABLE_DMABUF_RENDERER=1 npm run tauri dev`.
+- La base de datos está en `~/.local/share/com.finderremotejob.app/finder.db` (Linux).
+- Si la ventana sale en blanco en Linux: `WEBKIT_DISABLE_DMABUF_RENDERER=1 npm run tauri dev`.
+</details>
 
-### Instaladores
-
-- **Linux** (en tu equipo): `npm run tauri build -- --bundles deb,rpm,appimage`. Quedan en `target/release/bundle/`.
-- **Windows** (`.exe` y `.msi`) y Linux en GitHub: sube el repo y una etiqueta (`git tag v0.1.0 && git push --tags`), o lanza «Instaladores» a mano en la pestaña Actions. El flujo `.github/workflows/release.yml` deja un borrador de versión con los instaladores adjuntos.
-- Los instaladores no van firmados: Windows mostrará «Windows protegió su PC» (pulsa «Más información» → «Ejecutar de todas formas»).
-- La IA local necesita [Ollama](https://ollama.com/download) aparte; el asistente de bienvenida explica cómo instalarlo.
-
-## IA y claves de API
-
-La app usa dos "papeles" de IA:
+<details>
+<summary><b>IA y claves de API</b></summary>
 
 | Papel | Para qué | Por defecto |
 |---|---|---|
-| **Local** | Importar tu CV, clasificar requisitos de vacantes, similitud semántica | Ollama con `qwen3:8b` y `bge-m3`. Tu CV no sale del equipo |
-| **Redactor** | Reescribir el CV (módulo 9) | Claude si defines `ANTHROPIC_API_KEY`; si no, el modelo local |
+| **Local** | Importar el CV, clasificar requisitos, similitud semántica | Ollama con `qwen3:8b` y `bge-m3` |
+| **Redactor** | Reescribir el CV | El modelo local, o Claude / Gemini / ChatGPT si lo eliges en Ajustes |
 
-Instalar la IA local (Arch/CachyOS):
 ```bash
-sudo pacman -S ollama            # con GPU: ollama-cuda (NVIDIA), ollama-vulkan u ollama-rocm (AMD); en CPU el optimizador tarda minutos
-sudo systemctl enable --now ollama
 ollama pull qwen3:8b
 ollama pull bge-m3
+cargo test -p finder-infra llm -- --ignored --nocapture   # prueba en vivo
 ```
 
-Las claves **nunca** van en el código: se leen de variables de entorno. Copia `.env.example` como `.env` (excluido de git) y ajusta lo que necesites; ahí están todas las variables documentadas.
+Las claves nunca van en el código. Para desarrollo, copia `.env.example` como `.env` (está excluido de git); ahí están todas las variables documentadas.
+</details>
 
-Con Claude, cada petición incluye `fallbacks: "default"`: si los filtros de seguridad del modelo rechazan una petición, la API la repite con otro modelo dentro de la misma llamada.
+<details>
+<summary><b>Generar instaladores</b></summary>
 
-Prueba en vivo de la IA (requiere Ollama corriendo):
-```bash
-cargo test -p finder-infra llm -- --ignored --nocapture
-```
+- **Linux, en tu equipo:** `npm run tauri build -- --bundles deb,rpm,appimage` (quedan en `target/release/bundle/`).
+- **Windows y Linux en GitHub:** sube una etiqueta (`git tag v0.1.0 && git push --tags`). El flujo `release.yml` crea un borrador de versión con los instaladores.
+</details>
 
-## Copia de seguridad
+## Licencia
 
-Ajustes → «Copia de seguridad» guarda un `.zip` en Documentos con la base y los CV generados (sin las claves de API, que siguen en el llavero). «Restaurar una copia» reemplaza los datos y reinicia la app. Lo anterior queda como `finder.db.antes-de-restaurar` y `cvs.antes-de-restaurar` en la carpeta de datos.
+Código bajo [MIT](LICENSE-MIT) o [Apache 2.0](LICENSE-APACHE), a tu elección. Al usar la app aceptas los [términos de uso](TERMINOS.md). Las licencias de fuentes, iconos y dependencias están en [LICENCIAS-TERCEROS.md](LICENCIAS-TERCEROS.md).
 
-## Fuentes de vacantes y atribución
-
-Las vacantes automáticas vienen de Remote OK, Remotive, We Work Remotely, Get on Board, Jobicy y Himalayas, y de las empresas que sigas en Greenhouse, Lever o Ashby (Ajustes → Opciones avanzadas). Sus términos piden mencionar la fuente y enlazar al anuncio original; la app guarda ambos datos en cada vacante. Además, respeta un tiempo mínimo entre consultas (Remotive: 6 horas).
-
-## Licencias de terceros
-
-- Fuente Liberation Sans: SIL Open Font License 1.1 (`crates/infra/assets/fonts/LICENSE-LiberationSans.txt`).
-- Fuente de la interfaz Atkinson Hyperlegible Next (Braille Institute): SIL Open Font License 1.1, vía `@fontsource-variable/atkinson-hyperlegible-next`.
-- Iconos Material Symbols Rounded (Google): Apache License 2.0, copiados como trazos SVG en `src/lib/icons.ts`.
-
-## Portales sin API oficial
-
-LinkedIn, Indeed, Glassdoor, OCC y Computrabajo **no** se consultan automáticamente: sus términos de servicio lo prohíben y hacerlo pone en riesgo tus cuentas. En el MVP solo se pueden importar a mano (pegar el enlace o el texto de la vacante), y la postulación siempre la confirmas tú.
+<p align="center"><sub>Si FinderRemoteJob te ayudó, una ⭐ ayuda a que otra persona lo encuentre.</sub></p>
