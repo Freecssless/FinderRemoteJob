@@ -444,7 +444,7 @@ GROUP BY grupo ORDER BY tasa_respuesta DESC;
 FinderRemoteJob/
 ├── Cargo.toml                 # [workspace] members = ["src-tauri", "crates/*"]
 ├── package.json               # SvelteKit + Tauri CLI
-├── svelte.config.js           # adapter-static
+├── vite.config.js             # Vite + SvelteKit (adapter-static)
 ├── src/                       # Interfaz (Svelte + TS)
 │   ├── lib/api.ts             # envoltorios tipados de invoke()
 │   ├── lib/components/

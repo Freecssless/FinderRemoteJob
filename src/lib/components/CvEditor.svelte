@@ -1,8 +1,8 @@
 <script lang="ts">
-  import Icon from "$lib/components/Icon.svelte";
-  import { pop } from "$lib/motion";
+  import Icon from "#lib/components/Icon.svelte";
+  import { pop } from "#lib/motion.ts";
   import { flip } from "svelte/animate";
-  import type { CvMaster } from "$lib/api";
+  import type { CvMaster } from "#lib/api.ts";
 
   let { cv = $bindable() }: { cv: CvMaster } = $props();
 

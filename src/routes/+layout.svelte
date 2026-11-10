@@ -2,13 +2,13 @@
   import { onNavigate } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
-  import { api, type AppInfo } from "$lib/api";
-  import { LEGAL_VERSION, PRIVACY_URL, TERMS_URL, legalApi } from "$lib/legal";
+  import { api, type AppInfo } from "#lib/api.ts";
+  import { LEGAL_VERSION, PRIVACY_URL, TERMS_URL, legalApi } from "#lib/legal.ts";
   import { openUrl } from "@tauri-apps/plugin-opener";
-  import Select from "$lib/components/Select.svelte";
-  import { chooseProfile, profileStore, refreshProfiles } from "$lib/profile.svelte";
-  import Icon from "$lib/components/Icon.svelte";
-  import type { IconName } from "$lib/icons";
+  import Select from "#lib/components/Select.svelte";
+  import { chooseProfile, profileStore, refreshProfiles } from "#lib/profile.svelte.ts";
+  import Icon from "#lib/components/Icon.svelte";
+  import type { IconName } from "#lib/icons.ts";
   import "../app.css";
 
   let { children } = $props();

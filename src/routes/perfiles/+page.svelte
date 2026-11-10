@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { chooseProfile, refreshProfiles } from "$lib/profile.svelte";
-  import PageHead from "$lib/components/PageHead.svelte";
-  import Select from "$lib/components/Select.svelte";
-  import { api, emptyCv, rememberedProfile, REMOTE_LABELS, type CvMaster, type Profile, type RemotePref } from "$lib/api";
-  import CvEditor from "$lib/components/CvEditor.svelte";
-  import Icon from "$lib/components/Icon.svelte";
+  import { chooseProfile, refreshProfiles } from "#lib/profile.svelte.ts";
+  import PageHead from "#lib/components/PageHead.svelte";
+  import Select from "#lib/components/Select.svelte";
+  import { api, emptyCv, rememberedProfile, REMOTE_LABELS, type CvMaster, type Profile, type RemotePref } from "#lib/api.ts";
+  import CvEditor from "#lib/components/CvEditor.svelte";
+  import Icon from "#lib/components/Icon.svelte";
 
   let profiles = $state<Profile[]>([]);
   let selectedId = $state<string | null>(null);

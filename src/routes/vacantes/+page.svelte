@@ -1,17 +1,17 @@
 <script lang="ts">
   import { untrack } from "svelte";
-  import { profileStore } from "$lib/profile.svelte";
-  import PageHead from "$lib/components/PageHead.svelte";
-  import Select from "$lib/components/Select.svelte";
+  import { profileStore } from "#lib/profile.svelte.ts";
+  import PageHead from "#lib/components/PageHead.svelte";
+  import Select from "#lib/components/Select.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { goto } from "$app/navigation";
   import {
     api, boardApi, jobsApi, rememberedProfile, rememberProfile, SOURCE_LABELS,
     type JobDetail, type JobRow, type Profile, type SyncSummary,
-  } from "$lib/api";
-  import Icon from "$lib/components/Icon.svelte";
-  import Meter from "$lib/components/Meter.svelte";
-  import { rise, stagger } from "$lib/motion";
+  } from "#lib/api.ts";
+  import Icon from "#lib/components/Icon.svelte";
+  import Meter from "#lib/components/Meter.svelte";
+  import { rise, stagger } from "#lib/motion.ts";
 
   let profiles = $state<Profile[]>([]);
   let profileId = $state<string | null>(null);

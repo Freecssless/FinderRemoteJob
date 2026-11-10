@@ -1,10 +1,10 @@
 <script lang="ts">
-  import Icon from "$lib/components/Icon.svelte";
-  import PageHead from "$lib/components/PageHead.svelte";
-  import Select from "$lib/components/Select.svelte";
+  import Icon from "#lib/components/Icon.svelte";
+  import PageHead from "#lib/components/PageHead.svelte";
+  import Select from "#lib/components/Select.svelte";
   import { openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
-  import { backupApi, jobsApi, settingsApi, weightsApi, type LlmSettings, type Weights, type WeightsStatus } from "$lib/api";
-  import Meter from "$lib/components/Meter.svelte";
+  import { backupApi, jobsApi, settingsApi, weightsApi, type LlmSettings, type Weights, type WeightsStatus } from "#lib/api.ts";
+  import Meter from "#lib/components/Meter.svelte";
 
   const NO_KEYS = { ANTHROPIC_API_KEY: "", FRJ_OPENAI_API_KEY: "" };
   /** Proveedores con la dirección y el modelo ya puestos (compatibles con la API de OpenAI). */
