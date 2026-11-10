@@ -497,7 +497,7 @@ El mismo componente en Vacantes, Optimizador (antes → después), Postular y Ta
 ### Movimiento
 - **Curvas:** `--ease` (estándar, `0.2, 0, 0, 1`), `--ease-decel` (enfatizada al llegar, `0.05, 0.7, 0.1, 1`) y `--ease-accel` (al salir, `0.3, 0, 0.8, 0.15`).
 - **Cambio de pantalla:** View Transitions. El contenido sale en 100ms y entra en 260ms subiendo 12px. La barra lateral queda quieta y solo su píldora viaja. Sin soporte del motor, el cambio es instantáneo.
-- **Entradas (`$lib/motion.ts`):**
+- **Entradas (`#lib/motion.ts`):**
   - `rise`: sube 10px y se funde en 260ms. Lo usan el detalle de la vacante (al cambiar de vacante), las tarjetas del kanban y la cola.
   - `stagger`: escalona las listas 28ms por elemento, con tope en el 8.º.
   - `sheet`: la ficha lateral entra desde la derecha.
