@@ -4,6 +4,7 @@
   import Select from "#lib/components/Select.svelte";
   import { api, emptyCv, rememberedProfile, REMOTE_LABELS, type CvMaster, type Profile, type RemotePref } from "#lib/api.ts";
   import CvEditor from "#lib/components/CvEditor.svelte";
+  import ImportProgress from "#lib/components/ImportProgress.svelte";
   import Icon from "#lib/components/Icon.svelte";
 
   let profiles = $state<Profile[]>([]);
@@ -160,15 +161,36 @@
     }
   }
 
+  // Lectura en curso: archivo y modo (para repetirla con la IA en la nube).
+  let reading = $state<{ file: File; cloud: boolean } | null>(null);
+  let pending: Promise<void> = Promise.resolve();
+
   async function importFile(e: Event & { currentTarget: HTMLInputElement }) {
     const file = e.currentTarget.files?.[0];
     e.currentTarget.value = "";
-    if (!file || !cv) return;
+    if (file && cv) await readCv(file, false);
+  }
+
+  async function useCloud() {
+    const file = reading?.file;
+    await api.cancelImport();
+    await pending;
+    if (file) await readCv(file, true);
+  }
+
+  function readCv(file: File, cloud: boolean) {
+    pending = readCvNow(file, cloud);
+    return pending;
+  }
+
+  async function readCvNow(file: File, cloud: boolean) {
     busy = "import";
+    reading = { file, cloud };
     error = "";
     message = "";
     try {
-      const preview = await api.importCv(file);
+      const preview = await api.importCv(file, cloud);
+      if (!preview) return; // cancelada
       cv = preview.cv;
       warnings = preview.warnings;
       sourceText = preview.source_text;
@@ -177,6 +199,7 @@
       fail(e);
     } finally {
       busy = "";
+      reading = null;
     }
   }
 
@@ -277,16 +300,14 @@
         <h2>CV maestro</h2>
         <label class="filebtn">
           <input type="file" accept=".pdf,.docx" onchange={importFile} disabled={busy !== ""} />
-          <span>{busy === "import" ? "Leyendo con IA local…" : "Importar PDF o DOCX"}</span>
+          <span>{busy === "import" ? "Leyendo tu CV…" : "Importar PDF o DOCX"}</span>
         </label>
         <button class="primary" onclick={saveCv} disabled={busy !== "" || !cvDirty}>
           {busy === "save" ? "Guardando…" : "Guardar CV"}
         </button>
         {#if cvDirty}<button onclick={discardCv} disabled={busy !== ""}>Descartar cambios</button>{/if}
       </div>
-      {#if busy === "import"}
-        <p class="muted small">Con un modelo local en CPU suele tardar menos de un minuto.</p>
-      {/if}
+      {#if reading}<ImportProgress cloud={reading.cloud} onusecloud={useCloud} />{/if}
       {#if warnings.length}
         <div class="notice" role="status">
           <strong>Revisa estos datos antes de guardar</strong>

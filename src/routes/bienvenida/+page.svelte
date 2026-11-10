@@ -1,6 +1,7 @@
 <script lang="ts">
   import { chooseProfile, refreshProfiles } from "#lib/profile.svelte.ts";
   import Select from "#lib/components/Select.svelte";
+  import ImportProgress from "#lib/components/ImportProgress.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { listen } from "@tauri-apps/api/event";
   import { PRIVACY_URL, TERMS_URL, legalApi } from "#lib/legal.ts";
@@ -83,16 +84,33 @@
     ollama = await api.ollamaStatus().catch(() => ({ running: false, model: "qwen3:8b", installed: false }));
   }
 
-  async function importFile(e: Event & { currentTarget: HTMLInputElement }) {
-    const file = e.currentTarget.files?.[0];
-    e.currentTarget.value = "";
-    if (!file) return;
-    await run(async () => {
-      const preview = await api.importCv(file);
+  // Lectura en curso: archivo y modo (para repetirla con la IA en la nube).
+  let reading = $state<{ file: File; cloud: boolean } | null>(null);
+  let pending: Promise<void> = Promise.resolve();
+
+  function readCv(file: File, cloud: boolean) {
+    reading = { file, cloud };
+    pending = run(async () => {
+      const preview = await api.importCv(file, cloud);
+      if (!preview) return; // cancelada
       cv = preview.cv;
       warnings = preview.warnings;
       sourceText = preview.source_text;
-    });
+    }).finally(() => (reading = null));
+    return pending;
+  }
+
+  async function importFile(e: Event & { currentTarget: HTMLInputElement }) {
+    const file = e.currentTarget.files?.[0];
+    e.currentTarget.value = "";
+    if (file) await readCv(file, false);
+  }
+
+  async function useCloud() {
+    const file = reading?.file;
+    await api.cancelImport();
+    await pending;
+    if (file) await readCv(file, true);
   }
 
   const saveCv = () =>
@@ -206,7 +224,7 @@
           <input type="file" accept=".pdf,.docx" onchange={importFile} disabled={busy} />
           <span>{busy ? "Leyendo tu CV…" : "Elegir archivo"}</span>
         </label>
-        {#if busy}<p class="muted small">Suele tardar menos de un minuto. No cierres la app.</p>{/if}
+        {#if reading}<ImportProgress cloud={reading.cloud} onusecloud={useCloud} />{/if}
         <div class="row">
           <button onclick={() => (step = 2)} disabled={busy}>Saltar: lo haré después en Perfiles</button>
         </div>

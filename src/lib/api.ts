@@ -96,14 +96,22 @@ export const api = {
   getCv: (profileId: string) => invoke<CvMaster | null>("get_cv", { profileId }),
   saveCv: (profileId: string, cv: CvMaster, sourceText: string | null) =>
     invoke<void>("save_cv", { profileId, cv, sourceText }),
-  importCv: async (file: File) => {
+  /** `null` si el usuario canceló la lectura. `cloud`: leerlo con la IA en la nube de Ajustes. */
+  importCv: async (file: File, cloud = false) => {
     // El backend también lo valida; aquí evita congelar la ventana copiando un archivo enorme.
     if (file.size > 20 * 1024 * 1024) throw "El archivo pesa más de 20 MB: no parece un CV.";
-    return invoke<ImportPreview>("import_cv", {
-      fileName: file.name,
-      bytes: Array.from(new Uint8Array(await file.arrayBuffer())),
-    });
+    try {
+      return await invoke<ImportPreview>("import_cv", {
+        fileName: file.name,
+        bytes: Array.from(new Uint8Array(await file.arrayBuffer())),
+        cloud,
+      });
+    } catch (e) {
+      if (e === "Lectura cancelada.") return null; // IMPORT_CANCELLED en src-tauri/src/lib.rs
+      throw e;
+    }
   },
+  cancelImport: () => invoke<void>("cancel_import"),
 };
 
 // ---------------------------------------------------------------------------

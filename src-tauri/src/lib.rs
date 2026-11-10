@@ -17,7 +17,7 @@ use finder_infra::core::model::{CvMaster, Profile, RemotePref};
 use finder_infra::cvfile::{CvFileKind, extract_text};
 use finder_infra::db::Db;
 use finder_infra::llm::tasks::{self as ai_tasks, TaskError};
-use finder_infra::llm::{LlmClient, LlmConfig};
+use finder_infra::llm::{Backend, LlmClient, LlmConfig};
 use serde::Serialize;
 use tauri::{Manager, State};
 
@@ -42,6 +42,8 @@ pub(crate) struct AppState {
     sessions: std::sync::Mutex<std::collections::HashMap<String, optimizer::Session>>,
     /// Pesos de la compatibilidad (los normales salvo que el usuario aplique los sugeridos).
     weights: std::sync::RwLock<finder_infra::core::matching::Weights>,
+    /// Avisa a la lectura del CV en curso que el usuario la canceló.
+    cancel_import: tokio::sync::Notify,
     info: AppInfo,
 }
 
@@ -93,7 +95,7 @@ struct OllamaStatus {
 
 #[tauri::command]
 async fn ollama_status(state: State<'_, AppState>) -> CmdResult<OllamaStatus> {
-    use finder_infra::llm::{Backend, ollama};
+    use finder_infra::llm::ollama;
     let local = state.llm()?.local;
     let Backend::Ollama { base_url } = &local.backend else {
         // La IA local apunta a otro servidor: no hay nada de Ollama que comprobar.
@@ -115,7 +117,7 @@ async fn ollama_status(state: State<'_, AppState>) -> CmdResult<OllamaStatus> {
 /// la interfaz como evento `ollama-pull` con (nombre, bajado, total).
 #[tauri::command]
 async fn pull_model(app: tauri::AppHandle, state: State<'_, AppState>) -> CmdResult<()> {
-    use finder_infra::llm::{Backend, ollama};
+    use finder_infra::llm::ollama;
     use tauri::Emitter;
     let config = state.llm()?;
     let Backend::Ollama { base_url } = &config.local.backend else {
@@ -305,17 +307,34 @@ async fn import_cv(
     state: State<'_, AppState>,
     file_name: String,
     bytes: Vec<u8>,
+    cloud: bool,
 ) -> CmdResult<ImportPreview> {
+    // Se registra antes de empezar para no perder un «Cancelar» pulsado muy pronto.
+    let cancelled = state.cancel_import.notified();
     let kind = CvFileKind::from_name(&file_name)
         .ok_or("Solo se pueden importar archivos .pdf o .docx.")?;
     check_upload(&bytes, kind)?;
     let config = state.llm()?;
-    let client = LlmClient::new(config.local.clone()).map_err(err)?;
+    // Nube: la IA redactora de Ajustes, para equipos donde la local es muy lenta.
+    let endpoint = if cloud {
+        if matches!(config.writer.backend, Backend::Ollama { .. }) {
+            return Err("No hay una IA en la nube configurada: elígela en Ajustes.".into());
+        }
+        &config.writer
+    } else {
+        &config.local
+    };
+    let client = LlmClient::new(endpoint.clone()).map_err(err)?;
     let text = extract_text(&bytes, kind).map_err(err)?;
+    // Al cancelar se suelta la petición: Ollama deja de generar cuando se cierra la conexión.
+    let result = tokio::select! {
+        r = ai_tasks::import_text(&client, &state.dict, text.clone()) => r,
+        () = cancelled => return Err(IMPORT_CANCELLED.into()),
+    };
     // Si la IA local no responde, se importa lo que se puede leer sin ella (con un aviso).
-    let imported = match ai_tasks::import_text(&client, &state.dict, text.clone()).await {
+    let imported = match result {
         Ok(i) => i,
-        Err(TaskError::Llm(_)) => ai_tasks::import_without_ai(&state.dict, text),
+        Err(TaskError::Llm(_)) if !cloud => ai_tasks::import_without_ai(&state.dict, text),
         Err(e) => return Err(err(e)),
     };
     Ok(ImportPreview {
@@ -323,6 +342,14 @@ async fn import_cv(
         warnings: imported.result.warnings,
         source_text: imported.source_text,
     })
+}
+
+/// El frontend lo reconoce para no mostrarlo como error.
+const IMPORT_CANCELLED: &str = "Lectura cancelada.";
+
+#[tauri::command]
+fn cancel_import(state: State<'_, AppState>) {
+    state.cancel_import.notify_waiters();
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -392,6 +419,7 @@ pub fn run() {
                 data_dir,
                 sessions: Default::default(),
                 weights: std::sync::RwLock::new(weights),
+                cancel_import: Default::default(),
                 info,
             });
             reminders::spawn_checker(app.handle().clone());
@@ -415,6 +443,7 @@ pub fn run() {
             get_cv,
             save_cv,
             import_cv,
+            cancel_import,
             jobs::list_jobs,
             jobs::get_job,
             jobs::analyze_job,
