@@ -1,6 +1,6 @@
 {
   "name": "finder-remote-job",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "FinderRemoteJob: buscador de empleo remoto con optimizador de CV",
   "type": "module",
   "imports": {
