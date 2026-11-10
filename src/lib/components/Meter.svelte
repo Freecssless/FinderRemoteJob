@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Tween } from "svelte/motion";
-  import { scoreClass } from "$lib/api";
+  import { scoreClass } from "#lib/api.ts";
 
   /**
    * Medidor de compatibilidad: píldora tonal con el puntaje y barra lineal (M3).

@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { chooseProfile, refreshProfiles } from "$lib/profile.svelte";
-  import Select from "$lib/components/Select.svelte";
+  import { chooseProfile, refreshProfiles } from "#lib/profile.svelte.ts";
+  import Select from "#lib/components/Select.svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { listen } from "@tauri-apps/api/event";
-  import { PRIVACY_URL, TERMS_URL, legalApi } from "$lib/legal";
+  import { PRIVACY_URL, TERMS_URL, legalApi } from "#lib/legal.ts";
   import { goto } from "$app/navigation";
-  import { api, jobsApi, REMOTE_LABELS, type CvMaster, type Profile, type RemotePref } from "$lib/api";
+  import { api, jobsApi, REMOTE_LABELS, type CvMaster, type Profile, type RemotePref } from "#lib/api.ts";
 
   const STEPS = ["Tu perfil", "Tu CV", "Qué puestos buscas", "Buscar vacantes"];
   let step = $state(0);

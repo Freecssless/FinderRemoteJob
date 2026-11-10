@@ -1,17 +1,17 @@
 <script lang="ts">
   import { untrack } from "svelte";
-  import PageHead from "$lib/components/PageHead.svelte";
-  import Icon from "$lib/components/Icon.svelte";
-  import Meter from "$lib/components/Meter.svelte";
-  import CvPaper from "$lib/components/CvPaper.svelte";
-  import { rise, stagger } from "$lib/motion";
+  import PageHead from "#lib/components/PageHead.svelte";
+  import Icon from "#lib/components/Icon.svelte";
+  import Meter from "#lib/components/Meter.svelte";
+  import CvPaper from "#lib/components/CvPaper.svelte";
+  import { rise, stagger } from "#lib/motion.ts";
   import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
   import { page } from "$app/state";
-  import { profileStore } from "$lib/profile.svelte";
+  import { profileStore } from "#lib/profile.svelte.ts";
   import {
     jobsApi, optimizerApi, TEMPLATES, TEMPLATE_LABELS,
     type Choices, type CvDocument, type Template, type JobDetail, type OptimizerView, type SavedCv, type SavedEntry,
-  } from "$lib/api";
+  } from "#lib/api.ts";
 
   const jobId = $derived(page.url.searchParams.get("job"));
   const profile = $derived(profileStore.list.find((p) => p.id === profileStore.id) ?? null);

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { CvDocument } from "$lib/api";
+  import type { CvDocument } from "#lib/api.ts";
 
   /** Hoja del CV como se imprime. Las medidas van en `cqi`: la misma hoja sirve de miniatura y de vista grande. */
   let { doc, label = "Vista previa del CV" }: { doc: CvDocument; label?: string } = $props();

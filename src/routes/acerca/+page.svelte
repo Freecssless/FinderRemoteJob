@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
-  import PageHead from "$lib/components/PageHead.svelte";
-  import { LICENSES_URL, PRIVACY_URL, TERMS_URL, issueUrl, legalApi, type ErrorReport } from "$lib/legal";
+  import PageHead from "#lib/components/PageHead.svelte";
+  import { LICENSES_URL, PRIVACY_URL, TERMS_URL, issueUrl, legalApi, type ErrorReport } from "#lib/legal.ts";
 
   let report = $state<ErrorReport | null>(null);
   let what = $state("");

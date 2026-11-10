@@ -1,11 +1,11 @@
 <script lang="ts">
   import { untrack } from "svelte";
-  import { profileStore } from "$lib/profile.svelte";
-  import PageHead from "$lib/components/PageHead.svelte";
-  import Select from "$lib/components/Select.svelte";
-  import Icon from "$lib/components/Icon.svelte";
-  import Meter from "$lib/components/Meter.svelte";
-  import { receive, rise, send, sheet } from "$lib/motion";
+  import { profileStore } from "#lib/profile.svelte.ts";
+  import PageHead from "#lib/components/PageHead.svelte";
+  import Select from "#lib/components/Select.svelte";
+  import Icon from "#lib/components/Icon.svelte";
+  import Meter from "#lib/components/Meter.svelte";
+  import { receive, rise, send, sheet } from "#lib/motion.ts";
   import { flip } from "svelte/animate";
   import { openPath, openUrl } from "@tauri-apps/plugin-opener";
   import { goto } from "$app/navigation";
@@ -13,7 +13,7 @@
     api, boardApi, rememberedProfile, statsApi, rememberProfile, REMINDER_LABELS, SOURCE_LABELS, STATUSES, TEMPLATE_LABELS,
     STATUS_LABELS, type ApplicationDetail, type Stats, type BoardRow, type Profile, type Reminder, type ReminderDays,
     type Status,
-  } from "$lib/api";
+  } from "#lib/api.ts";
 
   let profiles = $state<Profile[]>([]);
   let profileId = $state<string | null>(null);

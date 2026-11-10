@@ -1,16 +1,16 @@
 <script lang="ts">
   import { untrack } from "svelte";
-  import { profileStore } from "$lib/profile.svelte";
-  import PageHead from "$lib/components/PageHead.svelte";
-  import Icon from "$lib/components/Icon.svelte";
-  import Meter from "$lib/components/Meter.svelte";
-  import { rise, stagger } from "$lib/motion";
+  import { profileStore } from "#lib/profile.svelte.ts";
+  import PageHead from "#lib/components/PageHead.svelte";
+  import Icon from "#lib/components/Icon.svelte";
+  import Meter from "#lib/components/Meter.svelte";
+  import { rise, stagger } from "#lib/motion.ts";
   import { openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
   import { goto } from "$app/navigation";
   import {
     api, boardApi, queueApi, rememberedProfile, rememberProfile, STATUS_LABELS,
     type Faq, type FaqView, type Profile, type QueueItem,
-  } from "$lib/api";
+  } from "#lib/api.ts";
 
   let profiles = $state<Profile[]>([]);
   let profileId = $state<string | null>(null);

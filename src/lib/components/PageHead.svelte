@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import type { IconName } from "$lib/icons";
+  import type { IconName } from "#lib/icons.ts";
   import Icon from "./Icon.svelte";
 
   /** Cabecera de pantalla: icono con el color de la sección, título, para qué sirve y acciones. */

@@ -1,5 +1,5 @@
 import { redirect } from "@sveltejs/kit";
-import { api } from "$lib/api";
+import { api } from "#lib/api.ts";
 
 // Sin perfiles es el primer uso: va al asistente de bienvenida.
 export async function load() {

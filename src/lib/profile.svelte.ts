@@ -1,4 +1,4 @@
-import { api, rememberedProfile, rememberProfile, type Profile } from "$lib/api";
+import { api, rememberedProfile, rememberProfile, type Profile } from "#lib/api.ts";
 
 /** Perfil activo de toda la app: se elige en el menú lateral (o en las pestañas de Perfiles). */
 export const profileStore = $state({ list: [] as Profile[], id: null as string | null, ready: false });
