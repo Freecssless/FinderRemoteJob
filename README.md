@@ -116,13 +116,11 @@
 
 ```mermaid
 flowchart LR
-    A["📄 Tu CV<br/>(PDF o DOCX)"] --> B["👤 Perfil<br/>CV maestro"]
-    C["🔎 Portales de<br/>empleo remoto"] --> D["📋 Vacantes<br/>con puntaje"]
-    B --> D
+    A["📄 Tu CV"] --> D["📋 Vacantes<br/>con puntaje"]
+    C["🔎 Portales"] --> D
     D --> E["✍️ Optimizador<br/>+ guardián"]
     E --> F["🖨️ CV adaptado<br/>PDF / DOCX"]
-    F --> G["✅ Tú postulas"]
-    G --> H["📊 Tablero y<br/>recordatorios"]
+    F --> H["✅ Postulas y lo<br/>sigues en el Tablero"]
 ```
 
 ## Instalación
