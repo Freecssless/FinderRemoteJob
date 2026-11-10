@@ -413,3 +413,7 @@
 - Ajustes, nuevo diseño: «¿Qué IA adapta tus CV?» con tres opciones (En tu computadora, Claude, Gemini o ChatGPT). Gemini y ChatGPT traen la dirección y el modelo ya puestos (`gemini-3.8-flash`, `gpt-6.1-terra`, según su documentación de noviembre de 2026); solo se pega la clave, con el enlace para crearla. Si falta la clave, se avisa antes de guardar.
 - Ollama, modelos, esfuerzo, proveedor compatible propio y «Empresas que sigues» pasan a «Opciones avanzadas» (cerrado).
 - Textos en lenguaje simple: «En uso: Claude · …»; la barra lateral solo dice qué IA se usa, o «La IA no está lista: revisa Ajustes».
+
+### Reintentos de la IA y nivel de idioma
+- La IA se reintenta sola (hasta 3 intentos, con pausas de 2 y 8 s) cuando responde límite de uso (429), sobrecarga (529) o error del servidor (5xx). Los errores de conexión no se repiten: si Ollama no está abierto, el aviso sale enseguida.
+- Compatibilidad: el nivel de idioma ahora cuenta. Se lee el nivel que pide la vacante junto al idioma («inglés avanzado», «C1», «fluent English», «nativo») y se compara con el del CV. Con menos nivel, el idioma vale en proporción (B2 frente a C1 = 4/5) y aparece en «Requeridos que no están en tu CV» como «Inglés C1 (tu CV dice B2)». Si alguno de los dos no dice nivel, cuenta completo, como antes.

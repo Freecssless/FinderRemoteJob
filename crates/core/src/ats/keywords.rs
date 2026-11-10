@@ -89,7 +89,7 @@ fn is_word_char(c: char) -> bool {
 }
 
 /// ¿`start..end` está delimitado por bordes de palabra? Evita que "react" coincida dentro de "reactivo".
-fn at_word_boundary(text: &str, start: usize, end: usize) -> bool {
+pub(crate) fn at_word_boundary(text: &str, start: usize, end: usize) -> bool {
     let before_ok = text[..start]
         .chars()
         .next_back()
