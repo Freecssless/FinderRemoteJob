@@ -38,6 +38,15 @@
   Todo pasa en tu computadora. <strong>Tú decides y tú le das «Enviar».</strong>
 </p>
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/capturas/vacantes-oscuro.png">
+    <img src="docs/capturas/vacantes-claro.png" alt="Pantalla de Vacantes: lista de ofertas remotas con su puntaje de compatibilidad y, a la derecha, el desglose de por qué la primera encaja en un 88" width="800">
+  </picture>
+</p>
+
+<p align="center"><sub>Vacantes ordenadas por qué tanto encajan contigo. Los datos de las capturas son ficticios.</sub></p>
+
 <br>
 
 ## Qué hace por ti
@@ -82,6 +91,26 @@
 | **Tema claro y oscuro** | Sigue el de tu sistema. Se usa con teclado y tiene una tipografía pensada para leer fácil. |
 
 </details>
+
+## Así se ve
+
+**Optimizador:** tu puntaje ATS antes y después, lo que pide la vacante y cómo quedará tu CV.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/capturas/optimizador-oscuro.png">
+    <img src="docs/capturas/optimizador-claro.png" alt="Optimizador: el CV pasa de 62 a 86 sobre 100 en el filtro ATS, con las propuestas a revisar y la vista previa del CV en plantilla Clásica" width="800">
+  </picture>
+</p>
+
+**Tablero:** cada postulación en su columna, con recordatorios y tu tasa de respuesta.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/capturas/tablero-oscuro.png">
+    <img src="docs/capturas/tablero-claro.png" alt="Tablero Kanban con postulaciones repartidas en columnas por estado, un recordatorio de seguimiento y el resumen: 24 postuladas, 5 entrevistas, 1 oferta" width="800">
+  </picture>
+</p>
 
 ## Cómo funciona
 
