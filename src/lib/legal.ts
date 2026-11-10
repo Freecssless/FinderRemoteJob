@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 /** Repositorio público: reportes, política completa y términos. Cambiar aquí si se mueve. */
-export const REPO_URL = "https://github.com/freecss/FinderRemoteJob";
+export const REPO_URL = "https://github.com/Freecssless/FinderRemoteJob";
 /** Sube cuando cambien la política de privacidad o los términos (se vuelve a pedir aceptarlos). */
 export const LEGAL_VERSION = "2026-11-08";
 export const PRIVACY_URL = `${REPO_URL}/blob/main/PRIVACIDAD.md`;

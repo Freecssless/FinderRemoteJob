@@ -71,7 +71,7 @@ vacantes de los portales. Aun así, puedes reportarnos:
 - **un tema de privacidad o de derechos de autor**.
 
 Hazlo desde la app («Privacidad y ayuda» → «Reportar un problema») o en
-<https://github.com/freecss/FinderRemoteJob/issues>. Los reportes son públicos: no incluyas tu CV
+<https://github.com/Freecssless/FinderRemoteJob/issues>. Los reportes son públicos: no incluyas tu CV
 ni datos personales. Revisamos los reportes cuando podemos; al ser un proyecto sin fines de lucro, no
 hay un plazo de respuesta garantizado.
 
@@ -100,4 +100,4 @@ derechos que te otorgue la ley de tu país de residencia como persona usuaria.
 
 ## 11. Contacto
 
-<https://github.com/freecss/FinderRemoteJob/issues>
+<https://github.com/Freecssless/FinderRemoteJob/issues>

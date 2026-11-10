@@ -103,5 +103,5 @@ que la revises y la aceptes de nuevo.
 ## 9. Contacto
 
 Para dudas, reportes o solicitudes sobre privacidad, abre un reporte en
-<https://github.com/freecss/FinderRemoteJob/issues> (o desde la app: «Privacidad y ayuda» →
+<https://github.com/Freecssless/FinderRemoteJob/issues> (o desde la app: «Privacidad y ayuda» →
 «Reportar contenido o privacidad»). No incluyas tu CV ni datos personales en el reporte: es público.
