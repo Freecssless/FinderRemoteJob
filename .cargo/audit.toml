@@ -11,4 +11,9 @@ ignore = [
     # fija y no carga bibliografías ni XML: no hay forma de que le llegue un XML del usuario.
     "RUSTSEC-2026-0194",
     "RUSTSEC-2026-0195",
+    # SQLite < 3.54 (libsqlite3-sys 0.37, fijado por sqlx 0.9.0, que exige < 0.38): solo afecta al
+    # abrir una base con un `-wal` que escribió un tercero. Restaurar un respaldo coloca solo
+    # finder.db y cvs (backup.rs: apply_pending) y descarta cualquier `-wal` del .zip; la carpeta
+    # de datos es solo del usuario. Quitar en cuanto sqlx acepte libsqlite3-sys >= 0.39.
+    "RUSTSEC-2026-0459",
 ]
