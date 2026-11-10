@@ -309,16 +309,33 @@ fn secure_url(url: String) -> Result<String> {
 pub(crate) async fn api_error(resp: reqwest::Response) -> LlmError {
     let status = resp.status();
     let body = resp.text().await.unwrap_or_default();
-    let message = serde_json::from_str::<Value>(&body)
+    LlmError::Api {
+        status,
+        message: error_message(status, &body),
+    }
+}
+
+/// Texto legible del cuerpo de un error, con una explicación en español si es un límite de uso o
+/// una saturación (el proveedor la manda en inglés). Gemini envuelve el error en una lista.
+fn error_message(status: StatusCode, body: &str) -> String {
+    let detail = serde_json::from_str::<Value>(body)
         .ok()
         .and_then(|v| {
+            let v = v.get(0).unwrap_or(&v);
             v.pointer("/error/message")
                 .or_else(|| v.pointer("/error"))
                 .and_then(Value::as_str)
                 .map(String::from)
         })
         .unwrap_or_else(|| body.chars().take(300).collect());
-    LlmError::Api { status, message }
+    let hint = match status.as_u16() {
+        429 => "llegaste al límite de uso de tu clave; espera unos minutos. ",
+        503 | 529 => {
+            "el servicio está saturado; intenta en unos minutos o usa otra IA en Ajustes. "
+        }
+        _ => "",
+    };
+    format!("{hint}{detail}")
 }
 
 #[cfg(test)]
@@ -447,6 +464,24 @@ mod tests {
         })
         .await;
         (r, n.get())
+    }
+
+    #[test]
+    fn mensaje_de_error_legible() {
+        let gemini = r#"[{"error":{"code":503,"message":"This model is currently experiencing high demand.","status":"UNAVAILABLE"}}]"#;
+        assert_eq!(
+            error_message(StatusCode::SERVICE_UNAVAILABLE, gemini),
+            "el servicio está saturado; intenta en unos minutos o usa otra IA en Ajustes. This model is currently experiencing high demand."
+        );
+        let openai = r#"{"error":{"message":"Invalid API key"}}"#;
+        assert_eq!(
+            error_message(StatusCode::UNAUTHORIZED, openai),
+            "Invalid API key"
+        );
+        assert_eq!(
+            error_message(StatusCode::BAD_GATEWAY, "Bad gateway"),
+            "Bad gateway"
+        );
     }
 
     #[tokio::test]
