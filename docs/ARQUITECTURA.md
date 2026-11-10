@@ -424,7 +424,7 @@ GROUP BY grupo ORDER BY tasa_respuesta DESC;
 - [x] Embeddings (similitud semántica con `bge-m3`). *La pantalla de estadísticas pasó a un resumen en el Tablero.*
 - [x] Reajuste de pesos con tus datos: Ajustes → «Compatibilidad a tu medida» sugiere pesos con 30 postulaciones con resultado; el usuario decide si aplicarlos.
 - [x] Respaldo y restauración (base y carpeta de CVs en un `.zip`) e instaladores de Linux (`.deb`, `.rpm`, AppImage).
-- [ ] Instalador de Windows (`.msi` y NSIS): el flujo de GitHub Actions está listo, pero falta subir el repositorio. Los instaladores no van firmados.
+- [x] Instalador de Windows (`.msi` y NSIS), generado en GitHub Actions al subir una etiqueta `v*`. Los instaladores no van firmados.
 - [x] Interfaz Material 3, asistente de bienvenida, perfil activo en el menú y avisos de navegación (no estaban en el plan original).
 
 ### Fase 3: móvil (5–7 semanas)
