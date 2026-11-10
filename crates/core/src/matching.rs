@@ -15,7 +15,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::ats::keywords::{SkillDict, contains_word, normalize};
+use crate::ats::keywords::{SkillDict, at_word_boundary, contains_word, normalize};
 use crate::ats::score::{Evidence, title_overlap};
 use crate::model::{CvMaster, Job, JobRequirements, Profile, RemotePref, TermKind};
 
@@ -193,27 +193,42 @@ pub fn match_score(dict: &SkillDict, input: &MatchInput) -> MatchReport {
         MAX_REGION / 2.0
     };
 
-    let wanted_langs: Vec<&str> = req
+    let mut wanted_langs: Vec<&str> = req
         .terms
         .iter()
         .filter(|t| t.kind == TermKind::Language && t.required)
         .map(|t| t.canonical.as_str())
         .chain(req.languages.iter().map(String::as_str))
         .collect();
-    let missing_langs: Vec<&str> = wanted_langs
-        .iter()
-        .copied()
-        .filter(|l| !ev.has_name(dict, l))
-        .collect();
+    wanted_langs.sort_unstable();
+    wanted_langs.dedup();
+    // Cada idioma vale 1; con menos nivel del pedido, la proporción (B2 frente a C1 = 4/5).
+    let mut lang_credit = 0.0f32;
+    for l in &wanted_langs {
+        if !ev.has_name(dict, l) {
+            blockers.push(format!("Piden {l}, que no aparece en tu CV."));
+            continue;
+        }
+        match (
+            job_language_level(dict, &job.description, l),
+            cv_language_level(dict, master, l),
+        ) {
+            (Some(want), Some(have)) if have < want => {
+                lang_credit += f32::from(have) / f32::from(want);
+                missing_required.push(format!(
+                    "{l} {} (tu CV dice {})",
+                    CEFR[usize::from(want)],
+                    CEFR[usize::from(have)]
+                ));
+            }
+            _ => lang_credit += 1.0,
+        }
+    }
     let languages = if wanted_langs.is_empty() {
         MAX_LANGUAGES
     } else {
-        MAX_LANGUAGES * (wanted_langs.len() - missing_langs.len()) as f32
-            / wanted_langs.len() as f32
+        MAX_LANGUAGES * lang_credit / wanted_langs.len() as f32
     };
-    for l in &missing_langs {
-        blockers.push(format!("Piden {l}, que no aparece en tu CV."));
-    }
     let logistics = remote + region + languages;
 
     // --- Bloqueantes por texto del anuncio + los que haya detectado el LLM.
@@ -569,6 +584,95 @@ fn remote_score(pref: RemotePref, mode: WorkMode) -> f32 {
     MAX_REMOTE * fraction
 }
 
+/// Palabras de nivel de idioma (normalizadas) → nivel MCER: 1 = A1 … 6 = C2 o nativo.
+const LANG_LEVELS: &[(&str, u8)] = &[
+    ("a1", 1),
+    ("basico", 1),
+    ("basica", 1),
+    ("basic", 1),
+    ("beginner", 1),
+    ("principiante", 1),
+    ("a2", 2),
+    ("elemental", 2),
+    ("elementary", 2),
+    ("b1", 3),
+    ("intermedio", 3),
+    ("intermedia", 3),
+    ("intermediate", 3),
+    ("b2", 4),
+    ("intermedio alto", 4),
+    ("intermedia alta", 4),
+    ("upper intermediate", 4),
+    ("upper-intermediate", 4),
+    ("conversacional", 4),
+    ("conversational", 4),
+    ("c1", 5),
+    ("avanzado", 5),
+    ("avanzada", 5),
+    ("advanced", 5),
+    ("fluent", 5),
+    ("fluency", 5),
+    ("fluido", 5),
+    ("fluida", 5),
+    ("fluidez", 5),
+    ("c2", 6),
+    ("nativo", 6),
+    ("nativa", 6),
+    ("native", 6),
+    ("bilingue", 6),
+    ("bilingual", 6),
+    ("lengua materna", 6),
+    ("mother tongue", 6),
+];
+
+/// Nombre de cada nivel de [`LANG_LEVELS`] para mostrarlo.
+const CEFR: [&str; 7] = ["", "A1", "A2", "B1", "B2", "C1", "C2"];
+
+/// Nivel que pide la vacante para `lang`: en cada mención, la palabra de nivel más cercana dentro
+/// de la misma frase (corta en `,` `.` `;` y saltos de línea), así «inglés avanzado y portugués
+/// básico» da C1 para el inglés y A1 para el portugués. `None` si el anuncio no dice nivel.
+fn job_language_level(dict: &SkillDict, description: &str, lang: &str) -> Option<u8> {
+    let idx = dict.lookup(lang)?;
+    let text = normalize(description);
+    let cuts = [',', '.', ';', '\n'];
+    dict.find(&text)
+        .iter()
+        .filter(|h| h.skill == idx)
+        .filter_map(|h| {
+            let (s, e) = (h.start, h.start + h.surface.len());
+            let from = text[..s].rfind(cuts).map_or(0, |i| i + 1);
+            let to = text[e..].find(cuts).map_or(text.len(), |i| e + i);
+            LANG_LEVELS
+                .iter()
+                .flat_map(|&(w, level)| {
+                    text[from..to]
+                        .match_indices(w)
+                        .map(move |(i, _)| (from + i, from + i + w.len(), level))
+                })
+                .filter(|&(a, b, _)| at_word_boundary(&text, a, b) && (b <= s || a >= e))
+                // La más cercana; si empatan («intermedio» e «intermedio alto»), la más alta.
+                .min_by_key(|&(a, b, level)| (if b <= s { s - b } else { a - e }, u8::MAX - level))
+                .map(|(_, _, level)| level)
+        })
+        .max()
+}
+
+/// Nivel de `lang` según la sección de idiomas del CV («B2», «Avanzado», «Nativo»…).
+fn cv_language_level(dict: &SkillDict, master: &CvMaster, lang: &str) -> Option<u8> {
+    let idx = dict.lookup(lang);
+    let lang_norm = normalize(lang);
+    let entry = master.languages.iter().find(|l| {
+        contains_word(&normalize(&l.name), &lang_norm)
+            || dict.find(&l.name).iter().any(|h| Some(h.skill) == idx)
+    })?;
+    let text = normalize(&format!("{} {}", entry.name, entry.level));
+    LANG_LEVELS
+        .iter()
+        .filter(|(w, _)| contains_word(&text, w))
+        .map(|&(_, level)| level)
+        .max()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -912,5 +1016,52 @@ mod tests {
         assert_eq!(rescale_cosine(0.1), 0.0);
         assert_eq!(rescale_cosine(0.55), 0.5);
         assert_eq!(rescale_cosine(0.95), 1.0);
+    }
+
+    #[test]
+    fn nivel_de_idioma_menor_al_pedido_cuenta_en_proporcion() -> R {
+        let (p, m) = (profile(), master()?); // el CV dice «Inglés: B2»
+        let con = |d: &str| evaluate(&job("Editor de video remoto", d), &p, &m, None);
+        let pide_c1 = con("Requisitos: Premiere, inglés avanzado (C1).")?;
+        assert!(pide_c1.blockers.is_empty());
+        assert!(
+            pide_c1
+                .missing_required
+                .contains(&"Inglés C1 (tu CV dice B2)".to_string())
+        );
+        let pide_b2 = con("Requisitos: Premiere, inglés intermedio alto.")?;
+        let sin_nivel = con("Requisitos: Premiere, inglés.")?;
+        assert!(
+            pide_b2
+                .missing_required
+                .iter()
+                .all(|s| !s.starts_with("Inglés"))
+        );
+        assert_eq!(pide_b2.breakdown.logistics, sin_nivel.breakdown.logistics);
+        // 4/5 de los puntos de idioma.
+        let diff = sin_nivel.breakdown.logistics - pide_c1.breakdown.logistics;
+        assert!((diff - MAX_LANGUAGES / 5.0).abs() < 1e-4, "diff = {diff}");
+        Ok(())
+    }
+
+    #[test]
+    fn nivel_de_idioma_toma_la_palabra_mas_cercana() -> R {
+        let dict = SkillDict::builtin()?;
+        let nivel = |d: &str, l: &str| job_language_level(&dict, d, l);
+        assert_eq!(
+            nivel("Inglés avanzado y portugués básico.", "Inglés"),
+            Some(5)
+        );
+        assert_eq!(
+            nivel("Inglés avanzado y portugués básico.", "Portugués"),
+            Some(1)
+        );
+        assert_eq!(nivel("Fluent English and basic Spanish", "Inglés"), Some(5));
+        assert_eq!(nivel("Upper-intermediate English", "Inglés"), Some(4));
+        assert_eq!(nivel("Inglés: intermedio alto", "Inglés"), Some(4));
+        // «avanzado» es de After Effects, en otra parte de la lista.
+        assert_eq!(nivel("After Effects avanzado, inglés", "Inglés"), None);
+        assert_eq!(nivel("Se valora inglés", "Inglés"), None);
+        Ok(())
     }
 }

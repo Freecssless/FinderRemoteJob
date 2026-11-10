@@ -47,7 +47,7 @@ pub enum LlmError {
 
 impl LlmError {
     /// ¿Vale la pena reintentar más tarde? (límite de uso, sobrecarga o red)
-    /// shortcut: no hay reintento automático; la interfaz ofrece "Reintentar". Agregar backoff si molesta.
+    /// Los errores de la API (429, 529, 5xx) ya se reintentan solos: ver [`with_retry`].
     pub fn is_retryable(&self) -> bool {
         match self {
             LlmError::Http(_) => true,
@@ -60,6 +60,26 @@ impl LlmError {
 }
 
 pub type Result<T> = std::result::Result<T, LlmError>;
+
+/// Pausas antes de cada reintento automático: 3 intentos en total.
+/// shortcut: no se lee la cabecera `retry-after`; leerla si los límites de uso siguen fallando.
+const RETRY_DELAYS: [Duration; 2] = [Duration::from_secs(2), Duration::from_secs(8)];
+
+/// Repite `call` tras cada pausa de `delays` mientras la API responda límite de uso, sobrecarga o
+/// error del servidor. Los errores de red no se repiten: si Ollama no corre, insistir no sirve.
+async fn with_retry<T, F, Fut>(delays: &[Duration], mut call: F) -> Result<T>
+where
+    F: FnMut() -> Fut,
+    Fut: std::future::Future<Output = Result<T>>,
+{
+    for delay in delays {
+        match call().await {
+            Err(e @ LlmError::Api { .. }) if e.is_retryable() => tokio::time::sleep(*delay).await,
+            done => return done,
+        }
+    }
+    call().await
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Backend {
@@ -179,6 +199,13 @@ impl LlmClient {
 
     /// Pide una respuesta JSON que cumpla `schema` (JSON Schema con `additionalProperties: false`).
     pub async fn complete_json(&self, system: &str, user: &str, schema: &Value) -> Result<Value> {
+        with_retry(&RETRY_DELAYS, || {
+            self.complete_json_once(system, user, schema)
+        })
+        .await
+    }
+
+    async fn complete_json_once(&self, system: &str, user: &str, schema: &Value) -> Result<Value> {
         match &self.endpoint.backend {
             Backend::Ollama { base_url } => {
                 ollama::complete_json(
@@ -220,6 +247,10 @@ impl LlmClient {
 
     /// Embeddings de cada texto, con `model` (solo backends compatibles con OpenAI, como Ollama).
     pub async fn embed(&self, model: &str, texts: &[String]) -> Result<Vec<Vec<f32>>> {
+        with_retry(&RETRY_DELAYS, || self.embed_once(model, texts)).await
+    }
+
+    async fn embed_once(&self, model: &str, texts: &[String]) -> Result<Vec<Vec<f32>>> {
         match &self.endpoint.backend {
             Backend::Ollama { base_url } => {
                 openai_compat::embed(&self.http, base_url, None, model, texts).await
@@ -395,5 +426,39 @@ mod tests {
         };
         assert!(api(429).is_retryable() && api(529).is_retryable() && api(500).is_retryable());
         assert!(!api(400).is_retryable() && !LlmError::Truncated.is_retryable());
+    }
+
+    /// Simula una IA que responde con los códigos de `codes` (200 = éxito) y cuenta los intentos.
+    async fn intentos(codes: &[u16]) -> (Result<u16>, usize) {
+        let n = std::cell::Cell::new(0);
+        let r = with_retry(&[Duration::ZERO; 2], || {
+            let code = codes[n.get().min(codes.len() - 1)];
+            n.set(n.get() + 1);
+            async move {
+                match StatusCode::from_u16(code) {
+                    Ok(StatusCode::OK) => Ok(code),
+                    Ok(status) => Err(LlmError::Api {
+                        status,
+                        message: String::new(),
+                    }),
+                    Err(_) => Err(LlmError::Truncated),
+                }
+            }
+        })
+        .await;
+        (r, n.get())
+    }
+
+    #[tokio::test]
+    async fn reintenta_limites_y_sobrecarga() {
+        // 429 y luego 529: al tercer intento responde.
+        assert!(matches!(intentos(&[429, 529, 200]).await, (Ok(200), 3)));
+        // Siempre 429: se rinde tras 3 intentos y devuelve el último error.
+        assert!(
+            matches!(intentos(&[429]).await, (Err(LlmError::Api { status, .. }), 3) if status == 429)
+        );
+        // Un 400 (petición mala) no se repite.
+        assert!(matches!(intentos(&[400, 200]).await, (Err(_), 1)));
+        assert!(matches!(intentos(&[200]).await, (Ok(200), 1)));
     }
 }
